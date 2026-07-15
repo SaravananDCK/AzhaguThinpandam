@@ -38,7 +38,7 @@ ssh root@YOUR_VPS_IP
 Fetch and run the setup script (installs Docker, firewall, fail2ban):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/deploy/setup-vps.sh -o setup-vps.sh
+curl -fsSL https://raw.githubusercontent.com/SaravananDCK/AzhaguThinpandam/main/deploy/setup-vps.sh -o setup-vps.sh
 bash setup-vps.sh
 ```
 
@@ -50,7 +50,7 @@ bash setup-vps.sh
 
 ```bash
 cd /opt/azhagu
-git clone https://github.com/YOUR_USER/YOUR_REPO.git .
+git clone https://github.com/SaravananDCK/AzhaguThinpandam.git .
 mkdir -p data uploads backups
 chown -R 1000:1000 data uploads   # the app container runs as uid 1000
 ```
