@@ -26,6 +26,9 @@ export default async function AdminSettingsPage() {
           ),
           lowStockThreshold: settings[SETTINGS.LOW_STOCK_THRESHOLD],
           boxTiers: settings[SETTINGS.BOX_TIERS],
+          packingCostRupees: paiseToRupees(
+            parseInt(settings[SETTINGS.PACKING_COST], 10) || 0
+          ),
         }}
       />
     </div>

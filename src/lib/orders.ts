@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { computeShippingFee, getBoxTiers, getShippingConfig } from "@/lib/queries";
+import { computeShippingFee, getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
 import { boxDiscount } from "@/lib/box";
-import { PAYMENT_STATUSES } from "@/lib/constants";
+import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
 
 export const checkoutSchema = z.object({
   email: z.string().email().max(200),
@@ -87,6 +87,10 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
   const shippingFee = computeShippingFee(subtotal - discount, shippingConfig);
   const total = subtotal - discount + shippingFee;
 
+  // Internal packing cost snapshot (P&L only — never charged to the customer)
+  const settings = await getSettings();
+  const packingCost = parseInt(settings[SETTINGS.PACKING_COST], 10) || 0;
+
   const order = await prisma.order.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -104,6 +108,7 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
       discount,
       shippingFee,
       total,
+      packingCost,
       notes: input.notes || null,
       items: {
         create: lines.map((l) => ({

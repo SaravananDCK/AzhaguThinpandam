@@ -20,6 +20,7 @@ type Props = {
     freeShippingAboveRupees: string;
     lowStockThreshold: string;
     boxTiers: string;
+    packingCostRupees: string;
   };
 };
 
@@ -107,6 +108,20 @@ export function SettingsForm({ values }: Props) {
                 defaultValue={values.lowStockThreshold}
               />
             </div>
+          </div>
+          <div className="grid gap-2 sm:max-w-xs">
+            <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
+            <Input
+              id="s-packing"
+              name="packingCost"
+              type="number"
+              min="0"
+              step="0.01"
+              defaultValue={values.packingCostRupees}
+            />
+            <p className="text-xs text-muted-foreground">
+              Recorded on each new order for the P&amp;L — never charged to the customer.
+            </p>
           </div>
         </CardContent>
       </Card>

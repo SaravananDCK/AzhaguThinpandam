@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
+import { rupeesToPaise } from "@/lib/money";
 
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   await assertAdmin();
@@ -48,4 +49,13 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath(`/order/${order.orderNumber}`);
   return { ok: true };
+}
+
+/** Sets the internal packing cost of an order (P&L only). */
+export async function updatePackingCost(orderId: string, formData: FormData): Promise<void> {
+  await assertAdmin();
+  const packingCost = rupeesToPaise(String(formData.get("packingCost") ?? ""));
+  if (packingCost === null) return; // invalid input — leave unchanged
+  await prisma.order.update({ where: { id: orderId }, data: { packingCost } }).catch(() => {});
+  revalidatePath(`/admin/orders/${orderId}`);
 }

@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatINR } from "@/lib/money";
+import { Input } from "@/components/ui/input";
+import { formatINR, paiseToRupees } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
+import { updatePackingCost } from "../actions";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -92,6 +94,25 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <span className="text-muted-foreground">Shipping</span>
               <span>{order.shippingFee === 0 ? "FREE" : formatINR(order.shippingFee)}</span>
             </div>
+            <form
+              action={updatePackingCost.bind(null, order.id)}
+              className="flex items-center justify-between gap-2"
+            >
+              <span className="text-muted-foreground">Packing cost (internal)</span>
+              <span className="flex items-center gap-1.5">
+                <Input
+                  name="packingCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={paiseToRupees(order.packingCost)}
+                  className="h-7 w-24 text-right text-sm"
+                />
+                <Button type="submit" variant="outline" size="sm" className="h-7">
+                  Save
+                </Button>
+              </span>
+            </form>
             <div className="flex justify-between font-semibold">
               <span>Total</span>
               <span>{formatINR(order.total)}</span>

@@ -47,6 +47,7 @@ export const SETTINGS = {
   FREE_SHIPPING_ABOVE: "free_shipping_above_paise",
   LOW_STOCK_THRESHOLD: "low_stock_threshold",
   BOX_TIERS: "box_discount_tiers",
+  PACKING_COST: "packing_cost_paise",
 } as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
@@ -60,4 +61,17 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // "packs:percent" pairs — discount on the whole order once the cart holds
   // that many packs. Applied server-side at checkout.
   [SETTINGS.BOX_TIERS]: "3:10,4:15,6:20",
+  // Internal packing cost recorded on each new order (₹, for P&L only)
+  [SETTINGS.PACKING_COST]: "0",
 };
+
+// Suggested expense categories for the accounting module
+export const EXPENSE_CATEGORIES = [
+  "Packing Materials",
+  "Transport & Courier",
+  "Marketing",
+  "Utilities",
+  "Salaries",
+  "Platform & Software",
+  "Other",
+] as const;

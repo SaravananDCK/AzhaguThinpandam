@@ -3,13 +3,17 @@ import type { Metadata } from "next";
 import {
   FolderTree,
   LayoutDashboard,
+  LineChart,
   Package,
+  PackageOpen,
+  Receipt,
   Settings,
   ShoppingCart,
   Store,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
+import "devextreme/dist/css/dx.light.css";
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s | Admin — AzhaguThinpandam" },
@@ -21,6 +25,9 @@ const NAV = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
+  { href: "/admin/purchases", label: "Purchases", icon: PackageOpen },
+  { href: "/admin/expenses", label: "Expenses", icon: Receipt },
+  { href: "/admin/finance", label: "Finance", icon: LineChart },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

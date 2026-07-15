@@ -11,9 +11,16 @@ export async function saveSettings(formData: FormData) {
 
   const shippingFee = rupeesToPaise(String(formData.get("shippingFee") ?? ""));
   const freeAbove = rupeesToPaise(String(formData.get("freeShippingAbove") ?? ""));
+  const packingCost = rupeesToPaise(String(formData.get("packingCost") ?? "0"));
   const lowStock = parseInt(String(formData.get("lowStockThreshold") ?? ""), 10);
 
-  if (shippingFee === null || freeAbove === null || Number.isNaN(lowStock) || lowStock < 0) {
+  if (
+    shippingFee === null ||
+    freeAbove === null ||
+    packingCost === null ||
+    Number.isNaN(lowStock) ||
+    lowStock < 0
+  ) {
     return { error: "Please enter valid numbers." };
   }
 
@@ -31,6 +38,7 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.FREE_SHIPPING_ABOVE]: String(freeAbove),
     [SETTINGS.LOW_STOCK_THRESHOLD]: String(lowStock),
     [SETTINGS.BOX_TIERS]: boxTiers,
+    [SETTINGS.PACKING_COST]: String(packingCost),
   };
 
   await prisma.$transaction(

@@ -7,6 +7,7 @@ import { SETTINGS, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants
 import { formatINR } from "@/lib/money";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DashboardCharts } from "@/components/admin/dashboard-charts";
 
 const REVENUE_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
@@ -14,7 +15,8 @@ export default async function AdminDashboard() {
   const settings = await getSettings();
   const lowStockThreshold = parseInt(settings[SETTINGS.LOW_STOCK_THRESHOLD], 10) || 5;
 
-  const [todayAgg, weekAgg, needAction, recentOrders, lowStock] = await Promise.all([
+  const [todayAgg, weekAgg, needAction, recentOrders, lowStock, monthOrders, topItems] =
+    await Promise.all([
     prisma.order.aggregate({
       _sum: { total: true },
       _count: true,
@@ -37,7 +39,38 @@ export default async function AdminDashboard() {
       orderBy: { stock: "asc" },
       take: 10,
     }),
+    prisma.order.findMany({
+      where: { status: { in: REVENUE_STATUSES }, createdAt: { gte: startOfISTDay(29) } },
+      select: { createdAt: true, total: true },
+    }),
+    prisma.orderItem.groupBy({
+      by: ["productName"],
+      _sum: { qty: true },
+      where: {
+        order: { status: { in: REVENUE_STATUSES }, createdAt: { gte: startOfISTDay(29) } },
+      },
+      orderBy: { _sum: { qty: "desc" } },
+      take: 6,
+    }),
   ]);
+
+  // Daily revenue series for the chart (IST days, ₹)
+  const dayKey = (d: Date) =>
+    new Date(d.getTime() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+  const revenueByDay = new Map<string, number>();
+  for (let i = 29; i >= 0; i--) revenueByDay.set(dayKey(startOfISTDay(i)), 0);
+  for (const o of monthOrders) {
+    const key = dayKey(o.createdAt);
+    if (revenueByDay.has(key)) revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + o.total);
+  }
+  const daily = [...revenueByDay.entries()].map(([iso, paise]) => ({
+    day: new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+    revenue: Math.round(paise / 100),
+  }));
+  const topProducts = topItems.map((t) => ({
+    name: t.productName,
+    qty: t._sum.qty ?? 0,
+  }));
 
   const stats = [
     {
@@ -84,6 +117,8 @@ export default async function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      <DashboardCharts daily={daily} topProducts={topProducts} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Card>
