@@ -32,6 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# runtime data on the server (docker volumes)
+/data
+/backups
+
+# deploy package (regenerate with scripts/make-publish.ps1)
+azhagu-publish.zip
 
 # vercel
 .vercel
@@ -39,3 +47,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# admin-uploaded images (runtime data)
+/uploads
+
+# sqlite
+prisma/dev.db*
+prisma/*.db*

@@ -1,0 +1,165 @@
+// AzhaguThinpandam ecommerce schema
+// SQLite notes: no enums (use String + constants in src/lib/constants.ts),
+// money stored as integer paise.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  // Customers log in with phone + WhatsApp OTP (no password). Admins log in
+  // with email + password. Customer email is optional (asked at checkout for
+  // order confirmations).
+  email        String?   @unique
+  passwordHash String?
+  name         String?
+  phone        String?   @unique
+  role         String    @default("CUSTOMER") // CUSTOMER | ADMIN
+  addresses    Address[]
+  orders       Order[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// One-time login codes delivered over WhatsApp (stored hashed, short-lived)
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  tamilName String?
+  slug      String    @unique
+  image     String?
+  sortOrder Int       @default(0)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  name        String
+  tamilName   String?
+  slug        String           @unique
+  description String
+  categoryId  String
+  category    Category         @relation(fields: [categoryId], references: [id])
+  isActive    Boolean          @default(true)
+  isFeatured  Boolean          @default(false)
+  isFlagship  Boolean          @default(false) // hero products pinned to the top of listings
+  images      ProductImage[]
+  variants    ProductVariant[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int     @default(0)
+}
+
+model ProductVariant {
+  id         String      @id @default(cuid())
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label      String // e.g. "250 g", "500 g", "1 kg"
+  price      Int // selling price in paise
+  mrp        Int? // strike-through price in paise
+  stock      Int         @default(0)
+  sku        String?     @unique
+  sortOrder  Int         @default(0)
+  isActive   Boolean     @default(true)
+  orderItems OrderItem[]
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  email       String
+  status      String      @default("PENDING") // PENDING | PAID | CONFIRMED | SHIPPED | DELIVERED | CANCELLED
+  // shipping address snapshot (kept even if the saved Address changes)
+  shipName    String
+  shipPhone   String
+  shipLine1   String
+  shipLine2   String?
+  shipCity    String
+  shipState   String
+  shipPincode String
+  subtotal    Int // paise
+  discount    Int         @default(0) // paise — bundle/box tier discount
+  shippingFee Int // paise
+  total       Int // paise (subtotal - discount + shippingFee)
+  notes       String?
+  items       OrderItem[]
+  payment     Payment?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  orderId      String
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId    String?
+  variant      ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  // snapshots so the order stays intact if products change
+  productName  String
+  variantLabel String
+  image        String?
+  price        Int // unit price in paise at time of order
+  qty          Int
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  orderId           String   @unique
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Int // paise
+  status            String   @default("CREATED") // CREATED | CAPTURED | FAILED
+  method            String? // upi | card | netbanking | wallet
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Setting {
+  key   String @id
+  value String
+}

@@ -1,0 +1,11 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
+# DOMAIN comes from the environment (set it in .env next to docker-compose.yml).
+{$DOMAIN} {
+	encode gzip
+
+	# Long cache for build assets (they're content-hashed)
+	@static path /_next/static/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	reverse_proxy app:3000
+}

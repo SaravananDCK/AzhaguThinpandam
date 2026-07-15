@@ -1,0 +1,134 @@
+"use client";
+
+import { useTransition } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { saveSettings } from "./actions";
+
+type Props = {
+  values: {
+    storeName: string;
+    storePhone: string;
+    storeEmail: string;
+    storeAddress: string;
+    shippingFeeRupees: string;
+    freeShippingAboveRupees: string;
+    lowStockThreshold: string;
+    boxTiers: string;
+  };
+};
+
+export function SettingsForm({ values }: Props) {
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      const res = await saveSettings(formData);
+      if (res.error) toast.error(res.error);
+      else toast.success("Settings saved");
+    });
+  }
+
+  return (
+    <form action={handleSubmit} className="max-w-xl space-y-6">
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Store details</p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-name">Store name</Label>
+            <Input id="s-name" name="storeName" defaultValue={values.storeName} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="s-phone">Contact phone</Label>
+              <Input id="s-phone" name="storePhone" defaultValue={values.storePhone} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-email">Contact email</Label>
+              <Input
+                id="s-email"
+                name="storeEmail"
+                type="email"
+                defaultValue={values.storeEmail}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-address">Store address (shown in footer)</Label>
+            <Textarea
+              id="s-address"
+              name="storeAddress"
+              rows={2}
+              defaultValue={values.storeAddress}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Shipping & stock</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2">
+              <Label htmlFor="s-fee">Shipping fee ₹</Label>
+              <Input
+                id="s-fee"
+                name="shippingFee"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.shippingFeeRupees}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-free">Free shipping above ₹</Label>
+              <Input
+                id="s-free"
+                name="freeShippingAbove"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.freeShippingAboveRupees}
+              />
+              <p className="text-xs text-muted-foreground">0 disables free shipping.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-lowstock">Low stock alert at</Label>
+              <Input
+                id="s-lowstock"
+                name="lowStockThreshold"
+                type="number"
+                min="0"
+                defaultValue={values.lowStockThreshold}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Build-your-box discounts</p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-tiers">Discount tiers</Label>
+            <Input id="s-tiers" name="boxTiers" defaultValue={values.boxTiers} />
+            <p className="text-xs text-muted-foreground">
+              Format: <code>packs:percent</code> pairs separated by commas — e.g.{" "}
+              <code>3:10,4:15,6:20</code> means 3+ packs → 10% off, 4+ → 15%, 6+ → 20%.
+              Applies to the whole order. Leave empty to disable.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button type="submit" disabled={pending}>
+        {pending && <Loader2 className="size-4 animate-spin" />} Save settings
+      </Button>
+    </form>
+  );
+}
