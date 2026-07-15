@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi, slugify } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { productSchema } from "../schema";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -62,6 +63,7 @@ export async function PUT(req: Request, { params }: Ctx) {
     // Sync variants
     for (const [i, v] of data.variants.entries()) {
       if (v.id) {
+        const before = product.variants.find((pv) => pv.id === v.id);
         await tx.productVariant.update({
           where: { id: v.id, productId: id },
           data: {
@@ -74,8 +76,16 @@ export async function PUT(req: Request, { params }: Ctx) {
             isActive: true,
           },
         });
+        if (before && before.stock !== v.stock) {
+          await recordMovement(tx, {
+            variantId: v.id,
+            delta: v.stock - before.stock,
+            reason: STOCK_REASONS.ADJUSTMENT,
+            note: "Edited in admin",
+          });
+        }
       } else {
-        await tx.productVariant.create({
+        const created = await tx.productVariant.create({
           data: {
             productId: id,
             label: v.label,
@@ -86,6 +96,14 @@ export async function PUT(req: Request, { params }: Ctx) {
             sortOrder: i,
           },
         });
+        if (v.stock > 0) {
+          await recordMovement(tx, {
+            variantId: created.id,
+            delta: v.stock,
+            reason: STOCK_REASONS.ADJUSTMENT,
+            note: "Initial stock",
+          });
+        }
       }
     }
 

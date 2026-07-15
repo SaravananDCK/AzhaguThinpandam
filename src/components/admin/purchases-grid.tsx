@@ -26,7 +26,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatINR } from "@/lib/money";
 
-type ItemRow = { description: string; qty: string; unitCostRupees: string };
+type ItemRow = {
+  description: string;
+  qty: string;
+  unitCostRupees: string;
+  variantId: string;
+  packs: string;
+};
 type PurchaseRow = {
   id: string;
   date: string;
@@ -34,13 +40,24 @@ type PurchaseRow = {
   invoiceNo: string | null;
   notes: string | null;
   total: number;
-  items: { id: string; description: string; qty: number; unitCost: number; amount: number }[];
+  items: {
+    id: string;
+    description: string;
+    qty: number;
+    unitCost: number;
+    amount: number;
+    variantId: string | null;
+    packs: number | null;
+    variant?: { label: string; product: { name: string } } | null;
+  }[];
 };
 
-const EMPTY_ITEM: ItemRow = { description: "", qty: "", unitCostRupees: "" };
+export type VariantOption = { id: string; name: string };
+
+const EMPTY_ITEM: ItemRow = { description: "", qty: "", unitCostRupees: "", variantId: "", packs: "" };
 const DEFAULT_SUPPLIER = "Karthick Sweets & Kadalai Mittai";
 
-export function PurchasesGrid() {
+export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOption[] }) {
   const gridRef = useRef<DataGridRef>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,6 +106,8 @@ export function PurchasesGrid() {
         description: i.description,
         qty: String(i.qty),
         unitCostRupees: String(i.unitCost / 100),
+        variantId: i.variantId ?? "",
+        packs: i.packs ? String(i.packs) : "",
       }))
     );
     setOpen(true);
@@ -101,7 +120,13 @@ export function PurchasesGrid() {
         description: i.description.trim(),
         qty: parseFloat(i.qty),
         unitCost: Math.round(parseFloat(i.unitCostRupees) * 100),
+        variantId: i.variantId || "",
+        ...(i.variantId && i.packs ? { packs: parseInt(i.packs, 10) } : {}),
       }));
+    if (parsedItems.some((i) => i.variantId && !i.packs)) {
+      toast.error("Enter how many packs were received for each linked product.");
+      return;
+    }
     if (!parsedItems.length) {
       toast.error("Add at least one item.");
       return;
@@ -203,7 +228,14 @@ export function PurchasesGrid() {
               <tbody>
                 {data.items.map((i) => (
                   <tr key={i.id}>
-                    <td className="py-0.5 pr-4">{i.description}</td>
+                    <td className="py-0.5 pr-4">
+                      {i.description}
+                      {i.variant && i.packs ? (
+                        <span className="ml-2 text-xs text-green-700 dark:text-green-400">
+                          → +{i.packs} × {i.variant.product.name} ({i.variant.label})
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="py-0.5 pr-4">{i.qty}</td>
                     <td className="py-0.5 pr-4">{formatINR(i.unitCost)}</td>
                     <td className="py-0.5">{formatINR(i.amount)}</td>
@@ -246,41 +278,74 @@ export function PurchasesGrid() {
           <div className="space-y-2">
             <Label>Items</Label>
             {items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr_90px_110px_32px] items-center gap-2">
-                <Input
-                  placeholder="e.g. Kadalai Mittai"
-                  value={item.description}
-                  onChange={(e) =>
-                    setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, description: e.target.value } : r)))
-                  }
-                />
-                <Input
-                  placeholder="kg"
-                  inputMode="decimal"
-                  value={item.qty}
-                  onChange={(e) =>
-                    setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, qty: e.target.value } : r)))
-                  }
-                />
-                <Input
-                  placeholder="₹/kg"
-                  inputMode="decimal"
-                  value={item.unitCostRupees}
-                  onChange={(e) =>
-                    setItems((rows) =>
-                      rows.map((r, i) => (i === idx ? { ...r, unitCostRupees: e.target.value } : r))
-                    )
-                  }
-                />
-                <button
-                  type="button"
-                  className="rounded p-1.5 text-muted-foreground hover:text-destructive"
-                  onClick={() => setItems((rows) => rows.filter((_, i) => i !== idx))}
-                  disabled={items.length === 1}
-                  aria-label="Remove item"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+              <div key={idx} className="space-y-1.5 rounded-lg border p-2.5">
+                <div className="grid grid-cols-[1fr_90px_110px_32px] items-center gap-2">
+                  <Input
+                    placeholder="e.g. Kadalai Mittai"
+                    value={item.description}
+                    onChange={(e) =>
+                      setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, description: e.target.value } : r)))
+                    }
+                  />
+                  <Input
+                    placeholder="kg"
+                    inputMode="decimal"
+                    value={item.qty}
+                    onChange={(e) =>
+                      setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, qty: e.target.value } : r)))
+                    }
+                  />
+                  <Input
+                    placeholder="₹/kg"
+                    inputMode="decimal"
+                    value={item.unitCostRupees}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === idx ? { ...r, unitCostRupees: e.target.value } : r))
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="rounded p-1.5 text-muted-foreground hover:text-destructive"
+                    onClick={() => setItems((rows) => rows.filter((_, i) => i !== idx))}
+                    disabled={items.length === 1}
+                    aria-label="Remove item"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-[1fr_110px] items-center gap-2">
+                  <select
+                    className="h-8 rounded-md border bg-background px-2 text-sm"
+                    value={item.variantId}
+                    onChange={(e) =>
+                      setItems((rows) =>
+                        rows.map((r, i) => (i === idx ? { ...r, variantId: e.target.value } : r))
+                      )
+                    }
+                  >
+                    <option value="">Not added to stock</option>
+                    {variantOptions.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        Add to stock: {v.name}
+                      </option>
+                    ))}
+                  </select>
+                  {item.variantId && (
+                    <Input
+                      placeholder="packs"
+                      inputMode="numeric"
+                      className="h-8"
+                      value={item.packs}
+                      onChange={(e) =>
+                        setItems((rows) =>
+                          rows.map((r, i) => (i === idx ? { ...r, packs: e.target.value } : r))
+                        )
+                      }
+                    />
+                  )}
+                </div>
               </div>
             ))}
             <div className="flex items-center justify-between">

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { computeShippingFee, getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
 import { boxDiscount } from "@/lib/box";
+import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
 
 export const checkoutSchema = z.object({
@@ -162,6 +163,10 @@ export async function markOrderPaid(params: {
     });
     for (const item of order.items) {
       if (!item.variantId) continue;
+      const before = await tx.productVariant.findUnique({
+        where: { id: item.variantId },
+        select: { stock: true },
+      });
       // Guarded decrement; never lets stock go negative
       await tx.productVariant.updateMany({
         where: { id: item.variantId, stock: { gte: item.qty } },
@@ -170,6 +175,13 @@ export async function markOrderPaid(params: {
       await tx.productVariant.updateMany({
         where: { id: item.variantId, stock: { lt: item.qty } },
         data: { stock: 0 },
+      });
+      const actualDelta = -Math.min(item.qty, before?.stock ?? item.qty);
+      await recordMovement(tx, {
+        variantId: item.variantId,
+        delta: actualDelta,
+        reason: STOCK_REASONS.SALE,
+        reference: order.orderNumber,
       });
     }
     return order;

@@ -6,6 +6,7 @@ import { assertAdmin } from "@/lib/admin";
 import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
 import { rupeesToPaise } from "@/lib/money";
+import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   await assertAdmin();
@@ -34,6 +35,12 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
         await tx.productVariant.update({
           where: { id: item.variantId },
           data: { stock: { increment: item.qty } },
+        });
+        await recordMovement(tx, {
+          variantId: item.variantId,
+          delta: item.qty,
+          reason: STOCK_REASONS.CANCEL_RESTOCK,
+          reference: order.orderNumber,
         });
       }
     });

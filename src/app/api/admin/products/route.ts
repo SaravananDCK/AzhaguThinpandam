@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi, slugify } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
+import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { productSchema } from "./schema";
 
 export async function POST(req: Request) {
@@ -27,30 +28,44 @@ export async function POST(req: Request) {
     );
   }
 
-  const product = await prisma.product.create({
-    data: {
-      name: data.name,
-      tamilName: data.tamilName || null,
-      slug,
-      description: data.description,
-      categoryId: data.categoryId,
-      isActive: data.isActive,
-      isFeatured: data.isFeatured,
-      isFlagship: data.isFlagship,
-      images: {
-        create: data.images.map((url, i) => ({ url, sortOrder: i })),
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
+      data: {
+        name: data.name,
+        tamilName: data.tamilName || null,
+        slug,
+        description: data.description,
+        categoryId: data.categoryId,
+        isActive: data.isActive,
+        isFeatured: data.isFeatured,
+        isFlagship: data.isFlagship,
+        images: {
+          create: data.images.map((url, i) => ({ url, sortOrder: i })),
+        },
+        variants: {
+          create: data.variants.map((v, i) => ({
+            label: v.label,
+            price: v.price,
+            mrp: v.mrp ?? null,
+            stock: v.stock,
+            sku: v.sku || null,
+            sortOrder: i,
+          })),
+        },
       },
-      variants: {
-        create: data.variants.map((v, i) => ({
-          label: v.label,
-          price: v.price,
-          mrp: v.mrp ?? null,
-          stock: v.stock,
-          sku: v.sku || null,
-          sortOrder: i,
-        })),
-      },
-    },
+      include: { variants: true },
+    });
+    for (const v of created.variants) {
+      if (v.stock > 0) {
+        await recordMovement(tx, {
+          variantId: v.id,
+          delta: v.stock,
+          reason: STOCK_REASONS.ADJUSTMENT,
+          note: "Initial stock",
+        });
+      }
+    }
+    return created;
   });
 
   return NextResponse.json({ id: product.id });

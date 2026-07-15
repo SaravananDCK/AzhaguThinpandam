@@ -1,9 +1,20 @@
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
 import { PurchasesGrid } from "@/components/admin/purchases-grid";
 
 export const metadata: Metadata = { title: "Purchases" };
 
-export default function AdminPurchasesPage() {
+export default async function AdminPurchasesPage() {
+  const variants = await prisma.productVariant.findMany({
+    where: { isActive: true, product: { isActive: true } },
+    include: { product: { select: { name: true } } },
+    orderBy: [{ product: { name: "asc" } }, { sortOrder: "asc" }],
+  });
+  const variantOptions = variants.map((v) => ({
+    id: v.id,
+    name: `${v.product.name} (${v.label})`,
+  }));
+
   return (
     <div className="space-y-5">
       <div>
@@ -13,7 +24,7 @@ export default function AdminPurchasesPage() {
           the P&amp;L. Expand a row to see its items.
         </p>
       </div>
-      <PurchasesGrid />
+      <PurchasesGrid variantOptions={variantOptions} />
     </div>
   );
 }
