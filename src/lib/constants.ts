@@ -53,7 +53,7 @@ export const SETTINGS = {
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.STORE_NAME]: "AzhaguThinpandam",
-  [SETTINGS.STORE_PHONE]: "94435 53634",
+  [SETTINGS.STORE_PHONE]: "93440 22162",
   [SETTINGS.STORE_EMAIL]: "",
   [SETTINGS.STORE_ADDRESS]: "Kovilpatti, Tamil Nadu",
   [SETTINGS.SHIPPING_FEE]: "6000", // ₹60
