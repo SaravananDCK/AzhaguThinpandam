@@ -39,6 +39,7 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.LOW_STOCK_THRESHOLD]: String(lowStock),
     [SETTINGS.BOX_TIERS]: boxTiers,
     [SETTINGS.PACKING_COST]: String(packingCost),
+    [SETTINGS.ROUND_TO_FIVE]: formData.get("roundToFive") ? "1" : "0",
   };
 
   await prisma.$transaction(

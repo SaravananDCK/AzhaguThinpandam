@@ -63,9 +63,11 @@ type ProductData = {
 export function ProductForm({
   categories,
   product,
+  roundToFive = true,
 }: {
   categories: Category[];
   product?: ProductData;
+  roundToFive?: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -95,7 +97,9 @@ export function ProductForm({
       toast.error("Enter a purchase price (₹/kg) and a profit margin % first.");
       return;
     }
-    const priced = applyMarginPricing(variants.map((v) => v.label), perKg, margin);
+    const priced = applyMarginPricing(variants.map((v) => v.label), perKg, margin, {
+      roundToFive,
+    });
     const updated = priced.filter(Boolean).length;
     if (!updated) {
       toast.error("No weight-based variants (like “250 g” or “1 kg”) to price.");
@@ -302,9 +306,12 @@ export function ProductForm({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Fills the variant prices below from cost + margin (e.g. ₹220/kg + 60% →
-              250 g = ₹88); 500 g and 1 kg get the standard 5% / 10% bulk discount with
-              the undiscounted price as MRP. Review, adjust if needed, then save.
+              Fills the variant prices below from cost + margin
+              {roundToFive
+                ? ", rounding UP to the next ₹5 (₹88 → ₹90, ₹81 → ₹85) — change this in Settings"
+                : ", exact to the ₹1 (₹5 round-off is off in Settings)"}
+              ; 500 g and 1 kg get the standard 5% / 10% bulk discount with the exact
+              price as MRP. Review, adjust if needed, then save.
             </p>
           </CardContent>
         </Card>

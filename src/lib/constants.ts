@@ -48,6 +48,7 @@ export const SETTINGS = {
   LOW_STOCK_THRESHOLD: "low_stock_threshold",
   BOX_TIERS: "box_discount_tiers",
   PACKING_COST: "packing_cost_paise",
+  ROUND_TO_FIVE: "round_prices_to_five",
 } as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
@@ -63,6 +64,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.BOX_TIERS]: "3:10,4:15,6:20",
   // Internal packing cost recorded on each new order (₹, for P&L only)
   [SETTINGS.PACKING_COST]: "0",
+  // "1" = computed sale prices ceil to the next ₹5; "0" = exact to the ₹1
+  [SETTINGS.ROUND_TO_FIVE]: "1",
 };
 
 // Suggested expense categories for the accounting module

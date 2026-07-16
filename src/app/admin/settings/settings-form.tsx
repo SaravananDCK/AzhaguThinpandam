@@ -21,6 +21,7 @@ type Props = {
     lowStockThreshold: string;
     boxTiers: string;
     packingCostRupees: string;
+    roundToFive: boolean;
   };
 };
 
@@ -109,6 +110,15 @@ export function SettingsForm({ values }: Props) {
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="roundToFive"
+              defaultChecked={values.roundToFive}
+              className="size-4 accent-primary"
+            />
+            Round computed sale prices UP to the next ₹5 (₹88 → ₹90)
+          </label>
           <div className="grid gap-2 sm:max-w-xs">
             <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
             <Input

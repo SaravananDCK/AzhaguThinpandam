@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/queries";
+import { SETTINGS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "../product-form";
 
@@ -23,6 +25,8 @@ export default async function EditProductPage({ params }: Props) {
     prisma.category.findMany({ orderBy: { sortOrder: "asc" } }),
   ]);
   if (!product) notFound();
+  const settings = await getSettings();
+  const roundToFive = settings[SETTINGS.ROUND_TO_FIVE] !== "0";
 
   return (
     <div className="space-y-5">
@@ -37,7 +41,7 @@ export default async function EditProductPage({ params }: Props) {
           <p className="text-xs text-muted-foreground">{product.name}</p>
         </div>
       </div>
-      <ProductForm categories={categories} product={product} />
+      <ProductForm categories={categories} product={product} roundToFive={roundToFive} />
     </div>
   );
 }

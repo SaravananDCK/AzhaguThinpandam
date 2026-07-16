@@ -32,6 +32,7 @@ export default async function AdminSettingsPage() {
           packingCostRupees: paiseToRupees(
             parseInt(settings[SETTINGS.PACKING_COST], 10) || 0
           ),
+          roundToFive: settings[SETTINGS.ROUND_TO_FIVE] !== "0",
         }}
       />
 
