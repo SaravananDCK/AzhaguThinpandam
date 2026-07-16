@@ -14,6 +14,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build against a throwaway empty database (all store pages render at request
 # time; only the sitemap touches the DB during build)
 ENV DATABASE_URL="file:/tmp/build.db"
+# Browser-facing config must be present at BUILD time — Next.js inlines
+# NEXT_PUBLIC_* into the client bundle. docker-compose passes these as build
+# args from .env (see docker-compose.yml). Missing values break the Razorpay
+# checkout popup and show the DevExtreme trial watermark.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_RAZORPAY_KEY_ID
+ARG NEXT_PUBLIC_DEVEXTREME_KEY
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_RAZORPAY_KEY_ID=$NEXT_PUBLIC_RAZORPAY_KEY_ID \
+    NEXT_PUBLIC_DEVEXTREME_KEY=$NEXT_PUBLIC_DEVEXTREME_KEY
 RUN npx prisma generate \
   && npx prisma migrate deploy \
   && npm run build

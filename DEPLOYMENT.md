@@ -214,7 +214,10 @@ Then restart: `docker compose up -d`.
 ## 8. Go live
 
 1. Complete Razorpay KYC and generate **live keys**.
-2. Swap the keys in `.env`, restart: `docker compose up -d`.
+2. Swap the keys in `.env`, then **rebuild** — `docker compose up -d --build`.
+   The `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `NEXT_PUBLIC_APP_URL` and
+   `NEXT_PUBLIC_DEVEXTREME_KEY` values are baked into the browser bundle at
+   build time, so changing any of them requires `--build`, not just a restart.
 3. Place one small real order to confirm, then refund it from the Razorpay dashboard.
 
 ## 9. Backups (set and forget)
