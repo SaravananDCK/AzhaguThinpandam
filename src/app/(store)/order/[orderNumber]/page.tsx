@@ -91,7 +91,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 <p className="text-sm font-medium">{item.productName}</p>
                 <p className="text-xs text-muted-foreground">
                   {item.variantLabel} × {item.qty}
-                  {packNote(item.variantLabel) && ` · ${packNote(item.variantLabel)}`}
+                  {packNote(item.variantLabel, item.basePackGrams ?? undefined) &&
+                    ` · ${packNote(item.variantLabel, item.basePackGrams ?? undefined)}`}
                 </p>
               </div>
               <p className="text-sm font-medium">{formatINR(item.price * item.qty)}</p>

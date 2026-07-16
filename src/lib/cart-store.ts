@@ -13,6 +13,7 @@ export type CartItem = {
   image?: string | null;
   qty: number;
   maxStock: number;
+  packetGrams?: number; // base packet size (200/250) for the delivery note
 };
 
 type CartState = {

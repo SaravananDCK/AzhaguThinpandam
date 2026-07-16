@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { computeShippingFee, getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
 import { boxDiscount } from "@/lib/box";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
+import { basePacketGrams } from "@/lib/pack";
 import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
 
 export const checkoutSchema = z.object({
@@ -57,7 +58,14 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
 
   const variants = await prisma.productVariant.findMany({
     where: { id: { in: variantIds } },
-    include: { product: { include: { images: { orderBy: { sortOrder: "asc" } } } } },
+    include: {
+      product: {
+        include: {
+          images: { orderBy: { sortOrder: "asc" } },
+          variants: { where: { isActive: true }, select: { label: true } },
+        },
+      },
+    },
   });
   const byId = new Map(variants.map((v) => [v.id, v]));
 
@@ -119,6 +127,7 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
           image: l.variant.product.images[0]?.url ?? null,
           price: l.variant.price,
           qty: l.qty,
+          basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
         })),
       },
     },

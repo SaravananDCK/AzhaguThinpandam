@@ -1,95 +1,43 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { DEFAULT_SETTINGS } from "../src/lib/constants";
+import { DEFAULT_SETTINGS, SETTINGS } from "../src/lib/constants";
+import { applyMarginPricing } from "../src/lib/pricing";
 
 const prisma = new PrismaClient();
 
 const r = (rupees: number) => Math.round(rupees * 100); // rupees → paise
 
-// Bulk sizes are discounted off the linear price (mrp): 5% on 500 g, 10% on 1 kg.
-// The undiscounted linear price is stored as mrp so the strike-through +
-// "% off" badge renders automatically.
-const BULK_DISCOUNTS: Record<number, number> = { 500: 0.05, 1000: 0.1 };
+// Catalog source: "K S HOME 15.7.26" — Karthick Sweets & Kadalai Mittai,
+// Kovilpatti. The per-kg figures are the SUPPLIER PRICES (what AzhaguThinpandam
+// pays Karthick), stored as purchasePricePerKg. Retail variant prices are
+// derived at DEFAULT_MARGIN with the standard bulk discounts, via the shared
+// pricing rule, so Admin → Pricing "Recalculate" reproduces them.
+const DEFAULT_MARGIN = 25;
 
-function gramsOf(label: string): number | null {
-  const m = label.trim().match(/^(\d+(?:\.\d+)?)\s*(g|kg)$/i);
-  if (!m) return null;
-  return m[2].toLowerCase() === "kg" ? parseFloat(m[1]) * 1000 : parseFloat(m[1]);
+// Larger sizes are delivered as multiple base packets; 200 g products step in
+// 200 g (200/400/600/800/1kg), 250 g products in 250 g (250/500/750/1kg).
+function weightsFor(basePackG: 200 | 250): { label: string; grams: number }[] {
+  const steps = basePackG === 200 ? [200, 400, 600, 800, 1000] : [250, 500, 750, 1000];
+  return steps.map((g) => ({ label: g < 1000 ? `${g} g` : "1 kg", grams: g }));
 }
+const STOCK_BY_INDEX = [50, 40, 30, 20, 12];
 
-function applyBulkDiscounts(variants: SeedVariant[]): SeedVariant[] {
-  const parsed = variants
-    .map((v) => ({ v, g: gramsOf(v.label) }))
-    .filter((x): x is { v: SeedVariant; g: number } => x.g !== null)
-    .sort((a, b) => a.g - b.g);
-  const base = parsed[0];
-  if (!base) return variants;
-  const perGram = base.v.price / base.g;
-
-  return variants.map((v) => {
-    const g = gramsOf(v.label);
-    const discount = g ? BULK_DISCOUNTS[g] : undefined;
-    if (!g || discount === undefined) return v;
-    const mrp = Math.round((perGram * g) / 100) * 100; // linear price, whole ₹
-    const price = Math.round((mrp * (1 - discount)) / 100) * 100;
-    return { ...v, mrp, price };
-  });
-}
-
-// Catalog source: "K S LIST 13.3.26" — Karthick Sweets & Kadalai Mittai,
-// Kovilpatti price list (13-03-2026). The list gives WHOLESALE purchase
-// prices per 1 kg (minimum 40 kg orders). Retail prices below are derived
-// from those with a ~25% markup, rounded to the nearest ₹5 per pack —
-// they are PLACEHOLDERS: review and adjust in Admin → Products.
-
-type SeedVariant = { label: string; price: number; mrp?: number; stock: number };
 type SeedProduct = {
   name: string;
   tamilName: string;
   slug: string;
   description: string;
+  basePackG: 200 | 250;
+  costPerKg: number; // ₹/kg supplier price
   featured?: boolean;
-  flagship?: boolean; // pinned to the top of listings with a Signature badge
-  // Not on the price list yet: seeded hidden with placeholder prices and zero
-  // stock — price & activate in Admin → Products. (Only applied on create, so
-  // re-seeding never re-hides a product an admin has activated.)
-  inactive?: boolean;
-  variants: SeedVariant[];
+  flagship?: boolean;
+  inactive?: boolean; // hidden until priced & activated in admin
 };
 type SeedCategory = {
   name: string;
   tamilName: string;
   slug: string;
   products: SeedProduct[];
-};
-
-// Wholesale ₹/kg from the K S price list (13-03-2026); retail = cost + 25%.
-// Stored on each product so the admin "pricing rule" fields come pre-filled.
-const DEFAULT_MARGIN_PCT = 25;
-const WHOLESALE_PER_KG: Record<string, number> = {
-  "kadalai-mittai": 200,
-  "special-kadalai-mittai": 220,
-  "karupatti-kadalai-mittai": 300,
-  "cocoa-mittai": 200,
-  "ellu-mittai": 170,
-  "kadalai-urundai": 200,
-  "ellu-urundai": 180,
-  sev: 150,
-  seeval: 150,
-  "seeni-sev": 160,
-  "karupatti-sev": 160,
-  "pattarai-sev": 180,
-  "pattarai-seeval": 180,
-  "kara-seeval": 180,
-  mixture: 180,
-  "paruvattu-mixture": 180,
-  "ragi-mixture": 180,
-  "omapodi-mixture": 200,
-  "butter-murukku": 200,
-  "kara-boondi": 180,
-  "masala-kadalai": 200,
-  "masala-pori-kadalai": 160,
-  "ennai-kadalai": 200,
 };
 
 const catalog: SeedCategory[] = [
@@ -104,40 +52,10 @@ const catalog: SeedCategory[] = [
         slug: "kadalai-mittai",
         description:
           "The famous Kovilpatti kadalai mittai — crunchy peanut candy bars set in pure jaggery, made the traditional way. Our signature product.",
+        basePackG: 250,
+        costPerKg: 220,
         featured: true,
         flagship: true,
-        variants: [
-          { label: "250 g", price: r(65), stock: 60 },
-          { label: "500 g", price: r(125), stock: 40 },
-          { label: "1 kg", price: r(250), stock: 20 },
-        ],
-      },
-      {
-        name: "Special Kadalai Mittai",
-        tamilName: "SPL கடலை மிட்டாய்",
-        slug: "special-kadalai-mittai",
-        description:
-          "Premium-grade Kovilpatti kadalai mittai with extra peanuts and richer jaggery — our best-seller for gifting.",
-        featured: true,
-        flagship: true,
-        variants: [
-          { label: "250 g", price: r(70), stock: 50 },
-          { label: "500 g", price: r(140), stock: 35 },
-          { label: "1 kg", price: r(280), stock: 15 },
-        ],
-      },
-      {
-        name: "Karupatti Kadalai Mittai",
-        tamilName: "கருப்பட்டி கடலை மிட்டாய்",
-        slug: "karupatti-kadalai-mittai",
-        description:
-          "Kadalai mittai made with karupatti (palm jaggery) instead of cane jaggery — deeper flavour, naturally rich in minerals.",
-        featured: true,
-        variants: [
-          { label: "200 g", price: r(75), stock: 40 },
-          { label: "500 g", price: r(190), stock: 25 },
-          { label: "1 kg", price: r(380), stock: 12 },
-        ],
       },
       {
         name: "Cocoa Mittai",
@@ -145,23 +63,26 @@ const catalog: SeedCategory[] = [
         slug: "cocoa-mittai",
         description:
           "A modern twist on the classic — peanut candy with a layer of cocoa. A favourite with kids.",
-        variants: [
-          { label: "200 g", price: r(50), stock: 50 },
-          { label: "500 g", price: r(125), stock: 30 },
-          { label: "1 kg", price: r(250), stock: 15 },
-        ],
+        basePackG: 200,
+        costPerKg: 260,
       },
       {
         name: "Ellu Mittai",
         tamilName: "எள்ளு மிட்டாய்",
         slug: "ellu-mittai",
+        description: "Crisp sesame candy bars in jaggery — iron-rich, light and moreish.",
+        basePackG: 200,
+        costPerKg: 225,
+      },
+      {
+        name: "Karupatti Kadalai Mittai",
+        tamilName: "கருப்பட்டி கடலை மிட்டாய்",
+        slug: "karupatti-kadalai-mittai",
         description:
-          "Crisp sesame candy bars in jaggery — iron-rich, light and moreish.",
-        variants: [
-          { label: "200 g", price: r(40), stock: 50 },
-          { label: "500 g", price: r(105), stock: 30 },
-          { label: "1 kg", price: r(210), stock: 15 },
-        ],
+          "Kadalai mittai made with karupatti (palm jaggery) instead of cane jaggery — deeper flavour, naturally rich in minerals.",
+        basePackG: 200,
+        costPerKg: 325,
+        featured: true,
       },
       {
         name: "Kadalai Urundai",
@@ -169,11 +90,8 @@ const catalog: SeedCategory[] = [
         slug: "kadalai-urundai",
         description:
           "Hand-rolled peanut and jaggery balls — the traditional evening snack of Tamil homes.",
-        variants: [
-          { label: "200 g", price: r(50), stock: 50 },
-          { label: "500 g", price: r(125), stock: 30 },
-          { label: "1 kg", price: r(250), stock: 15 },
-        ],
+        basePackG: 200,
+        costPerKg: 200,
       },
       {
         name: "Ellu Urundai",
@@ -181,27 +99,46 @@ const catalog: SeedCategory[] = [
         slug: "ellu-urundai",
         description:
           "Wholesome sesame and jaggery balls — a healthy traditional treat rich in iron.",
-        variants: [
-          { label: "200 g", price: r(45), stock: 50 },
-          { label: "500 g", price: r(115), stock: 30 },
-          { label: "1 kg", price: r(230), stock: 15 },
-        ],
+        basePackG: 200,
+        costPerKg: 200,
+      },
+      {
+        name: "Pori Kadalai Urundai",
+        tamilName: "பொரி கடலை உருண்டை",
+        slug: "pori-kadalai-urundai",
+        description:
+          "Puffed pori and peanut balls bound in jaggery — light, crunchy and impossible to stop at one.",
+        basePackG: 200,
+        costPerKg: 175,
+      },
+      // Not on the current list — kept hidden, reactivate in admin if needed
+      {
+        name: "Special Kadalai Mittai",
+        tamilName: "SPL கடலை மிட்டாய்",
+        slug: "special-kadalai-mittai",
+        description:
+          "Premium-grade Kovilpatti kadalai mittai with extra peanuts and richer jaggery — our best-seller for gifting.",
+        basePackG: 250,
+        costPerKg: 240,
+        inactive: true,
       },
       {
         name: "Seeni Mittai",
         tamilName: "சீனி மிட்டாய்",
         slug: "seeni-mittai",
         description: "Old-school sugar candy bars — a nostalgic pettikadai favourite.",
+        basePackG: 200,
+        costPerKg: 150,
         inactive: true,
-        variants: [{ label: "200 g", price: r(45), stock: 0 }],
       },
       {
         name: "Karupatti Mittai",
         tamilName: "கருப்பட்டி மிட்டாய்",
         slug: "karupatti-mittai",
         description: "Palm jaggery candy — deep caramel notes, naturally rich in minerals.",
+        basePackG: 200,
+        costPerKg: 260,
         inactive: true,
-        variants: [{ label: "200 g", price: r(75), stock: 0 }],
       },
     ],
   },
@@ -216,11 +153,8 @@ const catalog: SeedCategory[] = [
         slug: "sev",
         description:
           "Classic crunchy sev made from gram flour, fried fresh in small batches.",
-        variants: [
-          { label: "250 g", price: r(50), stock: 60 },
-          { label: "500 g", price: r(95), stock: 40 },
-          { label: "1 kg", price: r(190), stock: 20 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Seeval",
@@ -228,35 +162,24 @@ const catalog: SeedCategory[] = [
         slug: "seeval",
         description:
           "Thin, crisp seeval ribbons — light, flaky and perfect with evening tea.",
-        variants: [
-          { label: "250 g", price: r(50), stock: 60 },
-          { label: "500 g", price: r(95), stock: 40 },
-          { label: "1 kg", price: r(190), stock: 20 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Seeni Sev",
         tamilName: "சீனி சேவு",
         slug: "seeni-sev",
-        description:
-          "Sweet sev glazed with sugar — a crunchy sweet-and-savoury classic.",
-        variants: [
-          { label: "250 g", price: r(50), stock: 50 },
-          { label: "500 g", price: r(100), stock: 35 },
-          { label: "1 kg", price: r(200), stock: 18 },
-        ],
+        description: "Sweet sev glazed with sugar — a crunchy sweet-and-savoury classic.",
+        basePackG: 250,
+        costPerKg: 180,
       },
       {
         name: "Karupatti Sev",
         tamilName: "கருப்பட்டி சேவு",
         slug: "karupatti-sev",
-        description:
-          "Sev coated in karupatti (palm jaggery) — an earthy, healthier sweet crunch.",
-        variants: [
-          { label: "250 g", price: r(50), stock: 50 },
-          { label: "500 g", price: r(100), stock: 35 },
-          { label: "1 kg", price: r(200), stock: 18 },
-        ],
+        description: "Sev coated in karupatti (palm jaggery) — an earthy, healthier sweet crunch.",
+        basePackG: 250,
+        costPerKg: 180,
       },
       {
         name: "Pattarai Sev",
@@ -264,11 +187,8 @@ const catalog: SeedCategory[] = [
         slug: "pattarai-sev",
         description:
           "Traditional pattarai-style sev — thicker cut, extra crunchy, seasoned the old way.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Pattarai Seeval",
@@ -276,23 +196,16 @@ const catalog: SeedCategory[] = [
         slug: "pattarai-seeval",
         description:
           "Pattarai-style seeval — hand-cut flakes with a deeper roast and bolder seasoning.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Kara Seeval",
         tamilName: "கார சீவல்",
         slug: "kara-seeval",
-        description:
-          "Spicy seeval with chilli and curry leaves — for those who like it hot.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
+        description: "Spicy seeval with chilli and curry leaves — for those who like it hot.",
+        basePackG: 250,
+        costPerKg: 220,
       },
     ],
   },
@@ -307,11 +220,8 @@ const catalog: SeedCategory[] = [
         slug: "mixture",
         description:
           "Our signature South Indian mixture — sev, boondi, peanuts, curry leaves and fried gram in a moreish blend.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 60 },
-          { label: "500 g", price: r(115), stock: 40 },
-          { label: "1 kg", price: r(230), stock: 20 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Paruvattu Mixture",
@@ -319,11 +229,8 @@ const catalog: SeedCategory[] = [
         slug: "paruvattu-mixture",
         description:
           "Country-style paruvattu mixture with crisp lentil fritter pieces folded through.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
+        basePackG: 250,
+        costPerKg: 220,
       },
       {
         name: "Ragi Mixture",
@@ -331,12 +238,9 @@ const catalog: SeedCategory[] = [
         slug: "ragi-mixture",
         description:
           "Millet-powered mixture made with ragi (finger millet) — the guilt-free crunchy snack.",
+        basePackG: 250,
+        costPerKg: 220,
         featured: true,
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
       },
       {
         name: "Omapodi Mixture",
@@ -344,11 +248,8 @@ const catalog: SeedCategory[] = [
         slug: "omapodi-mixture",
         description:
           "Fine omapodi (ajwain sev) mixture — delicate strands with a digestive ajwain aroma.",
-        variants: [
-          { label: "250 g", price: r(65), stock: 50 },
-          { label: "500 g", price: r(125), stock: 35 },
-          { label: "1 kg", price: r(250), stock: 18 },
-        ],
+        basePackG: 250,
+        costPerKg: 240,
       },
       {
         name: "Butter Murukku",
@@ -356,12 +257,9 @@ const catalog: SeedCategory[] = [
         slug: "butter-murukku",
         description:
           "Light, airy and melt-in-the-mouth butter murukku — a softer, richer cousin of the classic.",
+        basePackG: 250,
+        costPerKg: 240,
         featured: true,
-        variants: [
-          { label: "250 g", price: r(65), stock: 50 },
-          { label: "500 g", price: r(125), stock: 35 },
-          { label: "1 kg", price: r(250), stock: 18 },
-        ],
       },
       {
         name: "Kara Boondi",
@@ -369,75 +267,44 @@ const catalog: SeedCategory[] = [
         slug: "kara-boondi",
         description:
           "Spicy gram-flour boondi pearls with peanuts and curry leaves — great on its own or over curd rice.",
-        variants: [
-          { label: "250 g", price: r(60), stock: 50 },
-          { label: "500 g", price: r(115), stock: 35 },
-          { label: "1 kg", price: r(230), stock: 18 },
-        ],
+        basePackG: 250,
+        costPerKg: 240,
       },
       {
         name: "Kaaram Murukku",
         tamilName: "காரம் முறுக்கு",
         slug: "kaaram-murukku",
         description: "Fiery hand-twisted murukku for those who like real heat.",
+        basePackG: 250,
+        costPerKg: 220,
         inactive: true,
-        variants: [{ label: "250 g", price: r(65), stock: 0 }],
       },
       {
         name: "Manapparai Murukku",
         tamilName: "மணப்பாறை முறுக்கு",
         slug: "manapparai-murukku",
         description: "The famous Manapparai-style murukku — extra crisp, extra moreish.",
+        basePackG: 250,
+        costPerKg: 220,
         inactive: true,
-        variants: [{ label: "250 g", price: r(65), stock: 0 }],
       },
       {
         name: "Ragi Murukku",
         tamilName: "ராகி முறுக்கு",
         slug: "ragi-murukku",
         description: "Finger-millet murukku — the wholesome twist on the classic.",
+        basePackG: 250,
+        costPerKg: 220,
         inactive: true,
-        variants: [{ label: "250 g", price: r(65), stock: 0 }],
       },
       {
         name: "Pudhina Mixture",
         tamilName: "புதினா மிக்சர்",
         slug: "pudhina-mixture",
         description: "Mixture tossed with fresh mint — cool aroma, spicy crunch.",
+        basePackG: 250,
+        costPerKg: 220,
         inactive: true,
-        variants: [{ label: "250 g", price: r(60), stock: 0 }],
-      },
-    ],
-  },
-  {
-    name: "Halwa",
-    tamilName: "அல்வா",
-    slug: "halwa",
-    products: [
-      {
-        name: "Wheat Halwa",
-        tamilName: "கோதுமை அல்வா",
-        slug: "wheat-halwa",
-        description:
-          "Glossy, ghee-rich wheat halwa slow-cooked the Tirunelveli way.",
-        inactive: true,
-        variants: [{ label: "250 g", price: r(150), stock: 0 }],
-      },
-      {
-        name: "Carrot Halwa",
-        tamilName: "கேரட் அல்வா",
-        slug: "carrot-halwa",
-        description: "Classic carrot halwa with ghee, milk and cashew.",
-        inactive: true,
-        variants: [{ label: "250 g", price: r(150), stock: 0 }],
-      },
-      {
-        name: "Karupatti Halwa",
-        tamilName: "கருப்பட்டி அல்வா",
-        slug: "karupatti-halwa",
-        description: "Halwa sweetened with palm jaggery — earthy, deep and rich.",
-        inactive: true,
-        variants: [{ label: "250 g", price: r(160), stock: 0 }],
       },
     ],
   },
@@ -452,12 +319,9 @@ const catalog: SeedCategory[] = [
         slug: "masala-kadalai",
         description:
           "Whole peanuts coated in a spiced gram-flour shell and fried crisp — the king of tea-time snacks.",
+        basePackG: 200,
+        costPerKg: 225,
         featured: true,
-        variants: [
-          { label: "200 g", price: r(50), stock: 60 },
-          { label: "500 g", price: r(125), stock: 40 },
-          { label: "1 kg", price: r(250), stock: 20 },
-        ],
       },
       {
         name: "Masala Pori Kadalai",
@@ -465,11 +329,8 @@ const catalog: SeedCategory[] = [
         slug: "masala-pori-kadalai",
         description:
           "Roasted peanuts tossed in a tangy masala — light, protein-rich and addictive.",
-        variants: [
-          { label: "200 g", price: r(40), stock: 60 },
-          { label: "500 g", price: r(100), stock: 40 },
-          { label: "1 kg", price: r(200), stock: 20 },
-        ],
+        basePackG: 200,
+        costPerKg: 175,
       },
       {
         name: "Ennai Kadalai",
@@ -477,11 +338,52 @@ const catalog: SeedCategory[] = [
         slug: "ennai-kadalai",
         description:
           "Golden oil-fried peanuts with salt and a hint of garlic — simple and perfect.",
-        variants: [
-          { label: "200 g", price: r(50), stock: 60 },
-          { label: "500 g", price: r(125), stock: 40 },
-          { label: "1 kg", price: r(250), stock: 20 },
-        ],
+        basePackG: 200,
+        costPerKg: 200,
+      },
+    ],
+  },
+  {
+    name: "Halwa",
+    tamilName: "அல்வா",
+    slug: "halwa",
+    products: [
+      {
+        name: "Ney Alva",
+        tamilName: "நெய் அல்வா",
+        slug: "ney-alva",
+        description:
+          "Rich ghee halwa slow-cooked to a glossy, melt-in-the-mouth finish — a festive Tirunelveli-style treat.",
+        basePackG: 250,
+        costPerKg: 280,
+        featured: true,
+      },
+      {
+        name: "Wheat Halwa",
+        tamilName: "கோதுமை அல்வா",
+        slug: "wheat-halwa",
+        description: "Glossy, ghee-rich wheat halwa slow-cooked the Tirunelveli way.",
+        basePackG: 250,
+        costPerKg: 240,
+        inactive: true,
+      },
+      {
+        name: "Carrot Halwa",
+        tamilName: "கேரட் அல்வா",
+        slug: "carrot-halwa",
+        description: "Classic carrot halwa with ghee, milk and cashew.",
+        basePackG: 250,
+        costPerKg: 240,
+        inactive: true,
+      },
+      {
+        name: "Karupatti Halwa",
+        tamilName: "கருப்பட்டி அல்வா",
+        slug: "karupatti-halwa",
+        description: "Halwa sweetened with palm jaggery — earthy, deep and rich.",
+        basePackG: 250,
+        costPerKg: 260,
+        inactive: true,
       },
     ],
   },
@@ -507,6 +409,10 @@ async function main() {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     await prisma.setting.upsert({ where: { key }, update: {}, create: { key, value } });
   }
+  const roundSetting = await prisma.setting.findUnique({
+    where: { key: SETTINGS.ROUND_TO_FIVE },
+  });
+  const roundToFive = roundSetting?.value !== "0";
 
   // --- Catalog ---
   let catSort = 0;
@@ -533,8 +439,8 @@ async function main() {
           isFeatured: p.featured ?? false,
           isFlagship: p.flagship ?? false,
           categoryId: category.id,
-          purchasePricePerKg: WHOLESALE_PER_KG[p.slug] ? r(WHOLESALE_PER_KG[p.slug]) : null,
-          profitMarginPct: WHOLESALE_PER_KG[p.slug] ? DEFAULT_MARGIN_PCT : null,
+          purchasePricePerKg: r(p.costPerKg),
+          profitMarginPct: DEFAULT_MARGIN,
         },
         create: {
           name: p.name,
@@ -545,12 +451,12 @@ async function main() {
           isFlagship: p.flagship ?? false,
           isActive: !p.inactive,
           categoryId: category.id,
-          purchasePricePerKg: WHOLESALE_PER_KG[p.slug] ? r(WHOLESALE_PER_KG[p.slug]) : null,
-          profitMarginPct: WHOLESALE_PER_KG[p.slug] ? DEFAULT_MARGIN_PCT : null,
+          purchasePricePerKg: r(p.costPerKg),
+          profitMarginPct: DEFAULT_MARGIN,
         },
       });
 
-      // Attach the photo; replace an old .svg placeholder if one is present
+      // Attach / refresh the product photo
       const firstImage = await prisma.productImage.findFirst({
         where: { productId: product.id },
         orderBy: { sortOrder: "asc" },
@@ -559,27 +465,31 @@ async function main() {
         await prisma.productImage.create({
           data: { productId: product.id, url: `/products/${p.slug}.webp`, sortOrder: 0 },
         });
-      } else if (firstImage.url.endsWith(".svg")) {
-        await prisma.productImage.update({
-          where: { id: firstImage.id },
-          data: { url: `/products/${p.slug}.webp` },
-        });
       }
 
-      let vSort = 0;
-      for (const v of applyBulkDiscounts(p.variants)) {
-        const sku = `${p.slug}-${v.label.replace(/\s+/g, "").toLowerCase()}`;
+      // Variants derived from cost + margin (with bulk discounts)
+      const weights = weightsFor(p.basePackG);
+      const priced = applyMarginPricing(
+        weights.map((w) => w.label),
+        r(p.costPerKg),
+        DEFAULT_MARGIN,
+        { roundToFive }
+      );
+      for (const [i, w] of weights.entries()) {
+        const pv = priced[i];
+        if (!pv) continue;
+        const sku = `${p.slug}-${w.label.replace(/\s+/g, "").toLowerCase()}`;
         await prisma.productVariant.upsert({
           where: { sku },
-          update: { price: v.price, mrp: v.mrp ?? null },
+          update: { price: pv.price, mrp: pv.mrp, isActive: true },
           create: {
             productId: product.id,
-            label: v.label,
-            price: v.price,
-            mrp: v.mrp ?? null,
-            stock: v.stock,
+            label: w.label,
+            price: pv.price,
+            mrp: pv.mrp,
+            stock: p.inactive ? 0 : (STOCK_BY_INDEX[i] ?? 12),
             sku,
-            sortOrder: vSort++,
+            sortOrder: i,
           },
         });
       }
@@ -589,6 +499,7 @@ async function main() {
   const counts = {
     categories: await prisma.category.count(),
     products: await prisma.product.count(),
+    activeProducts: await prisma.product.count({ where: { isActive: true } }),
     variants: await prisma.productVariant.count(),
   };
   console.log("Seeded:", counts);

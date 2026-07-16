@@ -76,10 +76,10 @@ export function CartView({
                     {item.productName}
                   </Link>
                   <p className="text-sm text-muted-foreground">{item.variantLabel}</p>
-                  {packNote(item.variantLabel) && (
+                  {packNote(item.variantLabel, item.packetGrams) && (
                     <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-gold-100 px-2 py-0.5 text-xs font-medium text-gold-800 dark:bg-gold-950/60 dark:text-gold-300">
                       <Package className="size-3" />
-                      Delivered as {packNote(item.variantLabel)} for freshness
+                      Delivered as {packNote(item.variantLabel, item.packetGrams)} for freshness
                     </p>
                   )}
                   <p className="mt-1 text-sm font-semibold">{formatINR(item.price)}</p>

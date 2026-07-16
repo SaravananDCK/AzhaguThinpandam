@@ -144,11 +144,12 @@ model OrderItem {
   variantId    String?
   variant      ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
   // snapshots so the order stays intact if products change
-  productName  String
-  variantLabel String
-  image        String?
-  price        Int // unit price in paise at time of order
-  qty          Int
+  productName   String
+  variantLabel  String
+  image         String?
+  price         Int // unit price in paise at time of order
+  qty           Int
+  basePackGrams Int? // base packet size for the "N × Ng packets" delivery note
 }
 
 model Payment {

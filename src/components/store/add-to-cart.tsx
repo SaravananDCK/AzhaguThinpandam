@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/money";
-import { packNote } from "@/lib/pack";
+import { basePacketGrams, packNote } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ export function AddToCart({ productSlug, productName, tamilName, image, variants
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const [qty, setQty] = useState(1);
   const addItem = useCart((s) => s.addItem);
+  const packetGrams = basePacketGrams(variants.map((v) => v.label));
 
   if (!variants.length) {
     return <p className="text-sm text-muted-foreground">Currently unavailable.</p>;
@@ -84,10 +85,10 @@ export function AddToCart({ productSlug, productName, tamilName, image, variants
         </div>
       )}
 
-      {selected && packNote(selected.label) && (
+      {selected && packNote(selected.label, packetGrams) && (
         <p className="inline-flex items-center gap-1.5 rounded-md bg-gold-100 px-3 py-1.5 text-sm font-medium text-gold-800 dark:bg-gold-950/60 dark:text-gold-300">
-          <Package className="size-4 shrink-0" /> Delivered as {packNote(selected.label)} for
-          freshness
+          <Package className="size-4 shrink-0" /> Delivered as{" "}
+          {packNote(selected.label, packetGrams)} for freshness
         </p>
       )}
 
@@ -138,6 +139,7 @@ export function AddToCart({ productSlug, productName, tamilName, image, variants
                 price: selected.price,
                 image,
                 maxStock: selected.stock,
+                packetGrams,
               },
               qty
             );

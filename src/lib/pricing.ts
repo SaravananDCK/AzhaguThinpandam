@@ -4,7 +4,11 @@
 // undercut. The smallest pack anchors the per-gram rate; larger packs get the
 // standard bulk discounts, with the exact linear price stored as mrp.
 
-export const BULK_DISCOUNTS: Record<number, number> = { 500: 0.05, 1000: 0.1 };
+// The two largest weight packs are discounted off their linear price: the
+// biggest gets LARGEST_DISCOUNT, the next-biggest SECOND_DISCOUNT (skipped if
+// that pack is the base). The exact linear price is stored as MRP.
+export const SECOND_DISCOUNT = 0.05;
+export const LARGEST_DISCOUNT = 0.1;
 
 export function gramsOf(label: string): number | null {
   const m = label.trim().match(/^(\d+(?:\.\d+)?)\s*(g|kg)$/i);
@@ -43,11 +47,15 @@ export function applyMarginPricing(
   const basePrice = roundPrice(retailPerGram * baseGrams);
   const perGram = basePrice / baseGrams;
 
+  // The two largest weight packs get the bulk discount
+  const largestGrams = weighted[weighted.length - 1].g;
+  const secondGrams = weighted.length >= 3 ? weighted[weighted.length - 2].g : null;
+
   return grams.map((g) => {
     if (g === null) return null;
     if (g === baseGrams) return { price: basePrice, mrp: null };
     const linear = Math.round((perGram * g) / 100) * 100; // exact — shown as MRP
-    const discount = BULK_DISCOUNTS[g];
+    const discount = g === largestGrams ? LARGEST_DISCOUNT : g === secondGrams ? SECOND_DISCOUNT : 0;
     if (!discount) return { price: roundPrice(linear), mrp: null };
     return { price: roundPrice(linear * (1 - discount)), mrp: linear };
   });

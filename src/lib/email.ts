@@ -34,7 +34,7 @@ async function sendMail(to: string, subject: string, html: string) {
 function orderItemsTable(items: OrderItem[], order: Order) {
   const rows = items
     .map((i) => {
-      const note = packNote(i.variantLabel);
+      const note = packNote(i.variantLabel, i.basePackGrams ?? undefined);
       return `<tr><td style="padding:6px 12px 6px 0">${i.productName} (${i.variantLabel}${note ? `, ${note}` : ""}) × ${i.qty}</td><td style="padding:6px 0;text-align:right">${formatINR(i.price * i.qty)}</td></tr>`;
     })
     .join("");
