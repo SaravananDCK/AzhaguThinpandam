@@ -34,25 +34,51 @@ export function getFeaturedProducts(take = 8) {
   });
 }
 
-export function getProducts(opts: { categorySlug?: string; q?: string } = {}) {
+function productsWhere(opts: { categorySlug?: string; q?: string }): Prisma.ProductWhereInput {
   const { categorySlug, q } = opts;
+  return {
+    isActive: true,
+    ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { tamilName: { contains: q } },
+            { description: { contains: q } },
+          ],
+        }
+      : {}),
+  };
+}
+
+/** Full unpaginated list — used by Build Your Box (client filters locally). */
+export function getProducts(opts: { categorySlug?: string; q?: string } = {}) {
   return prisma.product.findMany({
-    where: {
-      isActive: true,
-      ...(categorySlug ? { category: { slug: categorySlug } } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q } },
-              { tamilName: { contains: q } },
-              { description: { contains: q } },
-            ],
-          }
-        : {}),
-    },
+    where: productsWhere(opts),
     include: productInclude,
     orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
   });
+}
+
+export const PRODUCTS_PER_PAGE = 24;
+
+/** Paginated listing for /products — scales to large catalogs. */
+export async function getProductsPage(
+  opts: { categorySlug?: string; q?: string; page?: number; perPage?: number } = {}
+) {
+  const where = productsWhere(opts);
+  const perPage = opts.perPage ?? PRODUCTS_PER_PAGE;
+  const total = await prisma.product.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / perPage));
+  const page = Math.min(Math.max(1, opts.page ?? 1), pageCount);
+  const products = await prisma.product.findMany({
+    where,
+    include: productInclude,
+    orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
+    skip: (page - 1) * perPage,
+    take: perPage,
+  });
+  return { products, total, page, perPage, pageCount };
 }
 
 export function getProductBySlug(slug: string) {

@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Gift, Minus, Plus, ShoppingBag } from "lucide-react";
+import { Gift, Minus, Plus, Search, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
 import { activeTier, boxDiscount, nextTier, type BoxTier } from "@/lib/box";
@@ -27,6 +29,24 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
   const [qty, setQtyMap] = useState<Record<string, number>>({});
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+  const categories = useMemo(
+    () => [...new Set(items.map((i) => i.category))],
+    [items]
+  );
+  const visibleItems = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return items.filter((i) => {
+      if (categoryFilter && i.category !== categoryFilter) return false;
+      if (!term) return true;
+      return (
+        i.productName.toLowerCase().includes(term) ||
+        (i.tamilName ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [items, search, categoryFilter]);
 
   const setQty = (id: string, value: number, max: number) =>
     setQtyMap((m) => ({ ...m, [id]: Math.max(0, Math.min(max, value)) }));
@@ -117,9 +137,54 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
         </CardContent>
       </Card>
 
+      {/* Search + category filter */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+            aria-label="Search products in the box builder"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setCategoryFilter(null)}>
+            <Badge
+              variant={!categoryFilter ? "default" : "outline"}
+              className="rounded-full px-3 py-1"
+            >
+              All
+            </Badge>
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategoryFilter((cur) => (cur === c ? null : c))}
+            >
+              <Badge
+                variant={categoryFilter === c ? "default" : "outline"}
+                className="rounded-full px-3 py-1"
+              >
+                {c}
+              </Badge>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Product rows */}
       <div className="divide-y rounded-2xl border">
-        {items.map((item) => {
+        {visibleItems.length === 0 && (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            No products match — clear the search or pick another category.
+            {count > 0 && " Your selections are kept."}
+          </p>
+        )}
+        {visibleItems.map((item) => {
           const q = qty[item.variantId] ?? 0;
           return (
             <div key={item.variantId} className="flex items-center gap-3 p-3">
