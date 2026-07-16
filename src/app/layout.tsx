@@ -80,7 +80,7 @@ export default function RootLayout({
             "@context": "https://schema.org",
             "@type": "OnlineStore",
             name: "AzhaguThinpandam",
-            alternateName: "அழகு தின்பண்டம்",
+            alternateName: "அழகு திண்பண்டம்",
             url: APP_URL,
             logo: `${APP_URL}/logo.png`,
             description:

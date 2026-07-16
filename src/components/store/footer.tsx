@@ -34,7 +34,7 @@ export async function Footer() {
               />
               <div className="flex flex-col leading-tight">
                 <span className="font-heading text-xl font-bold">AzhaguThinpandam</span>
-                <span className="text-xs text-muted-foreground">அழகு தின்பண்டம்</span>
+                <span className="text-xs text-muted-foreground">அழகு திண்பண்டம்</span>
               </div>
             </div>
             <p className="mb-3 font-semibold">The taste of Kovilpatti, delivered.</p>

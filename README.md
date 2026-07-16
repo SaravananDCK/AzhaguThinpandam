@@ -1,4 +1,4 @@
-# AzhaguThinpandam — அழகு தின்பண்டம்
+# AzhaguThinpandam — அழகு திண்பண்டம்
 
 Ecommerce platform for traditional Kovilpatti snacks and sweets — kadalai
 mittai, sev, seeval, mixture, murukku and more. Single Next.js app containing

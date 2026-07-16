@@ -57,7 +57,7 @@ export async function Navbar() {
             <span className="font-heading text-lg font-bold tracking-tight">
               AzhaguThinpandam
             </span>
-            <span className="text-[11px] text-muted-foreground">அழகு தின்பண்டம்</span>
+            <span className="text-[11px] text-muted-foreground">அழகு திண்பண்டம்</span>
           </div>
         </Link>
 

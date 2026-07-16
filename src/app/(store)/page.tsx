@@ -82,7 +82,7 @@ export default async function HomePage() {
           {/* Copy */}
           <div className="max-w-2xl text-center sm:text-left">
             <p className="mb-5 animate-fade-in-up text-xs font-semibold uppercase tracking-[0.35em] text-gold-300">
-              Kovilpatti · அழகு தின்பண்டம்
+              Kovilpatti · அழகு திண்பண்டம்
             </p>
             <h1
               className="mb-6 animate-fade-in-up font-heading text-4xl font-semibold leading-[1.08] sm:text-5xl lg:text-6xl"
