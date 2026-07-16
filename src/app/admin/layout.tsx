@@ -11,6 +11,7 @@ import {
   Settings,
   ShoppingCart,
   Store,
+  Tags,
   Users,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/pricing", label: "Pricing", icon: Tags },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/purchases", label: "Purchases", icon: PackageOpen },
   { href: "/admin/stock", label: "Stock", icon: ArrowLeftRight },
