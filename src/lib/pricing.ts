@@ -1,8 +1,8 @@
 // Margin-based price rule: wholesale cost per kg + target margin % derive the
 // sale price of every gram-labelled variant. The smallest pack anchors the
-// per-gram rate (rounded to a friendly ₹5); larger packs get the standard
-// bulk discounts off the linear price, with the undiscounted linear price
-// stored as mrp for the strike-through display.
+// per-gram rate (rounded to the nearest ₹1 — exact, e.g. ₹220/kg + 60% →
+// 250 g = ₹88); larger packs get the standard bulk discounts off the linear
+// price, with the undiscounted linear price stored as mrp.
 
 export const BULK_DISCOUNTS: Record<number, number> = { 500: 0.05, 1000: 0.1 };
 
@@ -32,8 +32,8 @@ export function applyMarginPricing(
 
   const retailPerGram = (purchasePricePerKg * (1 + profitMarginPct / 100)) / 1000;
   const baseGrams = weighted[0].g;
-  // Anchor: smallest pack rounded to the nearest ₹5
-  const basePrice = Math.max(500, Math.round((retailPerGram * baseGrams) / 500) * 500);
+  // Anchor: smallest pack rounded to the nearest ₹1
+  const basePrice = Math.max(100, Math.round((retailPerGram * baseGrams) / 100) * 100);
   const perGram = basePrice / baseGrams;
 
   return grams.map((g) => {

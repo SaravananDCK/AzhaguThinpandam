@@ -302,10 +302,9 @@ export function ProductForm({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Fills the variant prices below from cost + margin: the smallest pack
-              anchors the rate (rounded to ₹5); 500 g and 1 kg get the standard 5% /
-              10% bulk discount with the undiscounted price as MRP. Review, adjust if
-              needed, then save.
+              Fills the variant prices below from cost + margin (e.g. ₹220/kg + 60% →
+              250 g = ₹88); 500 g and 1 kg get the standard 5% / 10% bulk discount with
+              the undiscounted price as MRP. Review, adjust if needed, then save.
             </p>
           </CardContent>
         </Card>
