@@ -84,6 +84,15 @@ export async function Footer() {
               <li>
                 <FooterLink href="/cart">Cart</FooterLink>
               </li>
+              <li>
+                <FooterLink href="/returns">Return &amp; Cancellation Policy</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/terms">Terms &amp; Conditions</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/privacy-policy">Privacy Policy</FooterLink>
+              </li>
             </ul>
             <h3 className="mb-3 mt-6 font-bold">Contact</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
