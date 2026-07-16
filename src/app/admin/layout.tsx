@@ -11,6 +11,7 @@ import {
   Settings,
   ShoppingCart,
   Store,
+  Users,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/purchases", label: "Purchases", icon: PackageOpen },

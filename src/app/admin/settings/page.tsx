@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { Download } from "lucide-react";
 import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
 import { paiseToRupees } from "@/lib/money";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -31,6 +34,23 @@ export default async function AdminSettingsPage() {
           ),
         }}
       />
+
+      <Card className="max-w-xl">
+        <CardContent className="space-y-3">
+          <p className="font-semibold">Backup</p>
+          <p className="text-sm text-muted-foreground">
+            Download a consistent snapshot of the entire database — products,
+            orders, customers, purchases and expenses. Keep a copy somewhere safe
+            (product photos are backed up separately by the server&apos;s nightly
+            job).
+          </p>
+          <Button asChild variant="outline">
+            <a href="/api/admin/backup" download>
+              <Download className="size-4" /> Download database backup
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

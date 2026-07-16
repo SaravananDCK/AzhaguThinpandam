@@ -460,7 +460,7 @@ const catalog: SeedCategory[] = [
 
 async function main() {
   // --- Admin user ---
-  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? "admin@azhaguthinpandam.in").toLowerCase();
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? "admin@azhaguthinpandam.com").toLowerCase();
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin@123";
   await prisma.user.upsert({
     where: { email: adminEmail },

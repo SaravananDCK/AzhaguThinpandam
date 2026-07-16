@@ -37,7 +37,7 @@ npm run db:seed             # real catalog (K S price list) + admin user
 npm run dev                 # http://localhost:3000
 ```
 
-Seeded admin: `admin@azhaguthinpandam.in` / `Admin@123` → `/admin`
+Seeded admin: `admin@azhaguthinpandam.com` / `Admin@123` → `/admin`
 (on `/login`, use "Store admin? Log in with email")
 
 Customer login is phone + WhatsApp OTP. Without WhatsApp API keys in `.env`,

@@ -187,7 +187,7 @@ scp prisma/dev.db root@YOUR_VPS_IP:/opt/azhagu/data/store.db
 Then restart (`docker compose restart app`) and log in — everything is there.
 Afterwards, in `/admin`: delete any test orders, and change the seeded admin
 password (or create your own admin with the command above and delete the
-seeded `admin@azhaguthinpandam.in` user via Prisma Studio locally first).
+seeded `admin@azhaguthinpandam.com` user via Prisma Studio locally first).
 
 ## 6. Verify the shop end-to-end (test mode)
 
