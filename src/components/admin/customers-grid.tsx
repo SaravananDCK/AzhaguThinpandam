@@ -6,6 +6,7 @@ import DataGrid, {
   Column,
   FilterRow,
   HeaderFilter,
+  Lookup,
   MasterDetail,
   Pager,
   Paging,
@@ -16,6 +17,7 @@ import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
 export type CustomerRow = {
   id: string;
+  type: "REGISTERED" | "GUEST";
   name: string | null;
   phone: string | null;
   email: string | null;
@@ -53,6 +55,25 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
           <span className="font-medium">{data.name ?? <span className="text-muted-foreground">No name yet</span>}</span>
         )}
       />
+      <Column
+        dataField="type"
+        caption="Type"
+        width={120}
+        cellRender={({ value }: { value: CustomerRow["type"] }) => (
+          <Badge variant={value === "REGISTERED" ? "outline" : "secondary"}>
+            {value === "REGISTERED" ? "Registered" : "Guest"}
+          </Badge>
+        )}
+      >
+        <Lookup
+          dataSource={[
+            { value: "REGISTERED", label: "Registered" },
+            { value: "GUEST", label: "Guest" },
+          ]}
+          valueExpr="value"
+          displayExpr="label"
+        />
+      </Column>
       <Column dataField="phone" width={135} allowHeaderFiltering={false} />
       <Column dataField="email" allowHeaderFiltering={false} />
       <Column
