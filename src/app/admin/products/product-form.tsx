@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Category } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -132,6 +132,17 @@ export function ProductForm({
 
   function setVariant(index: number, patch: Partial<VariantRow>) {
     setVariants((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  // Swaps a variant with its neighbour; the save order becomes the display order
+  function moveVariant(index: number, dir: -1 | 1) {
+    setVariants((rows) => {
+      const to = index + dir;
+      if (to < 0 || to >= rows.length) return rows;
+      const next = [...rows];
+      [next[index], next[to]] = [next[to], next[index]];
+      return next;
+    });
   }
 
   async function handleUpload(files: FileList | null) {
@@ -338,8 +349,28 @@ export function ProductForm({
               {variants.map((v, i) => (
                 <div
                   key={v.id ?? `new-${i}`}
-                  className="grid grid-cols-2 items-end gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_100px_100px_80px_1fr_36px]"
+                  className="grid grid-cols-2 items-end gap-2 rounded-lg border p-3 sm:grid-cols-[28px_1fr_100px_100px_80px_1fr_36px]"
                 >
+                  <div className="hidden flex-col sm:flex">
+                    <button
+                      type="button"
+                      className="flex h-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                      disabled={i === 0}
+                      onClick={() => moveVariant(i, -1)}
+                      aria-label="Move variant up"
+                    >
+                      <ChevronUp className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
+                      disabled={i === variants.length - 1}
+                      onClick={() => moveVariant(i, 1)}
+                      aria-label="Move variant down"
+                    >
+                      <ChevronDown className="size-4" />
+                    </button>
+                  </div>
                   <div className="grid gap-1">
                     <Label className="text-xs">Label</Label>
                     <Input
