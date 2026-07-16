@@ -56,6 +56,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
         variants: { where: { isActive: true }, select: { price: true, sortOrder: true } },
       },
     });
+  }, {
+    // Batch price saves fire many of these at once; give them room to queue
+    maxWait: 20000,
+    timeout: 20000,
   });
 
   const prices =

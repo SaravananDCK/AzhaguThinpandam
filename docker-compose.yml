@@ -11,8 +11,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      # These override .env inside the container — paths refer to the volumes below
-      DATABASE_URL: "file:/app/data/store.db"
+      # These override .env inside the container — paths refer to the volumes below.
+      # connection_limit=1 serializes DB access (SQLite is single-writer) so
+      # concurrent writes queue instead of deadlocking.
+      DATABASE_URL: "file:/app/data/store.db?connection_limit=1"
       UPLOADS_DIR: "/app/uploads"
     volumes:
       - ./data:/app/data
