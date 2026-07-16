@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { paiseToRupees, rupeesToPaise } from "@/lib/money";
+import { applyMarginPricing } from "@/lib/pricing";
 
 type VariantRow = {
   id?: string;
@@ -46,6 +47,8 @@ type ProductData = {
   isActive: boolean;
   isFeatured: boolean;
   isFlagship: boolean;
+  purchasePricePerKg: number | null;
+  profitMarginPct: number | null;
   images: { url: string }[];
   variants: {
     id: string;
@@ -78,7 +81,40 @@ export function ProductForm({
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [isFlagship, setIsFlagship] = useState(product?.isFlagship ?? false);
+  const [purchasePerKg, setPurchasePerKg] = useState(
+    product?.purchasePricePerKg ? paiseToRupees(product.purchasePricePerKg) : ""
+  );
+  const [marginPct, setMarginPct] = useState(
+    product?.profitMarginPct != null ? String(product.profitMarginPct) : ""
+  );
   const [images, setImages] = useState<string[]>(product?.images.map((i) => i.url) ?? []);
+  function recalcPrices() {
+    const perKg = rupeesToPaise(purchasePerKg);
+    const margin = parseFloat(marginPct);
+    if (!perKg || perKg <= 0 || !Number.isFinite(margin) || margin < 0) {
+      toast.error("Enter a purchase price (₹/kg) and a profit margin % first.");
+      return;
+    }
+    const priced = applyMarginPricing(variants.map((v) => v.label), perKg, margin);
+    const updated = priced.filter(Boolean).length;
+    if (!updated) {
+      toast.error("No weight-based variants (like “250 g” or “1 kg”) to price.");
+      return;
+    }
+    setVariants((rows) =>
+      rows.map((row, i) => {
+        const p = priced[i];
+        if (!p) return row;
+        return {
+          ...row,
+          priceRupees: paiseToRupees(p.price),
+          mrpRupees: p.mrp ? paiseToRupees(p.mrp) : "",
+        };
+      })
+    );
+    toast.success(`Updated ${updated} variant price${updated === 1 ? "" : "s"} — review and save.`);
+  }
+
   const [variants, setVariants] = useState<VariantRow[]>(
     product?.variants.map((v) => ({
       id: v.id,
@@ -148,6 +184,8 @@ export function ProductForm({
         isActive,
         isFeatured,
         isFlagship,
+        purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
+        profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
         images,
         variants: parsedVariants,
       };
@@ -228,6 +266,47 @@ export function ProductForm({
                 required
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="space-y-3">
+            <p className="font-semibold">Pricing rule</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-2">
+                <Label htmlFor="p-purchase">Purchase price ₹/kg</Label>
+                <Input
+                  id="p-purchase"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={purchasePerKg}
+                  onChange={(e) => setPurchasePerKg(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="p-margin">Profit margin %</Label>
+                <Input
+                  id="p-margin"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={marginPct}
+                  onChange={(e) => setMarginPct(e.target.value)}
+                />
+              </div>
+              <div className="grid content-end">
+                <Button type="button" variant="outline" onClick={recalcPrices}>
+                  Recalculate variant prices
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Fills the variant prices below from cost + margin: the smallest pack
+              anchors the rate (rounded to ₹5); 500 g and 1 kg get the standard 5% /
+              10% bulk discount with the undiscounted price as MRP. Review, adjust if
+              needed, then save.
+            </p>
           </CardContent>
         </Card>
 

@@ -63,6 +63,35 @@ type SeedCategory = {
   products: SeedProduct[];
 };
 
+// Wholesale ₹/kg from the K S price list (13-03-2026); retail = cost + 25%.
+// Stored on each product so the admin "pricing rule" fields come pre-filled.
+const DEFAULT_MARGIN_PCT = 25;
+const WHOLESALE_PER_KG: Record<string, number> = {
+  "kadalai-mittai": 200,
+  "special-kadalai-mittai": 220,
+  "karupatti-kadalai-mittai": 300,
+  "cocoa-mittai": 200,
+  "ellu-mittai": 170,
+  "kadalai-urundai": 200,
+  "ellu-urundai": 180,
+  sev: 150,
+  seeval: 150,
+  "seeni-sev": 160,
+  "karupatti-sev": 160,
+  "pattarai-sev": 180,
+  "pattarai-seeval": 180,
+  "kara-seeval": 180,
+  mixture: 180,
+  "paruvattu-mixture": 180,
+  "ragi-mixture": 180,
+  "omapodi-mixture": 200,
+  "butter-murukku": 200,
+  "kara-boondi": 180,
+  "masala-kadalai": 200,
+  "masala-pori-kadalai": 160,
+  "ennai-kadalai": 200,
+};
+
 const catalog: SeedCategory[] = [
   {
     name: "Mittai & Urundai",
@@ -504,6 +533,8 @@ async function main() {
           isFeatured: p.featured ?? false,
           isFlagship: p.flagship ?? false,
           categoryId: category.id,
+          purchasePricePerKg: WHOLESALE_PER_KG[p.slug] ? r(WHOLESALE_PER_KG[p.slug]) : null,
+          profitMarginPct: WHOLESALE_PER_KG[p.slug] ? DEFAULT_MARGIN_PCT : null,
         },
         create: {
           name: p.name,
@@ -514,6 +545,8 @@ async function main() {
           isFlagship: p.flagship ?? false,
           isActive: !p.inactive,
           categoryId: category.id,
+          purchasePricePerKg: WHOLESALE_PER_KG[p.slug] ? r(WHOLESALE_PER_KG[p.slug]) : null,
+          profitMarginPct: WHOLESALE_PER_KG[p.slug] ? DEFAULT_MARGIN_PCT : null,
         },
       });
 

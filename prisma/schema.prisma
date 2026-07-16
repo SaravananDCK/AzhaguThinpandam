@@ -62,6 +62,9 @@ model Product {
   isActive    Boolean          @default(true)
   isFeatured  Boolean          @default(false)
   isFlagship  Boolean          @default(false) // hero products pinned to the top of listings
+  // Pricing rule: wholesale cost + target margin drive variant sale prices
+  purchasePricePerKg Int? // paise per kg (wholesale cost)
+  profitMarginPct    Float? // e.g. 25 = sell at cost + 25%
   images      ProductImage[]
   variants    ProductVariant[]
   createdAt   DateTime         @default(now())

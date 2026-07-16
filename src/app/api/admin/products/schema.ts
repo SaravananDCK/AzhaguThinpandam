@@ -9,6 +9,8 @@ export const productSchema = z.object({
   isActive: z.boolean(),
   isFeatured: z.boolean(),
   isFlagship: z.boolean().default(false),
+  purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise
+  profitMarginPct: z.number().min(0).max(1000).nullable().optional(),
   images: z.array(z.string().min(1)).max(8),
   variants: z
     .array(

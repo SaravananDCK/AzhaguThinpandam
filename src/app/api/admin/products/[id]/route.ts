@@ -49,6 +49,8 @@ export async function PUT(req: Request, { params }: Ctx) {
         isActive: data.isActive,
         isFeatured: data.isFeatured,
         isFlagship: data.isFlagship,
+        purchasePricePerKg: data.purchasePricePerKg ?? null,
+        profitMarginPct: data.profitMarginPct ?? null,
       },
     });
 
