@@ -16,12 +16,13 @@ export default async function AdminPricingPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Set the wholesale <strong>Purchase ₹/kg</strong> and <strong>Margin %</strong> for
           every product in one place. Edit the cells, then <strong>Save</strong> — each
-          product&apos;s pack prices recalculate from its rule
-          {roundToFive ? " (rounded up to ₹5)" : " (exact to ₹1)"}, with 500 g / 1 kg getting
-          the standard bulk discount. Filter by category to price a whole group at once.
+          product&apos;s pack prices recalculate from its rule, with the largest packs getting
+          the standard bulk discount. Flip the <strong>₹5 rounding</strong> toggle and hit{" "}
+          <strong>Recalculate all prices</strong> to re-apply it across the whole catalog.
+          Filter by category to price a whole group at once.
         </p>
       </div>
-      <PricingGrid />
+      <PricingGrid initialRoundToFive={roundToFive} />
     </div>
   );
 }
