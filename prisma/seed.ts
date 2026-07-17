@@ -500,10 +500,10 @@ async function main() {
   // Grand-opening offer advertised on the homepage banner: 18% off, first
   // purchase only (one redemption per phone number).
   await prisma.coupon.upsert({
-    where: { code: "WELCOME18" },
+    where: { code: "AADIAMARKALAM18" },
     update: {},
     create: {
-      code: "WELCOME18",
+      code: "AADIAMARKALAM18",
       type: "PERCENT",
       value: 18,
       minOrder: 0,

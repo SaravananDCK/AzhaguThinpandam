@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 // Coupons to ensure exist on the live site.
 const COUPONS = [
-  { code: "WELCOME18", type: "PERCENT", value: 18, minOrder: 0, perCustomerLimit: 1, isActive: true },
+  { code: "AADIAMARKALAM18", type: "PERCENT", value: 18, minOrder: 0, perCustomerLimit: 1, isActive: true },
 ];
 
 // Settings to seed only when the key is missing (mirrors prisma/seed.ts).

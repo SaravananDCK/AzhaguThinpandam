@@ -159,7 +159,7 @@ export default async function HomePage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/banners/welcome.webp"
-                alt="Grand Opening Offer — 18% off your first order of Kovilpatti Kadalai Mittai with code WELCOME18"
+                alt="Grand Opening Offer — 18% off your first order of Kovilpatti Kadalai Mittai with code AADIAMARKALAM18"
                 width={1672}
                 height={941}
                 className="w-full transition-transform duration-700 group-hover:scale-[1.02]"
