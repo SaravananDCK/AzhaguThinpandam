@@ -45,6 +45,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY deploy/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY scripts/create-admin.mjs ./scripts/create-admin.mjs
+COPY scripts/seed-live.mjs ./scripts/seed-live.mjs
 # bcryptjs is bundled into the server build, but create-admin.mjs needs it as a
 # resolvable module (it's pure JS with zero dependencies)
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
