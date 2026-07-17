@@ -37,7 +37,9 @@ export function ScrollHeader({ children }: { children: React.ReactNode }) {
   return (
     <header
       data-scrolled={scrolled}
-      className="group/header sticky top-0 z-40 border-b border-border/60 bg-background/85 shadow-sm backdrop-blur-xl"
+      // Transparent, click-through wrapper — the floating pill inside carries the
+      // background/shadow and re-enables pointer events for its own area.
+      className="group/header pointer-events-none sticky top-0 z-40"
     >
       {children}
     </header>

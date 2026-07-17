@@ -175,6 +175,11 @@
   --sidebar-accent-foreground: #6b481d;
   --sidebar-border: #e5e7eb;
   --sidebar-ring: #cf4444;
+  /* Height reserved for the floating nav at rest (its largest state, before it
+     compacts on scroll). Single source of truth so the home hero can bleed up
+     underneath it (see (store)/page.tsx). The large logo sets the height on
+     every breakpoint. */
+  --nav-h: 9rem;
 }
 
 .dark {

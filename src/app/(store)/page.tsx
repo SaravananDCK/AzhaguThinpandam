@@ -71,14 +71,21 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero — rotating lifestyle photos with maroon overlay */}
-      <section className="relative overflow-hidden text-white">
+      {/* Hero — rotating lifestyle photos with maroon overlay. Bleeds up under
+          the transparent floating nav (negative margin = the reserved nav height). */}
+      <section
+        className="relative overflow-hidden text-white"
+        style={{ marginTop: "calc(var(--nav-h) * -1)" }}
+      >
         <HeroSlideshow />
         {/* Legibility overlays: maroon wash from the left, vignette at edges */}
         <div className="absolute inset-0 bg-gradient-to-r from-primary-950/95 via-primary-950/70 to-primary-950/20" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25" />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-4 py-24 sm:py-28 lg:py-36">
+        <div
+          className="relative z-10 mx-auto max-w-6xl px-4 pb-24 sm:pb-28 lg:pb-36"
+          style={{ paddingTop: "calc(var(--nav-h) + 3.5rem)" }}
+        >
           {/* Copy */}
           <div className="max-w-2xl text-center sm:text-left">
             <p className="mb-5 animate-fade-in-up text-xs font-semibold uppercase tracking-[0.35em] text-gold-300">
@@ -142,6 +149,25 @@ export default async function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
+        {/* Grand opening promo banner */}
+        <section className="mt-8 sm:mt-10">
+          <Reveal>
+            <Link
+              href="/products"
+              className="group block overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/banners/welcome.webp"
+                alt="Grand Opening Offer — 18% off your first order of Kovilpatti Kadalai Mittai with code WELCOME18"
+                width={1672}
+                height={941}
+                className="w-full transition-transform duration-700 group-hover:scale-[1.02]"
+              />
+            </Link>
+          </Reveal>
+        </section>
+
         {/* Why us */}
         <section className="mt-16 sm:mt-20">
           <Reveal>
