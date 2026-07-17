@@ -1,0 +1,31 @@
+name: Deploy to VPS
+
+# Auto-deploys on every push to main. The database is a Docker volume on the
+# VPS (not in git), so it is never touched — only code is pulled and the
+# containers are rebuilt. Prisma migrations auto-apply at container start via
+# deploy/docker-entrypoint.sh, so schema changes land without wiping data.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /opt/azhagu
+            git pull --ff-only origin main
+            docker compose up -d --build
+            docker image prune -f
