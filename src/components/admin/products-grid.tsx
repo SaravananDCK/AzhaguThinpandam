@@ -9,6 +9,7 @@ import DataGrid, {
   Pager,
   Paging,
   SearchPanel,
+  StateStoring,
 } from "devextreme-react/data-grid";
 import { Badge } from "@/components/ui/badge";
 
@@ -46,6 +47,8 @@ export function ProductsGrid({ rows }: { rows: ProductRow[] }) {
       hoverStateEnabled
       onRowClick={(e) => router.push(`/admin/products/${e.data.id}`)}
     >
+      {/* Persist filter/search/sort/page across edit-and-back within the session */}
+      <StateStoring enabled type="sessionStorage" storageKey="admin-products-grid" savingTimeout={300} />
       <FilterRow visible />
       <HeaderFilter visible />
       <SearchPanel visible width={240} placeholder="Search products…" />
