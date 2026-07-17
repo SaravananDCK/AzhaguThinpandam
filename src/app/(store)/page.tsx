@@ -6,6 +6,33 @@ import { HeroSlideshow } from "@/components/store/hero-slideshow";
 import { ProductCard } from "@/components/store/product-card";
 import { Reveal } from "@/components/store/reveal";
 import { getCategories, getFeaturedProducts } from "@/lib/queries";
+import { JsonLd } from "@/lib/seo";
+
+// Keyword-rich Q&A targeting "Kovilpatti kadalai mittai" / "kadalai mittai".
+// Rendered visibly AND emitted as FAQPage structured data (both must match for
+// Google's rich results).
+const KOVILPATTI_FAQ = [
+  {
+    q: "What is Kovilpatti kadalai mittai?",
+    a: "Kovilpatti kadalai mittai (also spelt kadalaimittai) is a traditional peanut candy from Kovilpatti in Tamil Nadu — roasted groundnuts set in molten country jaggery and cut into crisp bars. It is so distinctive that “Kovilpatti Kadalai Mittai” carries a Geographical Indication (GI) tag.",
+  },
+  {
+    q: "What makes AzhaguThinpandam's kadalai mittai special?",
+    a: "We make our kadalai mittai in small batches using carefully selected groundnuts and pure country jaggery — no glucose and no additives. Every batch is prepared fresh to order so it reaches you crunchy and aromatic.",
+  },
+  {
+    q: "Do you deliver kadalai mittai across India?",
+    a: "Yes. We pack your Kovilpatti kadalai mittai — along with murukku, sev, seeval and mixture — in sealed, cushioned boxes and ship across India, with free shipping on orders above ₹999.",
+  },
+  {
+    q: "Is kadalai mittai the same as peanut chikki?",
+    a: "It is the Tamil Nadu cousin of chikki. Kadalai mittai is set in country jaggery rather than sugar syrup and made in the distinctive Kovilpatti style, giving it a deeper, caramel-rich flavour.",
+  },
+  {
+    q: "How should I store kadalai mittai to keep it crisp?",
+    a: "Keep it in an airtight container away from moisture and it stays crisp for weeks. Since we make it fresh in small batches, it is best enjoyed within a month.",
+  },
+];
 
 export const metadata: Metadata = {
   title: {
@@ -279,6 +306,56 @@ export default async function HomePage() {
                 </div>
               </Reveal>
             ))}
+          </div>
+        </section>
+
+        {/* SEO content + FAQ — targets "Kovilpatti kadalai mittai" / "kadalai mittai" */}
+        <section className="my-16 sm:my-20">
+          <JsonLd
+            data={{
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: KOVILPATTI_FAQ.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }}
+          />
+          <div className="mx-auto max-w-3xl">
+            <Reveal>
+              <h2 className="font-heading text-3xl font-semibold sm:text-4xl">
+                The home of Kovilpatti Kadalai Mittai
+              </h2>
+              <div className="mt-4 space-y-4 leading-relaxed text-muted-foreground">
+                <p>
+                  AzhaguThinpandam brings you authentic{" "}
+                  <strong className="text-foreground">Kovilpatti kadalai mittai</strong> — the
+                  GI-tagged peanut candy that made this little Tamil Nadu town famous. Made the
+                  traditional way with groundnuts and pure country jaggery, our kadalaimittai is
+                  prepared fresh in small batches and delivered to your doorstep anywhere in India.
+                </p>
+                <p>
+                  Alongside our signature <strong className="text-foreground">kadalai mittai</strong>,
+                  we craft murukku, sev, seeval, mixture and karupatti sweets — the full spread of a
+                  Kovilpatti pettikadai, without shortcuts.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal>
+              <div className="mt-10 divide-y rounded-2xl border">
+                {KOVILPATTI_FAQ.map((f) => (
+                  <details key={f.q} className="group px-5 py-4">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-medium">
+                      {f.q}
+                      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                    </summary>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
 

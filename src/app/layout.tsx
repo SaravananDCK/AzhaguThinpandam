@@ -83,13 +83,33 @@ export default function RootLayout({
             alternateName: "அழகு திண்பண்டம்",
             url: APP_URL,
             logo: `${APP_URL}/logo.png`,
+            image: `${APP_URL}/logo.png`,
             description:
               "Authentic Kovilpatti kadalai mittai (kadalaimittai), murukku, sev, seeval and mixture — made fresh in small batches and delivered across India.",
+            telephone: "+91-93440-22162",
+            priceRange: "₹₹",
+            areaServed: { "@type": "Country", name: "India" },
             address: {
               "@type": "PostalAddress",
               addressLocality: "Kovilpatti",
               addressRegion: "Tamil Nadu",
               addressCountry: "IN",
+            },
+          }}
+        />
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "AzhaguThinpandam",
+            url: APP_URL,
+            potentialAction: {
+              "@type": "SearchAction",
+              target: {
+                "@type": "EntryPoint",
+                urlTemplate: `${APP_URL}/products?q={search_term_string}`,
+              },
+              "query-input": "required name=search_term_string",
             },
           }}
         />
