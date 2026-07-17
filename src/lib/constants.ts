@@ -59,9 +59,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.SHIPPING_FEE]: "6000", // ₹60
   [SETTINGS.FREE_SHIPPING_ABOVE]: "99900", // free shipping above ₹999
   [SETTINGS.LOW_STOCK_THRESHOLD]: "5",
-  // "packs:percent" pairs — discount on the whole order once the cart holds
-  // that many packs. Applied server-side at checkout.
-  [SETTINGS.BOX_TIERS]: "3:10,4:15,6:20",
+  // "kg:percent" pairs — discount on the whole order once the cart's total
+  // weight reaches that many kilograms. Applied server-side at checkout.
+  [SETTINGS.BOX_TIERS]: "1:5,3:10,4:15,6:20",
   // Internal packing cost recorded on each new order (₹, for P&L only)
   [SETTINGS.PACKING_COST]: "0",
   // "1" = computed sale prices ceil to the next ₹5; "0" = exact to the ₹1

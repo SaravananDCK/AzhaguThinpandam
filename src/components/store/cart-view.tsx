@@ -9,7 +9,7 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
-import { activeTier, boxDiscount, nextTier, type BoxTier } from "@/lib/box";
+import { activeTier, boxDiscount, formatKg, nextTier, totalKg, type BoxTier } from "@/lib/box";
 
 export function CartView({
   shippingFee,
@@ -41,10 +41,10 @@ export function CartView({
   }
 
   const subtotal = cartSubtotal(items);
-  const packCount = items.reduce((sum, i) => sum + i.qty, 0);
-  const tier = activeTier(tiers, packCount);
-  const next = nextTier(tiers, packCount);
-  const discount = boxDiscount(tiers, packCount, subtotal);
+  const weightKg = totalKg(items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
+  const tier = activeTier(tiers, weightKg);
+  const next = nextTier(tiers, weightKg);
+  const discount = boxDiscount(tiers, weightKg, subtotal);
   // Shipping threshold applies to the discounted amount (matches the server)
   const discounted = subtotal - discount;
   const freeShipping = discounted >= freeShippingAbove;
@@ -126,7 +126,7 @@ export function CartView({
             <p className="font-semibold">Order Summary</p>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
-                Subtotal ({packCount} pack{packCount !== 1 ? "s" : ""})
+                Subtotal ({formatKg(weightKg)})
               </span>
               <span className="font-medium">{formatINR(subtotal)}</span>
             </div>
@@ -138,10 +138,16 @@ export function CartView({
                 </span>
               </div>
             )}
+            {discount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">After discount</span>
+                <span className="font-medium">{formatINR(discounted)}</span>
+              </div>
+            )}
             {next && (
               <p className="flex items-center gap-1.5 rounded-md bg-primary-50 px-2.5 py-2 text-xs font-medium text-primary-800 dark:bg-primary-950/60 dark:text-primary-300">
                 <Gift className="size-3.5 shrink-0" />
-                Add {next.count - packCount} more pack{next.count - packCount > 1 ? "s" : ""} to{" "}
+                Add {formatKg(next.count - weightKg)} more to{" "}
                 {tier ? `bump your discount to ${next.percent}%` : `unlock ${next.percent}% off`}
               </p>
             )}
@@ -169,13 +175,14 @@ export function CartView({
               <div className="space-y-1.5 rounded-md bg-gold-100 px-2.5 py-2 dark:bg-gold-950/60">
                 <p className="flex items-center gap-1.5 text-xs font-medium text-gold-800 dark:text-gold-300">
                   <Truck className="size-3.5 shrink-0" />
-                  Add {formatINR(remaining)} more for FREE shipping (orders above{" "}
+                  Add {formatINR(remaining)} more for FREE shipping (on your{" "}
+                  {discount > 0 ? "after-discount total" : "order"} above{" "}
                   {formatINR(freeShippingAbove)})
                 </p>
                 <div className="h-1.5 overflow-hidden rounded-full bg-gold-200 dark:bg-gold-900">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-[width] duration-500"
-                    style={{ width: `${Math.min(100, (subtotal / freeShippingAbove) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (discounted / freeShippingAbove) * 100)}%` }}
                   />
                 </div>
               </div>

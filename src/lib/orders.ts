@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { computeShippingFee, getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
-import { boxDiscount } from "@/lib/box";
+import { boxDiscount, totalKg } from "@/lib/box";
+import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { basePacketGrams } from "@/lib/pack";
 import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
@@ -10,6 +11,7 @@ import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
 export const checkoutSchema = z.object({
   email: z.string().email().max(200),
   notes: z.string().max(500).optional(),
+  couponCode: z.string().trim().max(40).optional().or(z.literal("")),
   address: z.object({
     name: z.string().trim().min(2).max(100),
     phone: z
@@ -86,11 +88,31 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
 
   const subtotal = lines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
 
-  // Tiered bundle discount: N packs (any mix) → % off the whole order.
+  // Tiered bundle discount: total weight (kg, any mix) → % off the whole order.
   // Computed here, never trusted from the client.
-  const packCount = lines.reduce((sum, l) => sum + l.qty, 0);
+  const boxKg = totalKg(lines.map((l) => ({ label: l.variant.label, qty: l.qty })));
   const tiers = await getBoxTiers();
-  const discount = boxDiscount(tiers, packCount, subtotal);
+  const boxDiscountAmt = boxDiscount(tiers, boxKg, subtotal);
+
+  // Coupon (optional). The customer gets whichever is larger — the coupon or
+  // the box discount, never both. An invalid coupon fails the checkout so the
+  // total the customer sees always matches.
+  let discount = boxDiscountAmt;
+  let couponId: string | null = null;
+  let couponCode: string | null = null;
+  if (input.couponCode) {
+    const result = await validateCoupon({
+      code: input.couponCode,
+      subtotal,
+      phone: input.address.phone,
+    });
+    if (!result.ok) throw new CheckoutError(result.error);
+    if (result.discount > boxDiscountAmt) {
+      discount = result.discount;
+      couponId = result.coupon.id;
+      couponCode = result.coupon.code;
+    }
+  }
 
   const shippingConfig = await getShippingConfig();
   const shippingFee = computeShippingFee(subtotal - discount, shippingConfig);
@@ -118,6 +140,8 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
       shippingFee,
       total,
       packingCost,
+      couponId,
+      couponCode,
       notes: input.notes || null,
       items: {
         create: lines.map((l) => ({
@@ -191,6 +215,15 @@ export async function markOrderPaid(params: {
         delta: actualDelta,
         reason: STOCK_REASONS.SALE,
         reference: order.orderNumber,
+      });
+    }
+    // Record the coupon redemption (drives the per-customer limit). orderId is
+    // unique, so this is idempotent if the payment flow ever runs twice.
+    if (order.couponId) {
+      await tx.couponRedemption.upsert({
+        where: { orderId: order.id },
+        update: {},
+        create: { couponId: order.couponId, phone: order.shipPhone, orderId: order.id },
       });
     }
     return order;

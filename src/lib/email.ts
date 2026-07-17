@@ -40,7 +40,7 @@ function orderItemsTable(items: OrderItem[], order: Order) {
     .join("");
   const discountRow =
     order.discount > 0
-      ? `<tr><td style="padding:6px 12px 6px 0;border-top:1px solid #ddd">Bundle discount</td><td style="padding:6px 0;text-align:right;border-top:1px solid #ddd;color:#15803d">−${formatINR(order.discount)}</td></tr>`
+      ? `<tr><td style="padding:6px 12px 6px 0;border-top:1px solid #ddd">${order.couponCode ? `Coupon (${order.couponCode})` : "Bundle discount"}</td><td style="padding:6px 0;text-align:right;border-top:1px solid #ddd;color:#15803d">−${formatINR(order.discount)}</td></tr>`
       : "";
   return `<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}
     ${discountRow}

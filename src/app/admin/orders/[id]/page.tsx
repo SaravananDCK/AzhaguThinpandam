@@ -84,7 +84,9 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Bundle discount</span>
+                <span className="text-muted-foreground">
+                  {order.couponCode ? `Coupon (${order.couponCode})` : "Bundle discount"}
+                </span>
                 <span className="font-medium text-green-600 dark:text-green-400">
                   −{formatINR(order.discount)}
                 </span>

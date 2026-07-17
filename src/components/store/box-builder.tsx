@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
-import { activeTier, boxDiscount, nextTier, type BoxTier } from "@/lib/box";
+import { activeTier, boxDiscount, formatKg, nextTier, totalKg, type BoxTier } from "@/lib/box";
 import { cn } from "@/lib/utils";
 
 export type BoxItem = {
@@ -51,20 +51,23 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
   const setQty = (id: string, value: number, max: number) =>
     setQtyMap((m) => ({ ...m, [id]: Math.max(0, Math.min(max, value)) }));
 
-  const { count, subtotal } = useMemo(() => {
-    let count = 0;
+  const { weightKg, subtotal, itemCount } = useMemo(() => {
     let subtotal = 0;
+    let itemCount = 0;
     for (const item of items) {
       const q = qty[item.variantId] ?? 0;
-      count += q;
       subtotal += q * item.price;
+      itemCount += q;
     }
-    return { count, subtotal };
+    const weightKg = totalKg(
+      items.map((i) => ({ label: i.label, qty: qty[i.variantId] ?? 0 }))
+    );
+    return { weightKg, subtotal, itemCount };
   }, [items, qty]);
 
-  const tier = activeTier(tiers, count);
-  const next = nextTier(tiers, count);
-  const discount = boxDiscount(tiers, count, subtotal);
+  const tier = activeTier(tiers, weightKg);
+  const next = nextTier(tiers, weightKg);
+  const discount = boxDiscount(tiers, weightKg, subtotal);
   const maxTierCount = tiers.length ? tiers[tiers.length - 1].count : 0;
 
   function addBoxToCart() {
@@ -105,11 +108,11 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
             {tier
               ? `${tier.percent}% off unlocked!`
               : next
-                ? `Add ${next.count - count} more pack${next.count - count > 1 ? "s" : ""} to unlock ${next.percent}% off`
+                ? `Add ${formatKg(next.count - weightKg)} more to unlock ${next.percent}% off`
                 : "Pick your packs"}
             {tier && next && (
               <span className="font-normal text-muted-foreground">
-                — {next.count - count} more for {next.percent}%
+                — {formatKg(next.count - weightKg)} more for {next.percent}%
               </span>
             )}
           </p>
@@ -117,7 +120,7 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
             <div
               className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-[width] duration-500"
               style={{
-                width: `${maxTierCount ? Math.min(100, (count / maxTierCount) * 100) : 0}%`,
+                width: `${maxTierCount ? Math.min(100, (weightKg / maxTierCount) * 100) : 0}%`,
               }}
             />
           </div>
@@ -127,10 +130,10 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
                 key={t.count}
                 className={cn(
                   "font-medium",
-                  count >= t.count && "text-gold-700 dark:text-gold-400"
+                  weightKg >= t.count && "text-gold-700 dark:text-gold-400"
                 )}
               >
-                {t.count} packs · {t.percent}% off
+                {formatKg(t.count)} · {t.percent}% off
               </span>
             ))}
           </div>
@@ -181,7 +184,7 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
         {visibleItems.length === 0 && (
           <p className="p-6 text-center text-sm text-muted-foreground">
             No products match — clear the search or pick another category.
-            {count > 0 && " Your selections are kept."}
+            {itemCount > 0 && " Your selections are kept."}
           </p>
         )}
         {visibleItems.map((item) => {
@@ -245,7 +248,7 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
           <div className="text-sm">
             <p className="font-semibold">
-              {count} pack{count !== 1 ? "s" : ""} ·{" "}
+              {itemCount} pack{itemCount !== 1 ? "s" : ""} ·{" "}
               {discount > 0 ? (
                 <>
                   <span className="text-muted-foreground line-through">
@@ -263,7 +266,7 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
               </p>
             )}
           </div>
-          <Button size="lg" disabled={count === 0} onClick={addBoxToCart}>
+          <Button size="lg" disabled={itemCount === 0} onClick={addBoxToCart}>
             <ShoppingBag className="size-4" /> Add box to cart
           </Button>
         </div>

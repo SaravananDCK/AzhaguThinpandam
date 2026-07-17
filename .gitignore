@@ -54,3 +54,9 @@ next-env.d.ts
 # sqlite
 prisma/dev.db*
 prisma/*.db*
+
+# local design source files (exported assets live in public/)
+/*.cdr
+/PriceList*.png
+/WelcomeBanner.png
+/Backup_of_*

@@ -25,8 +25,8 @@ export async function saveSettings(formData: FormData) {
   }
 
   const boxTiers = String(formData.get("boxTiers") ?? "").trim();
-  if (boxTiers && !/^\d+\s*:\s*\d+(\s*,\s*\d+\s*:\s*\d+)*$/.test(boxTiers)) {
-    return { error: "Discount tiers must look like 3:10,4:15,6:20 (or be empty)." };
+  if (boxTiers && !/^\d+(?:\.\d+)?\s*:\s*\d+(\s*,\s*\d+(?:\.\d+)?\s*:\s*\d+)*$/.test(boxTiers)) {
+    return { error: "Discount tiers must look like 1:10,2:15,3:20 (kg:percent, or be empty)." };
   }
 
   const values: Record<string, string> = {

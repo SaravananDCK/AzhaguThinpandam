@@ -131,6 +131,12 @@ model Order {
   total       Int // paise (subtotal - discount + shippingFee)
   packingCost Int         @default(0) // paise — internal cost (not charged to customer)
   notes       String?
+  // Coupon snapshot — set only when a coupon actually applied (beat the box
+  // discount). `discount` above holds the winning amount (box vs coupon).
+  couponId    String?
+  coupon      Coupon?     @relation(fields: [couponId], references: [id])
+  couponCode  String?
+  redemption  CouponRedemption?
   items       OrderItem[]
   payment     Payment?
   createdAt   DateTime    @default(now())
@@ -169,6 +175,39 @@ model Payment {
 model Setting {
   key   String @id
   value String
+}
+
+// Discount codes entered at checkout. The applied discount is whichever is
+// larger: this coupon or the weight-based box discount (never both).
+model Coupon {
+  id               String             @id @default(cuid())
+  code             String             @unique // stored uppercase
+  type             String // "PERCENT" | "FLAT"
+  value            Int // PERCENT: whole percent (10 = 10%); FLAT: paise off
+  maxDiscount      Int? // paise — optional cap for PERCENT coupons
+  minOrder         Int                @default(0) // paise — minimum subtotal to qualify
+  perCustomerLimit Int                @default(1) // max redemptions per phone number
+  isActive         Boolean            @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  redemptions      CouponRedemption[]
+  orders           Order[]
+}
+
+// One row per successful redemption (created when the order is paid), so the
+// per-customer limit can be enforced by phone number.
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  phone     String
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([couponId, phone])
 }
 
 // ---- Accounting (admin-only) ----

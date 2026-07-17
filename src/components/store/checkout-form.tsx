@@ -2,8 +2,8 @@
 
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Loader2, Lock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Loader2, Lock, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
-import { activeTier, boxDiscount, type BoxTier } from "@/lib/box";
+import { activeTier, boxDiscount, totalKg, type BoxTier } from "@/lib/box";
 
 declare global {
   interface Window {
@@ -37,15 +37,60 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
   const { items, clear } = useCart();
   const mounted = useMounted();
   const [submitting, setSubmitting] = useState(false);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const subtotal = cartSubtotal(items);
   // Mirrors the server-side math in createOrderFromCart
-  const packCount = items.reduce((sum, i) => sum + i.qty, 0);
-  const tier = activeTier(tiers, packCount);
-  const discount = boxDiscount(tiers, packCount, subtotal);
+  const weightKg = totalKg(items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
+  const tier = activeTier(tiers, weightKg);
+  const boxDisc = boxDiscount(tiers, weightKg, subtotal);
+  // Whichever is larger — coupon or box discount, never both.
+  const couponDisc = coupon?.discount ?? 0;
+  const couponWins = couponDisc > boxDisc;
+  const discount = Math.max(boxDisc, couponDisc);
   const discounted = subtotal - discount;
   const fee = freeShippingAbove > 0 && discounted >= freeShippingAbove ? 0 : shippingFee;
   const total = discounted + fee;
+
+  async function applyCoupon() {
+    const code = couponInput.trim();
+    if (!code) return;
+    setApplyingCoupon(true);
+    setCouponMsg(null);
+    try {
+      const res = await fetch("/api/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal, phone: phoneRef.current?.value?.trim() ?? "" }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setCoupon(null);
+        setCouponMsg(data.error ?? "This coupon isn't valid.");
+      } else {
+        setCoupon({ code: data.code, discount: data.discount });
+        setCouponMsg(
+          data.discount <= boxDisc
+            ? "Your bundle discount is already bigger, so that will be applied."
+            : null
+        );
+      }
+    } catch {
+      setCouponMsg("Couldn't check the coupon. Please try again.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  function removeCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponMsg(null);
+  }
 
   useEffect(() => {
     if (mounted && items.length === 0 && !submitting) router.replace("/cart");
@@ -74,6 +119,9 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
             pincode: form.get("pincode"),
           },
           items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
+          // Only send the coupon when it actually beats the box discount, so a
+          // non-winning (or stale) code never blocks checkout.
+          couponCode: couponWins ? coupon?.code : undefined,
         }),
       });
       const data = await res.json();
@@ -186,6 +234,7 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
                     pattern="[6-9][0-9]{9}"
                     title="10-digit mobile number"
                     defaultValue={defaults.phone}
+                    ref={phoneRef}
                   />
                 </div>
               </div>
@@ -262,12 +311,72 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{formatINR(subtotal)}</span>
             </div>
-            {discount > 0 && tier && (
+
+            {/* Coupon */}
+            {coupon ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-sm dark:border-green-900 dark:bg-green-950/50">
+                <span className="flex items-center gap-1.5 font-medium text-green-700 dark:text-green-300">
+                  <Check className="size-4 shrink-0" /> {coupon.code}
+                </span>
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Remove coupon"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyCoupon();
+                      }
+                    }}
+                    placeholder="Coupon code"
+                    className="h-9 pl-8 uppercase"
+                    aria-label="Coupon code"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={applyCoupon}
+                  disabled={applyingCoupon || !couponInput.trim()}
+                >
+                  {applyingCoupon ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
+            )}
+            {couponMsg && (
+              <p className="text-xs text-muted-foreground">{couponMsg}</p>
+            )}
+
+            {discount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Bundle discount ({tier.percent}%)</span>
+                <span className="text-muted-foreground">
+                  {couponWins
+                    ? `Coupon (${coupon?.code})`
+                    : `Bundle discount${tier ? ` (${tier.percent}%)` : ""}`}
+                </span>
                 <span className="font-semibold text-green-600 dark:text-green-400">
                   −{formatINR(discount)}
                 </span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">After discount</span>
+                <span className="font-medium">{formatINR(discounted)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
@@ -276,7 +385,8 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
             </div>
             {fee > 0 && freeShippingAbove > 0 && (
               <p className="text-xs text-muted-foreground">
-                Free shipping on orders above {formatINR(freeShippingAbove)}
+                Free shipping on {discount > 0 ? "the after-discount total" : "orders"} above{" "}
+                {formatINR(freeShippingAbove)}
               </p>
             )}
             <Separator />

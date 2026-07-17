@@ -5,7 +5,7 @@ import { BoxBuilder } from "@/components/store/box-builder";
 export const metadata: Metadata = {
   title: "Build Your Box",
   description:
-    "Pick any mix of our snacks and sweets — the more packs you add, the bigger your discount.",
+    "Pick any mix of our snacks and sweets — the more you add, the bigger your discount.",
 };
 
 export default async function BuildBoxPage() {
@@ -34,7 +34,7 @@ export default async function BuildBoxPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="font-heading text-2xl font-bold sm:text-3xl">Build Your Box</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Mix and match any packs — the fuller the box, the bigger the discount.
+        Mix and match your favourites — the fuller the box, the bigger the discount.
       </p>
       <BoxBuilder items={items} tiers={tiers} />
     </div>

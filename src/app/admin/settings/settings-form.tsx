@@ -140,12 +140,13 @@ export function SettingsForm({ values }: Props) {
         <CardContent className="space-y-4">
           <p className="font-semibold">Build-your-box discounts</p>
           <div className="grid gap-2">
-            <Label htmlFor="s-tiers">Discount tiers</Label>
+            <Label htmlFor="s-tiers">Weight discount tiers</Label>
             <Input id="s-tiers" name="boxTiers" defaultValue={values.boxTiers} />
             <p className="text-xs text-muted-foreground">
-              Format: <code>packs:percent</code> pairs separated by commas — e.g.{" "}
-              <code>3:10,4:15,6:20</code> means 3+ packs → 10% off, 4+ → 15%, 6+ → 20%.
-              Applies to the whole order. Leave empty to disable.
+              Format: <code>kg:percent</code> pairs separated by commas — e.g.{" "}
+              <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
+              3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
+              the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
             </p>
           </div>
         </CardContent>

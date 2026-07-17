@@ -496,11 +496,28 @@ async function main() {
     }
   }
 
+  // --- Coupons ---
+  // Grand-opening offer advertised on the homepage banner: 18% off, first
+  // purchase only (one redemption per phone number).
+  await prisma.coupon.upsert({
+    where: { code: "WELCOME18" },
+    update: {},
+    create: {
+      code: "WELCOME18",
+      type: "PERCENT",
+      value: 18,
+      minOrder: 0,
+      perCustomerLimit: 1,
+      isActive: true,
+    },
+  });
+
   const counts = {
     categories: await prisma.category.count(),
     products: await prisma.product.count(),
     activeProducts: await prisma.product.count({ where: { isActive: true } }),
     variants: await prisma.productVariant.count(),
+    coupons: await prisma.coupon.count(),
   };
   console.log("Seeded:", counts);
 }
