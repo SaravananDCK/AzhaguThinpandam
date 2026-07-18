@@ -40,6 +40,10 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.BOX_TIERS]: boxTiers,
     [SETTINGS.PACKING_COST]: String(packingCost),
     [SETTINGS.ROUND_TO_FIVE]: formData.get("roundToFive") ? "1" : "0",
+    [SETTINGS.INSTAGRAM_HANDLE]: String(formData.get("instagramHandle") ?? "")
+      .trim()
+      .replace(/^@/, ""),
+    [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
   };
 
   await prisma.$transaction(

@@ -3,10 +3,21 @@ import type { Metadata } from "next";
 import { ArrowRight, HandHeart, Leaf, ShieldCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroSlideshow } from "@/components/store/hero-slideshow";
+import { InstagramReels } from "@/components/store/instagram-reels";
 import { ProductCard } from "@/components/store/product-card";
 import { Reveal } from "@/components/store/reveal";
-import { getCategories, getFeaturedProducts } from "@/lib/queries";
+import { getCategories, getFeaturedProducts, getSettings } from "@/lib/queries";
+import { SETTINGS } from "@/lib/constants";
 import { JsonLd } from "@/lib/seo";
+
+// Reel/post URLs from the setting — one per line or comma-separated.
+function parseReels(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter((s) => /instagram\.com\//i.test(s));
+}
 
 // Keyword-rich Q&A targeting "Kovilpatti kadalai mittai" / "kadalai mittai".
 // Rendered visibly AND emitted as FAQPage structured data (both must match for
@@ -91,10 +102,13 @@ function SectionHeader({
 }
 
 export default async function HomePage() {
-  const [categories, featured] = await Promise.all([
+  const [categories, featured, settings] = await Promise.all([
     getCategories(),
     getFeaturedProducts(8),
+    getSettings(),
   ]);
+  const instaHandle = settings[SETTINGS.INSTAGRAM_HANDLE] ?? "";
+  const instaReels = parseReels(settings[SETTINGS.INSTAGRAM_REELS]);
 
   return (
     <div>
@@ -194,6 +208,9 @@ export default async function HomePage() {
             </Link>
           </Reveal>
         </section>
+
+        {/* Instagram reels (configurable in Admin → Settings) */}
+        <InstagramReels handle={instaHandle} reels={instaReels} />
 
         {/* Why us */}
         <section className="mt-16 sm:mt-20">

@@ -22,6 +22,8 @@ type Props = {
     boxTiers: string;
     packingCostRupees: string;
     roundToFive: boolean;
+    instagramHandle: string;
+    instagramReels: string;
   };
 };
 
@@ -147,6 +149,40 @@ export function SettingsForm({ values }: Props) {
               <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
               3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
               the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Instagram (homepage)</p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-ig-handle">Instagram handle</Label>
+            <Input
+              id="s-ig-handle"
+              name="instagramHandle"
+              defaultValue={values.instagramHandle}
+              placeholder="azhagintamilmozhi05"
+            />
+            <p className="text-xs text-muted-foreground">
+              Username only, without the @. Used for the &ldquo;Follow&rdquo; link. Leave empty to
+              hide the section.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-ig-reels">Featured reel / post links</Label>
+            <Textarea
+              id="s-ig-reels"
+              name="instagramReels"
+              rows={4}
+              defaultValue={values.instagramReels}
+              placeholder="https://www.instagram.com/reel/XXXX/&#10;https://www.instagram.com/reel/YYYY/"
+            />
+            <p className="text-xs text-muted-foreground">
+              One Instagram reel or post URL per line — these are embedded on the homepage.
+              Instagram doesn&apos;t allow pulling a whole profile automatically, so paste the reels
+              you want to feature. Leave empty to show just a &ldquo;Watch on Instagram&rdquo; button.
             </p>
           </div>
         </CardContent>

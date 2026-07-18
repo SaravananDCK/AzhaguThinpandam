@@ -49,6 +49,8 @@ export const SETTINGS = {
   BOX_TIERS: "box_discount_tiers",
   PACKING_COST: "packing_cost_paise",
   ROUND_TO_FIVE: "round_prices_to_five",
+  INSTAGRAM_HANDLE: "instagram_handle",
+  INSTAGRAM_REELS: "instagram_reels",
 } as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
@@ -66,6 +68,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.PACKING_COST]: "0",
   // "1" = computed sale prices ceil to the next ₹5; "0" = exact to the ₹1
   [SETTINGS.ROUND_TO_FIVE]: "1",
+  // Instagram handle (no @) for the homepage "Follow" link + section heading
+  [SETTINGS.INSTAGRAM_HANDLE]: "azhagintamilmozhi05",
+  // Reel/post URLs to feature on the homepage — one per line (or comma-separated)
+  [SETTINGS.INSTAGRAM_REELS]: "",
 };
 
 // Suggested expense categories for the accounting module

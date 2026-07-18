@@ -33,6 +33,8 @@ export default async function AdminSettingsPage() {
             parseInt(settings[SETTINGS.PACKING_COST], 10) || 0
           ),
           roundToFive: settings[SETTINGS.ROUND_TO_FIVE] !== "0",
+          instagramHandle: settings[SETTINGS.INSTAGRAM_HANDLE] ?? "",
+          instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
         }}
       />
 
