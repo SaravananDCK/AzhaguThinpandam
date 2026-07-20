@@ -35,6 +35,7 @@ export default async function AdminSettingsPage() {
           roundToFive: settings[SETTINGS.ROUND_TO_FIVE] !== "0",
           instagramHandle: settings[SETTINGS.INSTAGRAM_HANDLE] ?? "",
           instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
+          preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
         }}
       />
 

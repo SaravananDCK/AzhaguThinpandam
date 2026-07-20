@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getBoxTiers, getShippingConfig } from "@/lib/queries";
+import { getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
+import { SETTINGS } from "@/lib/constants";
 import { CheckoutForm } from "@/components/store/checkout-form";
 
 export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
-  const [session, shippingConfig, tiers] = await Promise.all([
+  const [session, shippingConfig, tiers, settings] = await Promise.all([
     auth(),
     getShippingConfig(),
     getBoxTiers(),
+    getSettings(),
   ]);
+  const preLaunchNotice = (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim();
 
   let defaults: {
     email?: string;
@@ -50,6 +53,7 @@ export default async function CheckoutPage() {
         tiers={tiers}
         defaults={defaults}
         loggedIn={Boolean(session?.user)}
+        preLaunchNotice={preLaunchNotice}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import {
   CheckoutError,
 } from "@/lib/orders";
 import { getRazorpay, isRazorpayConfigured } from "@/lib/razorpay";
+import { getSettings } from "@/lib/queries";
+import { SETTINGS } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +18,13 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? "Invalid checkout details.";
       return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    // Pre-launch gate — refuse orders while the inauguration notice is set.
+    const settings = await getSettings();
+    const preLaunch = (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim();
+    if (preLaunch) {
+      return NextResponse.json({ error: preLaunch }, { status: 403 });
     }
 
     const session = await auth();

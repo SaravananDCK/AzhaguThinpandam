@@ -24,6 +24,7 @@ type Props = {
     roundToFive: boolean;
     instagramHandle: string;
     instagramReels: string;
+    preLaunchNotice: string;
   };
 };
 
@@ -149,6 +150,27 @@ export function SettingsForm({ values }: Props) {
               <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
               3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
               the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Pre-launch notice</p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-prelaunch">Order-time message</Label>
+            <Textarea
+              id="s-prelaunch"
+              name="preLaunchNotice"
+              rows={2}
+              defaultValue={values.preLaunchNotice}
+              placeholder="Our grand inauguration is on 3rd August 2026!"
+            />
+            <p className="text-xs text-muted-foreground">
+              While this is set, clicking <strong>Pay</strong> shows this message instead of taking
+              payment. <strong>Clear the box and save</strong> to enable real checkout once your
+              payment gateway is live.
             </p>
           </div>
         </CardContent>

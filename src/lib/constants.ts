@@ -51,6 +51,7 @@ export const SETTINGS = {
   ROUND_TO_FIVE: "round_prices_to_five",
   INSTAGRAM_HANDLE: "instagram_handle",
   INSTAGRAM_REELS: "instagram_reels",
+  PRE_LAUNCH_NOTICE: "pre_launch_notice",
 } as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
@@ -72,6 +73,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.INSTAGRAM_HANDLE]: "azhagintamilmozhi05",
   // Reel/post URLs to feature on the homepage — one per line (or comma-separated)
   [SETTINGS.INSTAGRAM_REELS]: "",
+  // Pre-launch gate: when non-empty, placing an order shows this notice instead
+  // of taking payment. Clear it once the payment platform is live.
+  [SETTINGS.PRE_LAUNCH_NOTICE]:
+    "Our grand inauguration is on 3rd August 2026! 🎉 Online ordering opens then — thank you for your patience.",
 };
 
 // Suggested expense categories for the accounting module

@@ -3,10 +3,16 @@
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Lock, Tag, X } from "lucide-react";
+import { Check, Loader2, Lock, PartyPopper, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,13 +36,23 @@ type Props = {
     Record<"email" | "name" | "phone" | "line1" | "line2" | "city" | "state" | "pincode", string>
   >;
   loggedIn: boolean;
+  // When set (pre-launch), placing an order shows this notice instead of paying.
+  preLaunchNotice?: string;
 };
 
-export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, loggedIn }: Props) {
+export function CheckoutForm({
+  shippingFee,
+  freeShippingAbove,
+  tiers,
+  defaults,
+  loggedIn,
+  preLaunchNotice,
+}: Props) {
   const router = useRouter();
   const { items, clear } = useCart();
   const mounted = useMounted();
   const [submitting, setSubmitting] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
   const phoneRef = useRef<HTMLInputElement>(null);
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
@@ -100,6 +116,11 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Pre-launch: don't place the order, just show the inauguration notice.
+    if (preLaunchNotice) {
+      setNoticeOpen(true);
+      return;
+    }
     const form = new FormData(e.currentTarget);
     setSubmitting(true);
     try {
@@ -411,6 +432,24 @@ export function CheckoutForm({ shippingFee, freeShippingAbove, tiers, defaults, 
           </CardContent>
         </Card>
       </form>
+
+      {/* Pre-launch inauguration notice (shown instead of taking payment) */}
+      <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="items-center text-center">
+            <span className="mb-2 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <PartyPopper className="size-7" />
+            </span>
+            <DialogTitle className="font-heading text-xl">Launching soon!</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm leading-relaxed text-muted-foreground">
+            {preLaunchNotice}
+          </p>
+          <Button className="mt-2 w-full" onClick={() => setNoticeOpen(false)}>
+            Got it
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

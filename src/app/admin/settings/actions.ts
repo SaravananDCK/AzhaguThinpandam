@@ -44,6 +44,7 @@ export async function saveSettings(formData: FormData) {
       .trim()
       .replace(/^@/, ""),
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
+    [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
   };
 
   await prisma.$transaction(
