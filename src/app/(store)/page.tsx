@@ -108,7 +108,8 @@ export default async function HomePage() {
     getSettings(),
   ]);
   const instaHandle = settings[SETTINGS.INSTAGRAM_HANDLE] ?? "";
-  const instaReels = parseReels(settings[SETTINGS.INSTAGRAM_REELS]);
+  // Show the latest 3 (paste newest-first in Admin → Settings)
+  const instaReels = parseReels(settings[SETTINGS.INSTAGRAM_REELS]).slice(0, 3);
 
   return (
     <div>

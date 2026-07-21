@@ -202,9 +202,10 @@ export function SettingsForm({ values }: Props) {
               placeholder="https://www.instagram.com/reel/XXXX/&#10;https://www.instagram.com/reel/YYYY/"
             />
             <p className="text-xs text-muted-foreground">
-              One Instagram reel or post URL per line — these are embedded on the homepage.
-              Instagram doesn&apos;t allow pulling a whole profile automatically, so paste the reels
-              you want to feature. Leave empty to show just a &ldquo;Watch on Instagram&rdquo; button.
+              One Instagram reel or post URL per line — the <strong>latest 3</strong> are embedded on
+              the homepage (paste newest first). Instagram doesn&apos;t allow pulling a whole profile
+              automatically, so list the reels you want to feature. Leave empty to show just a
+              &ldquo;Watch on Instagram&rdquo; button.
             </p>
           </div>
         </CardContent>
