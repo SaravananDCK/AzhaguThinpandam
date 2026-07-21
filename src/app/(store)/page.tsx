@@ -28,7 +28,7 @@ const KOVILPATTI_FAQ = [
     a: "Kovilpatti kadalai mittai (also spelt kadalaimittai) is a traditional peanut candy from Kovilpatti in Tamil Nadu — roasted groundnuts set in molten country jaggery and cut into crisp bars. It is so distinctive that “Kovilpatti Kadalai Mittai” carries a Geographical Indication (GI) tag.",
   },
   {
-    q: "What makes AzhaguThinpandam's kadalai mittai special?",
+    q: "What makes Azhagu Thinpandam's kadalai mittai special?",
     a: "We make our kadalai mittai in small batches using carefully selected groundnuts and pure country jaggery — no glucose and no additives. Every batch is prepared fresh to order so it reaches you crunchy and aromatic.",
   },
   {
@@ -48,7 +48,7 @@ const KOVILPATTI_FAQ = [
 export const metadata: Metadata = {
   title: {
     absolute:
-      "Kovilpatti Kadalai Mittai Online | AzhaguThinpandam — Traditional Tamil Snacks & Sweets",
+      "Kovilpatti Kadalai Mittai Online | Azhagu Thinpandam — Traditional Tamil Snacks & Sweets",
   },
   description:
     "The home of authentic Kovilpatti kadalai mittai (kadalaimittai) — peanut candy set in country jaggery. Plus murukku, sev, seeval, mixture and karupatti sweets, made fresh and delivered across India.",
@@ -317,7 +317,7 @@ export default async function HomePage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/showcase/showcase-${n}.webp`}
-                    alt="AzhaguThinpandam snacks showcase"
+                    alt="Azhagu Thinpandam snacks showcase"
                     className="aspect-square size-full object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                   />
@@ -347,7 +347,7 @@ export default async function HomePage() {
               </h2>
               <div className="mt-4 space-y-4 leading-relaxed text-muted-foreground">
                 <p>
-                  AzhaguThinpandam brings you authentic{" "}
+                  Azhagu Thinpandam brings you authentic{" "}
                   <strong className="text-foreground">Kovilpatti kadalai mittai</strong> — the
                   GI-tagged peanut candy that made this little Tamil Nadu town famous. Made the
                   traditional way with groundnuts and pure country jaggery, our kadalaimittai is

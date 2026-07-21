@@ -6,13 +6,13 @@ import { SETTINGS } from "@/lib/constants";
 export const metadata: Metadata = {
   title: "Contact Us",
   description:
-    "Get in touch with AzhaguThinpandam — phone, WhatsApp, email and business address for our Kovilpatti snacks and sweets store.",
+    "Get in touch with Azhagu Thinpandam — phone, WhatsApp, email and business address for our Kovilpatti snacks and sweets store.",
   alternates: { canonical: "/contact" },
 };
 
 export default async function ContactPage() {
   const settings = await getSettings();
-  const name = settings[SETTINGS.STORE_NAME] || "AzhaguThinpandam";
+  const name = settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam";
   const phone = settings[SETTINGS.STORE_PHONE];
   const email = settings[SETTINGS.STORE_EMAIL];
   const address = settings[SETTINGS.STORE_ADDRESS];

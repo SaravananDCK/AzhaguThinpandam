@@ -103,7 +103,7 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
         setBusy(false);
         return;
       }
-      toast.success("Welcome to AzhaguThinpandam!");
+      toast.success("Welcome to Azhagu Thinpandam!");
       router.push(callbackUrl);
       router.refresh();
     } catch {

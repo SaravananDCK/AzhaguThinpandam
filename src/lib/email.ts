@@ -51,7 +51,7 @@ function orderItemsTable(items: OrderItem[], order: Order) {
 
 function wrap(content: string) {
   return `<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:24px;color:#292524">
-    <h2 style="color:#8f1e1e;margin:0 0 4px">AzhaguThinpandam</h2>
+    <h2 style="color:#8f1e1e;margin:0 0 4px">Azhagu Thinpandam</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#78716c">அழகு திண்பண்டம் — Traditional Tamil Snacks</p>
     ${content}
     <p style="margin-top:28px;font-size:12px;color:#78716c">Questions? Just reply to this email.</p>

@@ -34,7 +34,7 @@ async function sendTwilioOtp(phone: string, code: string): Promise<void> {
     params.set("ContentVariables", JSON.stringify({ "1": code }));
   } else {
     // Freeform body — works in the Twilio sandbox / open sessions only
-    params.set("Body", `${code} is your AzhaguThinpandam login code. Valid for 5 minutes.`);
+    params.set("Body", `${code} is your Azhagu Thinpandam login code. Valid for 5 minutes.`);
   }
 
   const res = await fetch(

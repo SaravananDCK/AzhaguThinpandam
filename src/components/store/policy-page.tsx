@@ -8,7 +8,7 @@ export async function PolicyContact() {
   const address = settings[SETTINGS.STORE_ADDRESS];
   return (
     <>
-      {settings[SETTINGS.STORE_NAME] || "AzhaguThinpandam"}
+      {settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam"}
       {address ? `, ${address}` : ""}
       {phone ? ` · Phone/WhatsApp: ${phone}` : ""}
       {email ? ` · Email: ${email}` : ""}

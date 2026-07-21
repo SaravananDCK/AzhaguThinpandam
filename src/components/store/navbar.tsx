@@ -38,7 +38,7 @@ export async function Navbar() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
-                alt="AzhaguThinpandam logo"
+                alt="Azhagu Thinpandam logo"
                 className="size-24 shrink-0 rounded-full shadow-sm transition-all duration-300 group-hover:scale-105 group-data-[scrolled=true]/header:size-11"
               />
             </Link>
@@ -48,8 +48,8 @@ export async function Navbar() {
               {/* Top row */}
               <div className="flex items-center gap-3 group-data-[scrolled=true]/header:gap-2">
                 <Link href="/" className="hidden flex-col leading-tight sm:flex">
-                  <span className="font-heading text-xl font-bold tracking-tight text-primary transition-all duration-300 group-data-[scrolled=true]/header:text-base">
-                    AzhaguThinpandam
+                  <span className="whitespace-nowrap font-heading text-xl font-bold tracking-tight text-primary transition-all duration-300 group-data-[scrolled=true]/header:text-base">
+                    Azhagu Thinpandam
                   </span>
                   <span className="text-xs text-muted-foreground transition-all duration-300 group-data-[scrolled=true]/header:text-[11px]">
                     அழகு திண்பண்டம்

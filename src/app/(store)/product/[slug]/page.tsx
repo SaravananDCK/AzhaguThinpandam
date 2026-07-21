@@ -60,7 +60,7 @@ export default async function ProductPage({ params }: Props) {
           alternateName: product.tamilName ?? undefined,
           description: product.description,
           image: product.images.map((i) => absoluteUrl(i.url)),
-          brand: { "@type": "Brand", name: "AzhaguThinpandam" },
+          brand: { "@type": "Brand", name: "Azhagu Thinpandam" },
           category: product.category.name,
           offers: {
             "@type": "AggregateOffer",

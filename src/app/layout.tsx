@@ -33,8 +33,8 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").rep
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "AzhaguThinpandam — Kovilpatti Kadalai Mittai & Traditional Tamil Snacks",
-    template: "%s | AzhaguThinpandam",
+    default: "Azhagu Thinpandam — Kovilpatti Kadalai Mittai & Traditional Tamil Snacks",
+    template: "%s | Azhagu Thinpandam",
   },
   description:
     "Authentic Kovilpatti kadalai mittai (kadalaimittai), murukku, sev, seeval and mixture — made fresh in small batches and delivered across India.",
@@ -52,10 +52,10 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    siteName: "AzhaguThinpandam",
+    siteName: "Azhagu Thinpandam",
     locale: "en_IN",
     url: APP_URL,
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: "AzhaguThinpandam" }],
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Azhagu Thinpandam" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -79,7 +79,7 @@ export default function RootLayout({
           data={{
             "@context": "https://schema.org",
             "@type": "OnlineStore",
-            name: "AzhaguThinpandam",
+            name: "Azhagu Thinpandam",
             alternateName: "அழகு திண்பண்டம்",
             url: APP_URL,
             logo: `${APP_URL}/logo.png`,
@@ -101,7 +101,7 @@ export default function RootLayout({
           data={{
             "@context": "https://schema.org",
             "@type": "WebSite",
-            name: "AzhaguThinpandam",
+            name: "Azhagu Thinpandam",
             url: APP_URL,
             potentialAction: {
               "@type": "SearchAction",

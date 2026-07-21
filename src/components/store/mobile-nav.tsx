@@ -54,7 +54,7 @@ export function MobileNav({ categories }: { categories: Category[] }) {
           <SheetTitle className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="" className="size-8 rounded-full" />
-            AzhaguThinpandam
+            Azhagu Thinpandam
           </SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-1 overflow-y-auto px-4 pb-6">

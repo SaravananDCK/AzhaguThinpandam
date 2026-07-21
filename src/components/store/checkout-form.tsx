@@ -169,7 +169,7 @@ export function CheckoutForm({
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: "AzhaguThinpandam",
+        name: "Azhagu Thinpandam",
         description: `Order ${data.orderNumber}`,
         order_id: data.razorpayOrderId,
         prefill: { name: data.name, email: data.email, contact: data.phone },

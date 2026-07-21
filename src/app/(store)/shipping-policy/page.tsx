@@ -7,7 +7,7 @@ import { formatINR } from "@/lib/money";
 export const metadata: Metadata = {
   title: "Shipping & Delivery Policy",
   description:
-    "How AzhaguThinpandam ships and delivers your Kovilpatti snacks and sweets across India — dispatch times, delivery timelines, charges and tracking.",
+    "How Azhagu Thinpandam ships and delivers your Kovilpatti snacks and sweets across India — dispatch times, delivery timelines, charges and tracking.",
   alternates: { canonical: "/shipping-policy" },
 };
 

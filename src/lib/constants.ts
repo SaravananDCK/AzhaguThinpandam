@@ -55,7 +55,7 @@ export const SETTINGS = {
 } as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
-  [SETTINGS.STORE_NAME]: "AzhaguThinpandam",
+  [SETTINGS.STORE_NAME]: "Azhagu Thinpandam",
   [SETTINGS.STORE_PHONE]: "93440 22162",
   [SETTINGS.STORE_EMAIL]: "",
   [SETTINGS.STORE_ADDRESS]: "Kovilpatti, Tamil Nadu",

@@ -4,7 +4,7 @@ import { PolicyContact, PolicyLayout } from "@/components/store/policy-page";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How AzhaguThinpandam collects, uses and protects your personal information.",
+    "How Azhagu Thinpandam collects, uses and protects your personal information.",
   alternates: { canonical: "/privacy-policy" },
 };
 
@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
   return (
     <PolicyLayout title="Privacy Policy" updated="16 July 2026">
       <p>
-        AzhaguThinpandam (&ldquo;we&rdquo;, &ldquo;us&rdquo;) respects your privacy.
+        Azhagu Thinpandam (&ldquo;we&rdquo;, &ldquo;us&rdquo;) respects your privacy.
         This policy explains what information we collect when you use our website,
         why we collect it, and how we protect it.
       </p>

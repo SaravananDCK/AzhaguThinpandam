@@ -3,7 +3,7 @@ import { PolicyContact, PolicyLayout } from "@/components/store/policy-page";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
-  description: "Terms and conditions for shopping at AzhaguThinpandam.",
+  description: "Terms and conditions for shopping at Azhagu Thinpandam.",
   alternates: { canonical: "/terms" },
 };
 
@@ -17,7 +17,7 @@ export default function TermsPage() {
 
       <h2>About us</h2>
       <p>
-        AzhaguThinpandam sells traditional Tamil snacks and sweets, prepared in
+        Azhagu Thinpandam sells traditional Tamil snacks and sweets, prepared in
         small batches and shipped across India from Kovilpatti, Tamil Nadu.
       </p>
 

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const r = (rupees: number) => Math.round(rupees * 100); // rupees → paise
 
 // Catalog source: "K S HOME 15.7.26" — Karthick Sweets & Kadalai Mittai,
-// Kovilpatti. The per-kg figures are the SUPPLIER PRICES (what AzhaguThinpandam
+// Kovilpatti. The per-kg figures are the SUPPLIER PRICES (what Azhagu Thinpandam
 // pays Karthick), stored as purchasePricePerKg. Retail variant prices are
 // derived at DEFAULT_MARGIN with the standard bulk discounts, via the shared
 // pricing rule, so Admin → Pricing "Recalculate" reproduces them.

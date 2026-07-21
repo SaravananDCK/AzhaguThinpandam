@@ -53,7 +53,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return {
     title: `All Products — Kovilpatti Snacks & Sweets Online${pageSuffix}`,
     description:
-      "Kadalai mittai, murukku, sev, seeval, mixture and more — the full AzhaguThinpandam range, made fresh in Kovilpatti.",
+      "Kadalai mittai, murukku, sev, seeval, mixture and more — the full Azhagu Thinpandam range, made fresh in Kovilpatti.",
     alternates: {
       canonical: pageNum > 1 ? `/products?page=${pageNum}` : "/products",
     },

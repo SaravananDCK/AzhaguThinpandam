@@ -29,11 +29,11 @@ export async function Footer() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
-                alt="AzhaguThinpandam logo"
+                alt="Azhagu Thinpandam logo"
                 className="size-12 rounded-full shadow-lg"
               />
               <div className="flex flex-col leading-tight">
-                <span className="font-heading text-xl font-bold">AzhaguThinpandam</span>
+                <span className="font-heading text-xl font-bold">Azhagu Thinpandam</span>
                 <span className="text-xs text-muted-foreground">அழகு திண்பண்டம்</span>
               </div>
             </div>
@@ -112,7 +112,7 @@ export async function Footer() {
         {/* Bottom bar */}
         <div className="border-t pt-6">
           <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted-foreground md:flex-row">
-            <p>© {new Date().getFullYear()} AzhaguThinpandam. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Azhagu Thinpandam. All rights reserved.</p>
             <p>Made with தமிழ் pride in Kovilpatti 🥜</p>
             <p className="flex items-center gap-2">
               Crafted by

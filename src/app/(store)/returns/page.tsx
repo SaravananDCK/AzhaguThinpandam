@@ -4,7 +4,7 @@ import { PolicyContact, PolicyLayout } from "@/components/store/policy-page";
 export const metadata: Metadata = {
   title: "Return & Cancellation Policy",
   description:
-    "Cancellations, replacements and refunds at AzhaguThinpandam — how they work for fresh food products.",
+    "Cancellations, replacements and refunds at Azhagu Thinpandam — how they work for fresh food products.",
   alternates: { canonical: "/returns" },
 };
 

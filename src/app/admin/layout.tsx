@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import "devextreme/dist/css/dx.light.css";
 
 export const metadata: Metadata = {
-  title: { default: "Admin", template: "%s | Admin — AzhaguThinpandam" },
+  title: { default: "Admin", template: "%s | Admin — Azhagu Thinpandam" },
   robots: { index: false, follow: false },
 };
 
@@ -49,7 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="" className="size-9 rounded-full" />
           <span>
-            <span className="font-heading font-bold text-primary">AzhaguThinpandam</span>
+            <span className="font-heading font-bold text-primary">Azhagu Thinpandam</span>
             <span className="block text-xs text-muted-foreground">Admin Panel</span>
           </span>
         </Link>
