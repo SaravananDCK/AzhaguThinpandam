@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy-policy" },
 };
 
-// Grievance Officer — update the name here if the registered proprietor differs.
-const GRIEVANCE_OFFICER = "Saravanan";
+// Grievance Officer — the sole proprietor of Azhagu Thinpandam.
+const GRIEVANCE_OFFICER = "Rajalakshmi Saravanan";
 
 export default async function PrivacyPolicyPage() {
   const settings = await getSettings();
@@ -143,7 +143,7 @@ export default async function PrivacyPolicyPage() {
           <strong>Name:</strong> {GRIEVANCE_OFFICER}
         </li>
         <li>
-          <strong>Designation:</strong> Grievance Officer, Azhagu Thinpandam
+          <strong>Designation:</strong> Proprietor &amp; Grievance Officer, Azhagu Thinpandam
         </li>
         <li>
           <strong>Address:</strong> Azhagu Thinpandam, {address}

@@ -25,9 +25,10 @@ export default function TermsPage() {
         &lsquo;Platform&rsquo;).
       </p>
       <p>
-        The Platform is owned by Azhagu Thinpandam, with its registered office at 111-1k-1A,
-        Dwarakamayi, Polpettai, State Bank Colony, Tuticorin-628001 (hereinafter referred to as
-        &lsquo;Platform Owner&rsquo;, &lsquo;we&rsquo;, &lsquo;us&rsquo;, &lsquo;our&rsquo;).
+        The Platform is owned by Azhagu Thinpandam, a sole proprietorship concern of Rajalakshmi
+        Saravanan, with its registered office at 111-1k-1A, Dwarakamayi, Polpettai, State Bank
+        Colony, Tuticorin-628001 (hereinafter referred to as &lsquo;Platform Owner&rsquo;,
+        &lsquo;we&rsquo;, &lsquo;us&rsquo;, &lsquo;our&rsquo;).
       </p>
       <p>
         Your use of the Platform and services and tools are governed by the following terms and
