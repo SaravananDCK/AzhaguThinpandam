@@ -1,72 +1,71 @@
 import type { Metadata } from "next";
-import { PolicyContact, PolicyLayout } from "@/components/store/policy-page";
+import { PolicyLayout } from "@/components/store/policy-page";
 
 export const metadata: Metadata = {
-  title: "Return & Cancellation Policy",
+  title: "Refund, Cancellation & Return Policy",
   description:
-    "Cancellations, replacements and refunds at Azhagu Thinpandam — how they work for fresh food products.",
+    "Cancellations, refunds, replacements and returns at Azhagu Thinpandam.",
   alternates: { canonical: "/returns" },
 };
 
 export default function ReturnsPage() {
   return (
-    <PolicyLayout title="Return & Cancellation Policy" updated="16 July 2026">
-      <h2>Cancelling an order</h2>
-      <ul>
-        <li>
-          You can cancel an order any time <strong>before it is shipped</strong> —
-          contact us on WhatsApp or email with your order number.
-        </li>
-        <li>
-          Cancelled orders are refunded in full to your original payment method,
-          typically within <strong>5–7 business days</strong> (processed via our
-          secure payment gateway).
-        </li>
-        <li>Once an order has shipped, it can no longer be cancelled.</li>
-      </ul>
-
-      <h2>Returns on food products</h2>
+    <PolicyLayout title="Refund, Cancellation &amp; Return Policy" updated="21 July 2026">
+      <h2>Refund and Cancellation policy</h2>
       <p>
-        Because our snacks and sweets are perishable foods made fresh to order, we
-        cannot accept returns of delivered products for change of mind. However, we
-        will always make it right if something is wrong:
+        This refund and cancellation policy outlines how you can cancel or seek a refund for a
+        product/service that you have purchased through the Platform. Under this policy:
       </p>
       <ul>
         <li>
-          <strong>Damaged, spoiled or wrong items</strong> — contact us within{" "}
-          <strong>48 hours of delivery</strong> with your order number and photos of
-          the product and packaging.
+          Cancellations will only be considered if the request is made within 2 days of placing the
+          order. However, cancellation requests may not be entertained if the orders have been
+          communicated to such sellers/merchant(s) listed on the Platform and they have initiated the
+          process of shipping them, or the product is out for delivery. In such an event, you may
+          choose to reject the product at the doorstep.
         </li>
         <li>
-          After a quick review we will send a <strong>free replacement</strong> or
-          issue a <strong>full refund</strong> for the affected items — your choice.
+          Azhagu Thinpandam does not accept cancellation requests for perishable items like flowers,
+          eatables, etc. However, the refund/replacement can be made if the user establishes that the
+          quality of the product delivered is not good.
         </li>
-        <li>No need to ship anything back for perishable items.</li>
-      </ul>
-
-      <h2>Refund timelines</h2>
-      <ul>
-        <li>Refunds are initiated within 2 business days of approval.</li>
         <li>
-          The amount reaches your bank/UPI/card within 5–7 business days, depending
-          on your bank (payment gateway processing timelines apply).
+          In case of receipt of damaged or defective items, please report to our customer service
+          team. The request would be entertained once the seller/merchant listed on the Platform has
+          checked and determined the same at its own end. This should be reported within 2 days of
+          receipt of products. In case you feel that the product received is not as shown on the site
+          or as per your expectations, you must bring it to the notice of our customer service within
+          2 days of receiving the product. The customer service team after looking into your
+          complaint will take an appropriate decision.
+        </li>
+        <li>
+          In case of complaints regarding products that come with a warranty from the manufacturers,
+          please refer the issue to them.
+        </li>
+        <li>
+          In case of any refunds approved by Azhagu Thinpandam, it will take 7 days for the refund to
+          be processed to you.
         </li>
       </ul>
 
-      <h2>Delivery issues</h2>
+      <h2>Return Policy</h2>
       <p>
-        If your order shows as delivered but hasn&apos;t arrived, or is
-        significantly delayed, contact us and we&apos;ll trace it with the courier —
-        lost shipments are replaced or refunded in full.
+        We offer refund/exchange within first 2 days from the date of your purchase. If 2 days have
+        passed since your purchase, you will not be offered a return, exchange or refund of any kind.
+        In order to become eligible for a return or an exchange, (i) the purchased item should be
+        unused and in the same condition as you received it, (ii) the item must have original
+        packaging, (iii) if the item that you purchased was on a sale, then the item may not be
+        eligible for a return/exchange. Further, only such items are replaced by us (based on an
+        exchange request), if such items are found defective or damaged.
       </p>
-
-      <h2>How to reach us</h2>
       <p>
-        <PolicyContact />
-      </p>
-      <p>
-        Quote your order number (starts with <strong>AT-</strong>) — you can find it
-        in your confirmation email or under My Account → Orders.
+        You agree that there may be a certain category of products/items that are exempted from
+        returns or refunds. Such categories of the products would be identified to you at the time of
+        purchase. For exchange/return accepted request(s) (as applicable), once your returned
+        product/item is received and inspected by us, we will send you an email to notify you about
+        receipt of the returned/exchanged product. Further, if the same has been approved after the
+        quality check at our end, your request (i.e. return/exchange) will be processed in accordance
+        with our policies.
       </p>
     </PolicyLayout>
   );
