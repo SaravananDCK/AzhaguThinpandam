@@ -19,8 +19,8 @@ export default function ReturnsPage() {
         </li>
         <li>
           Cancelled orders are refunded in full to your original payment method,
-          typically within <strong>5–7 business days</strong> (processed via
-          Razorpay).
+          typically within <strong>5–7 business days</strong> (processed via our
+          secure payment gateway).
         </li>
         <li>Once an order has shipped, it can no longer be cancelled.</li>
       </ul>
@@ -49,7 +49,7 @@ export default function ReturnsPage() {
         <li>Refunds are initiated within 2 business days of approval.</li>
         <li>
           The amount reaches your bank/UPI/card within 5–7 business days, depending
-          on your bank (Razorpay processing timelines apply).
+          on your bank (payment gateway processing timelines apply).
         </li>
       </ul>
 

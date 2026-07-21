@@ -44,9 +44,9 @@ export default function PrivacyPolicyPage() {
 
       <h2>Payments</h2>
       <p>
-        All payments are processed securely by <strong>Razorpay</strong>. We never
-        see or store your card number, UPI PIN or banking credentials.
-        Razorpay&apos;s handling of your payment data is governed by their own
+        All payments are processed securely by our <strong>PCI-DSS compliant payment
+        gateway</strong>. We never see or store your card number, UPI PIN or banking
+        credentials. The gateway&apos;s handling of your payment data is governed by its own
         privacy policy.
       </p>
 
@@ -54,8 +54,8 @@ export default function PrivacyPolicyPage() {
       <p>
         We share only what is necessary to run the store: your delivery details with
         our courier partners, your phone number with our WhatsApp/SMS service
-        provider to deliver login codes, and payment information with Razorpay. We
-        never sell your personal information to anyone.
+        provider to deliver login codes, and payment information with our payment
+        gateway. We never sell your personal information to anyone.
       </p>
 
       <h2>Data retention &amp; your rights</h2>

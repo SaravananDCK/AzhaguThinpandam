@@ -52,7 +52,7 @@ export async function Footer() {
                   {method}
                 </div>
               ))}
-              <span className="text-xs text-muted-foreground">· secured by Razorpay</span>
+              <span className="text-xs text-muted-foreground">· 100% secure payments</span>
             </div>
           </div>
 
@@ -83,6 +83,12 @@ export async function Footer() {
               </li>
               <li>
                 <FooterLink href="/cart">Cart</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/contact">Contact Us</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/shipping-policy">Shipping &amp; Delivery Policy</FooterLink>
               </li>
               <li>
                 <FooterLink href="/returns">Return &amp; Cancellation Policy</FooterLink>

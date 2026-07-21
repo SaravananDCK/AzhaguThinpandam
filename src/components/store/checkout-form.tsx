@@ -427,7 +427,7 @@ export function CheckoutForm({
               )}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              Secured by Razorpay — UPI, cards, netbanking & wallets
+              Secure payments — UPI, cards, netbanking & wallets
             </p>
           </CardContent>
         </Card>

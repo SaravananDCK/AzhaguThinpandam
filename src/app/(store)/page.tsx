@@ -58,7 +58,7 @@ export const metadata: Metadata = {
 const TRUST_ROW = [
   { Icon: Truck, text: "Free shipping over ₹999" },
   { Icon: HandHeart, text: "Made fresh in small batches" },
-  { Icon: ShieldCheck, text: "Secure payments via Razorpay" },
+  { Icon: ShieldCheck, text: "100% secure payments" },
 ];
 
 const WHY_US = [

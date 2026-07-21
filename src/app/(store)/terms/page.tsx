@@ -33,8 +33,8 @@ export default function TermsPage() {
       <ul>
         <li>All prices are in Indian Rupees (₹) and include applicable taxes.</li>
         <li>
-          Payment is collected at the time of ordering through Razorpay (UPI,
-          cards, netbanking, wallets).
+          Payment is collected at the time of ordering through our secure payment
+          gateway (UPI, cards, netbanking, wallets).
         </li>
         <li>
           Prices, discounts and bundle offers may change at any time; the price
