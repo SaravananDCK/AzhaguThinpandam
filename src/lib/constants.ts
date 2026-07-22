@@ -64,7 +64,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.LOW_STOCK_THRESHOLD]: "5",
   // "kg:percent" pairs — discount on the whole order once the cart's total
   // weight reaches that many kilograms. Applied server-side at checkout.
-  [SETTINGS.BOX_TIERS]: "1:5,3:10,4:15,6:20",
+  [SETTINGS.BOX_TIERS]: "1:3,3:5,4:7,6:10",
   // Internal packing cost recorded on each new order (₹, for P&L only)
   [SETTINGS.PACKING_COST]: "0",
   // "1" = computed sale prices ceil to the next ₹5; "0" = exact to the ₹1

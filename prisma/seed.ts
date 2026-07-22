@@ -479,9 +479,13 @@ async function main() {
         const pv = priced[i];
         if (!pv) continue;
         const sku = `${p.slug}-${w.label.replace(/\s+/g, "").toLowerCase()}`;
+        // Only the base pack (smallest, index 0) is live for now. Larger packs
+        // are kept but hidden — reactivate them in Admin → Products, or flip
+        // this back to `isActive: true` to sell all sizes again.
+        const isBase = i === 0;
         await prisma.productVariant.upsert({
           where: { sku },
-          update: { price: pv.price, mrp: pv.mrp, isActive: true },
+          update: { price: pv.price, mrp: pv.mrp, isActive: isBase },
           create: {
             productId: product.id,
             label: w.label,
@@ -490,6 +494,7 @@ async function main() {
             stock: p.inactive ? 0 : (STOCK_BY_INDEX[i] ?? 12),
             sku,
             sortOrder: i,
+            isActive: isBase,
           },
         });
       }
