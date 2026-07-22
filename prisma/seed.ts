@@ -12,7 +12,7 @@ const r = (rupees: number) => Math.round(rupees * 100); // rupees → paise
 // pays Karthick), stored as purchasePricePerKg. Retail variant prices are
 // derived at DEFAULT_MARGIN with the standard bulk discounts, via the shared
 // pricing rule, so Admin → Pricing "Recalculate" reproduces them.
-const DEFAULT_MARGIN = 60;
+const DEFAULT_MARGIN = 75;
 
 // Larger sizes are delivered as multiple base packets; 200 g products step in
 // 200 g (200/400/600/800/1kg), 250 g products in 250 g (250/500/750/1kg).

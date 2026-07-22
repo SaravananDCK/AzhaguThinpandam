@@ -5,10 +5,13 @@ import { requireAdminApi } from "@/lib/admin";
 import { SETTINGS } from "@/lib/constants";
 import { priceRoundingIsFive, recomputeAllProducts } from "@/lib/pricing-server";
 
-// Optionally set the ₹5-rounding mode, then reprice the whole catalog from each
-// product's stored rule. `roundToFive` is optional — when omitted, the current
-// saved setting is used.
-const bodySchema = z.object({ roundToFive: z.boolean().optional() });
+// Optionally set the ₹5-rounding mode and/or a catalog-wide margin, then reprice
+// the whole catalog from each product's stored rule. Both are optional — when
+// omitted, the current saved setting / each product's stored margin is used.
+const bodySchema = z.object({
+  roundToFive: z.boolean().optional(),
+  setMargin: z.number().min(0).max(1000).optional(),
+});
 
 export async function POST(req: NextRequest) {
   const { response } = await requireAdminApi();
@@ -30,7 +33,15 @@ export async function POST(req: NextRequest) {
   }
 
   const roundToFive = await priceRoundingIsFive();
-  const { productsUpdated, variantsUpdated } = await recomputeAllProducts(roundToFive);
+  const { productsUpdated, variantsUpdated } = await recomputeAllProducts(
+    roundToFive,
+    parsed.data.setMargin
+  );
 
-  return NextResponse.json({ productsUpdated, variantsUpdated, roundToFive });
+  return NextResponse.json({
+    productsUpdated,
+    variantsUpdated,
+    roundToFive,
+    setMargin: parsed.data.setMargin ?? null,
+  });
 }

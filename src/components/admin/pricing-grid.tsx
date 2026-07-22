@@ -16,6 +16,7 @@ import DataGrid, {
 import CustomStore from "devextreme/data/custom_store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type PricingRow = {
   id: string;
@@ -42,6 +43,7 @@ async function apiJson(url: string, init?: RequestInit) {
 export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolean }) {
   const [roundToFive, setRoundToFive] = useState(initialRoundToFive);
   const [recalculating, setRecalculating] = useState(false);
+  const [bulkMargin, setBulkMargin] = useState("");
   const gridRef = useRef<GridInstance | null>(null);
 
   const store = useMemo(
@@ -63,17 +65,18 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
     []
   );
 
-  async function recalculateAll() {
+  async function recalculateAll(setMargin?: number) {
     setRecalculating(true);
     try {
       const res = await apiJson("/api/admin/pricing/recalculate", {
         method: "POST",
-        body: JSON.stringify({ roundToFive }),
+        body: JSON.stringify(setMargin != null ? { roundToFive, setMargin } : { roundToFive }),
       });
       await gridRef.current?.refresh();
       toast.success(
-        `Recalculated ${res.productsUpdated} product${res.productsUpdated === 1 ? "" : "s"} ` +
-          `(${res.variantsUpdated} pack prices) ${roundToFive ? "rounded up to ₹5" : "exact to ₹1"}.`
+        (setMargin != null ? `Set margin to ${setMargin}% and r` : "R") +
+          `ecalculated ${res.productsUpdated} product${res.productsUpdated === 1 ? "" : "s"} ` +
+          `(${res.variantsUpdated} pack prices)${roundToFive ? ", rounded up to ₹5" : ""}.`
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Recalculation failed.");
@@ -82,27 +85,63 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
     }
   }
 
+  function applyBulkMargin() {
+    const m = Number(bulkMargin);
+    if (!bulkMargin.trim() || Number.isNaN(m) || m < 0) {
+      toast.error("Enter a valid margin %.");
+      return;
+    }
+    recalculateAll(m);
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={roundToFive}
-            onChange={(e) => setRoundToFive(e.target.checked)}
+      <div className="space-y-3 rounded-lg border bg-muted/40 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={roundToFive}
+              onChange={(e) => setRoundToFive(e.target.checked)}
+              disabled={recalculating}
+              className="size-4 accent-primary"
+            />
+            Round sale prices UP to the next ₹5 (₹88 → ₹90)
+          </label>
+          <Button onClick={() => recalculateAll()} disabled={recalculating} size="sm">
+            {recalculating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            Recalculate all prices
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-sm font-medium">Set margin for all products:</span>
+          <Input
+            type="number"
+            min="0"
+            value={bulkMargin}
+            onChange={(e) => setBulkMargin(e.target.value)}
+            placeholder="e.g. 75"
+            className="h-9 w-24"
             disabled={recalculating}
-            className="size-4 accent-primary"
           />
-          Round sale prices UP to the next ₹5 (₹88 → ₹90)
-        </label>
-        <Button onClick={recalculateAll} disabled={recalculating} size="sm">
-          {recalculating ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          Recalculate all prices
-        </Button>
+          <span className="text-sm text-muted-foreground">%</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={applyBulkMargin}
+            disabled={recalculating || !bulkMargin.trim()}
+          >
+            Apply to all &amp; recalculate
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Overwrites every product&apos;s margin and reprices the whole catalog.
+          </span>
+        </div>
       </div>
 
       <DataGrid

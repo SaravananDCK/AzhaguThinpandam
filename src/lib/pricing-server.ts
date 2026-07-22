@@ -47,14 +47,16 @@ export async function recomputeProductPrices(
  * Reprices every product that has a complete pricing rule (purchase ₹/kg +
  * margin %) from that rule, using the given rounding mode. Used by the
  * "Recalculate all prices" action so a change to the ₹5-rounding toggle can be
- * applied across the whole catalog in one shot. Runs in a single transaction so
- * SQLite sees one writer.
+ * applied across the whole catalog in one shot. When `setMargin` is given,
+ * every product's margin is first set to that value (a catalog-wide margin
+ * change). Runs in a single transaction so SQLite sees one writer.
  */
 export async function recomputeAllProducts(
-  roundToFive: boolean
+  roundToFive: boolean,
+  setMargin?: number
 ): Promise<{ productsUpdated: number; variantsUpdated: number }> {
   const products = await prisma.product.findMany({
-    where: { purchasePricePerKg: { gt: 0 }, profitMarginPct: { not: null } },
+    where: { purchasePricePerKg: { gt: 0 } },
     select: { id: true, purchasePricePerKg: true, profitMarginPct: true },
   });
 
@@ -64,11 +66,19 @@ export async function recomputeAllProducts(
   await prisma.$transaction(
     async (tx) => {
       for (const p of products) {
+        const margin = setMargin ?? p.profitMarginPct;
+        if (margin == null) continue; // no rule to price from
+        if (setMargin != null && setMargin !== p.profitMarginPct) {
+          await tx.product.update({
+            where: { id: p.id },
+            data: { profitMarginPct: setMargin },
+          });
+        }
         const n = await recomputeProductPrices(
           tx,
           p.id,
           p.purchasePricePerKg!,
-          p.profitMarginPct!,
+          margin,
           roundToFive
         );
         if (n > 0) productsUpdated++;
