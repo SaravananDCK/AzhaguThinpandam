@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { CheckCircle2, ShoppingCart, Sparkles, XCircle } from "lucide-react";
-import { formatINR } from "@/lib/money";
+import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
+import { CardAddToCart } from "@/components/store/card-add-to-cart";
 import type { ProductWithDetails } from "@/lib/queries";
 
 export function ProductCard({ product }: { product: ProductWithDetails }) {
@@ -69,20 +69,6 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           </h3>
         </Link>
 
-        <div className="flex items-baseline gap-2">
-          {product.variants.length > 1 && (
-            <span className="text-xs text-muted-foreground">from</span>
-          )}
-          <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
-            {formatINR(minPrice)}
-          </span>
-          {discount > 0 && cheapest?.mrp && (
-            <span className="text-xs text-muted-foreground line-through">
-              {formatINR(cheapest.mrp)}
-            </span>
-          )}
-        </div>
-
         {inStock ? (
           <p className="flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
             <CheckCircle2 className="size-3.5" /> In stock — made fresh to order
@@ -93,17 +79,20 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           </p>
         )}
 
-        {/* CTA */}
-        <Link
-          href={href}
-          className="group/btn relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(207,68,68,0.4)] active:scale-95"
-        >
-          <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-full" />
-          <ShoppingCart className="relative z-10 size-4 transition-transform duration-300 group-hover/btn:scale-110" />
-          <span className="relative z-10 tracking-wide">
-            {inStock ? "Choose pack size" : "View product"}
-          </span>
-        </Link>
+        {/* Price + size picker + add to cart */}
+        <CardAddToCart
+          productSlug={product.slug}
+          productName={product.name}
+          tamilName={product.tamilName}
+          image={image}
+          variants={product.variants.map((v) => ({
+            id: v.id,
+            label: v.label,
+            price: v.price,
+            mrp: v.mrp,
+            stock: v.stock,
+          }))}
+        />
       </div>
     </div>
   );

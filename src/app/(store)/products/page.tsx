@@ -4,7 +4,8 @@ import { ChevronLeft, ChevronRight, PackageSearch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/product-card";
-import { getCategories, getProductsPage } from "@/lib/queries";
+import { CartSidebar } from "@/components/store/cart-sidebar";
+import { getBoxTiers, getCategories, getProductsPage } from "@/lib/queries";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
@@ -63,14 +64,15 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function ProductsPage({ searchParams }: Props) {
   const { q, category, page: pageParam } = await searchParams;
   const requestedPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-  const [categories, { products, total, page, pageCount, perPage }] = await Promise.all([
+  const [categories, { products, total, page, pageCount, perPage }, tiers] = await Promise.all([
     getCategories(),
     getProductsPage({ q, categorySlug: category, page: requestedPage }),
+    getBoxTiers(),
   ]);
   const activeCategory = categories.find((c) => c.slug === category);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-8">
       <h1 className="font-heading text-2xl font-bold sm:text-3xl">
         {activeCategory ? activeCategory.name : "All Products"}
         {activeCategory?.tamilName && (
@@ -120,8 +122,10 @@ export default async function ProductsPage({ searchParams }: Props) {
         ))}
       </div>
 
+      <div className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
+        <div>
       {products.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-3 text-center">
+        <div className="mt-10 flex flex-col items-center gap-3 text-center">
           <PackageSearch className="size-12 text-muted-foreground" />
           <p className="font-medium">No products found</p>
           <p className="text-sm text-muted-foreground">
@@ -133,7 +137,7 @@ export default async function ProductsPage({ searchParams }: Props) {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -206,6 +210,15 @@ export default async function ProductsPage({ searchParams }: Props) {
           </p>
         </>
       )}
+        </div>
+
+        {/* Live cart — desktop only */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-24">
+            <CartSidebar tiers={tiers} />
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
