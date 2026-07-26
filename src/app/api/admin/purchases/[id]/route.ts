@@ -70,6 +70,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
       data: {
         date: parsed.data.date,
         supplier: parsed.data.supplier,
+        supplierId: parsed.data.supplierId || null,
+        gstRate: parsed.data.gstRate,
         invoiceNo: parsed.data.invoiceNo || null,
         notes: parsed.data.notes || null,
         total: items.reduce((s, i) => s + i.amount, 0),

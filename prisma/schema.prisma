@@ -23,6 +23,7 @@ model User {
   role         String    @default("CUSTOMER") // CUSTOMER | ADMIN
   addresses    Address[]
   orders       Order[]
+  reviews      Review[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -65,10 +66,20 @@ model Product {
   // Pricing rule: wholesale cost + target margin drive variant sale prices
   purchasePricePerKg Int? // paise per kg (wholesale cost)
   profitMarginPct    Float? // e.g. 25 = sell at cost + 25%
+  // GST rate (%) included in the sale price. Null falls back to the store
+  // default (Setting `default_gst_rate`). Prices are GST-inclusive.
+  gstRate     Float?
   images      ProductImage[]
   variants    ProductVariant[]
+  reviews     Review[]
+  // Denormalised from APPROVED reviews (recomputed on moderation) so listings
+  // can show stars without aggregating per card.
+  ratingAvg   Float?
+  ratingCount Int              @default(0)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  @@index([categoryId])
 }
 
 model ProductImage {
@@ -77,6 +88,8 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   sortOrder Int     @default(0)
+
+  @@index([productId])
 }
 
 model ProductVariant {
@@ -93,6 +106,28 @@ model ProductVariant {
   orderItems    OrderItem[]
   purchaseItems PurchaseItem[]
   movements     StockMovement[]
+
+  @@index([productId])
+}
+
+// Customer product reviews. Only verified purchasers can post (enforced in the
+// API), and reviews stay PENDING until an admin approves them.
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Int // 1..5
+  title      String?
+  body       String?
+  authorName String? // display-name snapshot at submit time
+  status     String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([productId, userId]) // one review per customer per product (editable)
+  @@index([productId, status])
 }
 
 model Address {
@@ -108,6 +143,8 @@ model Address {
   pincode   String
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Order {
@@ -141,6 +178,10 @@ model Order {
   payment     Payment?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
+  @@index([shipPhone])
 }
 
 model OrderItem {
@@ -156,6 +197,10 @@ model OrderItem {
   price         Int // unit price in paise at time of order
   qty           Int
   basePackGrams Int? // base packet size for the "N × Ng packets" delivery note
+  gstRate       Float? // GST% included in `price`, snapshot at order time (output GST)
+
+  @@index([orderId])
+  @@index([variantId])
 }
 
 model Payment {
@@ -212,17 +257,59 @@ model CouponRedemption {
 
 // ---- Accounting (admin-only) ----
 
-// Stock bought from the wholesale supplier (e.g. Karthick Sweets)
-model Purchase {
-  id        String         @id @default(cuid())
-  date      DateTime
-  supplier  String
-  invoiceNo String?
+// Wholesale vendors we buy stock from. `owed` is derived, not stored:
+// Σ(purchase totals) − Σ(payments) for this supplier.
+model Supplier {
+  id        String            @id @default(cuid())
+  name      String
+  gstin     String? // supplier's GST registration number
+  phone     String?
+  email     String?
+  address   String?
+  gstRate   Float? // default GST% on this supplier's goods (fills the purchase form)
   notes     String?
-  total     Int // paise (sum of item amounts)
-  items     PurchaseItem[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  isActive  Boolean           @default(true)
+  purchases Purchase[]
+  payments  SupplierPayment[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+// A payment made to a supplier (reduces what we owe them). Lump sums can cover
+// several invoices, so payments are tracked against the supplier, not a purchase.
+model SupplierPayment {
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  date       DateTime
+  amount     Int // paise
+  method     String? // Cash | UPI | Bank transfer | Cheque | Other
+  reference  String? // txn id / cheque no
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([supplierId, date])
+}
+
+// Stock bought from a supplier — counted as cost of goods in the P&L.
+model Purchase {
+  id          String         @id @default(cuid())
+  date        DateTime
+  // `supplier` is a denormalised name snapshot (kept even if the Supplier row
+  // is deleted); `supplierId` links to the Supplier for the payables ledger.
+  supplier    String
+  supplierId  String?
+  supplierRef Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  invoiceNo   String?
+  notes       String?
+  gstRate     Float          @default(0) // GST% included in `total` (input GST)
+  total       Int // paise (sum of item amounts, GST-inclusive)
+  items       PurchaseItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([supplierId])
+  @@index([date])
 }
 
 model PurchaseItem {
@@ -237,6 +324,9 @@ model PurchaseItem {
   variantId   String?
   variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
   packs       Int?
+
+  @@index([purchaseId])
+  @@index([variantId])
 }
 
 // Audit trail for every stock change (packs in/out per variant)
@@ -263,4 +353,6 @@ model Expense {
   amount      Int // paise
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([date])
 }

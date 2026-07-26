@@ -11,6 +11,7 @@ import DataGrid, {
   TotalItem,
 } from "devextreme-react/data-grid";
 import type { DataGridRef } from "devextreme-react/data-grid";
+import SelectBox from "devextreme-react/select-box";
 import CustomStore from "devextreme/data/custom_store";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,6 +38,8 @@ type PurchaseRow = {
   id: string;
   date: string;
   supplier: string;
+  supplierId: string | null;
+  gstRate: number;
   invoiceNo: string | null;
   notes: string | null;
   total: number;
@@ -52,18 +55,40 @@ type PurchaseRow = {
   }[];
 };
 
-export type VariantOption = { id: string; name: string };
+export type VariantOption = {
+  id: string;
+  name: string;
+  grams: number | null; // pack weight → default kg
+  pricePerKgPaise: number | null; // wholesale ₹/kg → default unit cost
+};
+export type SupplierOption = { id: string; name: string; gstRate: number | null };
 
 const EMPTY_ITEM: ItemRow = { description: "", qty: "", unitCostRupees: "", variantId: "", packs: "" };
-const DEFAULT_SUPPLIER = "Karthick Sweets & Kadalai Mittai";
 
-export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOption[] }) {
+/** GST component of a GST-inclusive rupee amount at the given rate (%). */
+function gstOf(inclusiveRupees: number, rate: number): number {
+  if (!rate || rate <= 0) return 0;
+  return (inclusiveRupees * rate) / (100 + rate);
+}
+
+export function PurchasesGrid({
+  variantOptions,
+  supplierOptions,
+}: {
+  variantOptions: VariantOption[];
+  supplierOptions: SupplierOption[];
+}) {
   const gridRef = useRef<DataGridRef>(null);
+  // Index of a newly-added item row whose Item field should grab focus on mount
+  const pendingFocus = useRef(-1);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [date, setDate] = useState("");
-  const [supplier, setSupplier] = useState(DEFAULT_SUPPLIER);
+  const [supplierId, setSupplierId] = useState("");
+  // Free-text name kept for legacy purchases recorded before suppliers existed
+  const [legacySupplier, setLegacySupplier] = useState("");
+  const [gstRate, setGstRate] = useState("0");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ItemRow[]>([{ ...EMPTY_ITEM }]);
@@ -88,17 +113,23 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
   const openNew = useCallback(() => {
     setEditingId(null);
     setDate(new Date().toISOString().slice(0, 10));
-    setSupplier(DEFAULT_SUPPLIER);
+    const first = supplierOptions[0];
+    setSupplierId(first?.id ?? "");
+    setLegacySupplier("");
+    setGstRate(first?.gstRate != null ? String(first.gstRate) : "0");
     setInvoiceNo("");
     setNotes("");
     setItems([{ ...EMPTY_ITEM }]);
     setOpen(true);
-  }, []);
+  }, [supplierOptions]);
 
   const openEdit = useCallback((row: PurchaseRow) => {
     setEditingId(row.id);
     setDate(row.date.slice(0, 10));
-    setSupplier(row.supplier);
+    setSupplierId(row.supplierId ?? "");
+    // If the purchase predates suppliers (no link), keep its free-text name
+    setLegacySupplier(row.supplierId ? "" : row.supplier);
+    setGstRate(String(row.gstRate ?? 0));
     setInvoiceNo(row.invoiceNo ?? "");
     setNotes(row.notes ?? "");
     setItems(
@@ -113,7 +144,61 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
     setOpen(true);
   }, []);
 
+  function onSupplierChange(id: string) {
+    setSupplierId(id);
+    setLegacySupplier("");
+    const s = supplierOptions.find((o) => o.id === id);
+    if (s?.gstRate != null) setGstRate(String(s.gstRate));
+  }
+
+  // packets × pack-weight → kg (as a string), or null if not computable
+  function kgFromPackets(packetsStr: string, grams: number | null | undefined): string | null {
+    const n = parseInt(packetsStr, 10);
+    if (grams && Number.isFinite(n) && n > 0) return String((n * grams) / 1000);
+    return null;
+  }
+
+  // Picking an item sets its variant link + description snapshot, and prefills
+  // ₹/kg (wholesale cost) and kg (from the packets already entered, else one
+  // pack). Everything stays editable; deselecting keeps the existing values.
+  function onItemVariantChange(idx: number, variantId: string) {
+    const opt = variantOptions.find((v) => v.id === variantId);
+    setItems((rows) =>
+      rows.map((r, i) => {
+        if (i !== idx) return r;
+        if (!variantId) return { ...r, variantId };
+        const kg = kgFromPackets(r.packs, opt?.grams) ?? (opt?.grams ? String(opt.grams / 1000) : r.qty);
+        return {
+          ...r,
+          variantId,
+          description: opt?.name ?? r.description,
+          qty: kg,
+          unitCostRupees:
+            opt?.pricePerKgPaise != null ? String(opt.pricePerKgPaise / 100) : r.unitCostRupees,
+        };
+      })
+    );
+  }
+
+  // Entering the number of packets auto-fills the kg (packets × pack-weight).
+  function onPacketsChange(idx: number, packetsStr: string) {
+    setItems((rows) =>
+      rows.map((r, i) => {
+        if (i !== idx) return r;
+        const opt = variantOptions.find((v) => v.id === r.variantId);
+        const kg = kgFromPackets(packetsStr, opt?.grams);
+        return { ...r, packs: packetsStr, ...(kg != null ? { qty: kg } : {}) };
+      })
+    );
+  }
+
   async function save() {
+    // A line that has a qty/cost but no item picked is an oversight, not a
+    // blank row — flag it rather than silently dropping it.
+    if (items.some((i) => (i.qty.trim() || i.unitCostRupees.trim()) && !i.description.trim())) {
+      toast.error("Pick an item for each line.");
+      return;
+    }
     const parsedItems = items
       .filter((i) => i.description.trim())
       .map((i) => ({
@@ -123,10 +208,6 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
         variantId: i.variantId || "",
         ...(i.variantId && i.packs ? { packs: parseInt(i.packs, 10) } : {}),
       }));
-    if (parsedItems.some((i) => i.variantId && !i.packs)) {
-      toast.error("Enter how many packs were received for each linked product.");
-      return;
-    }
     if (!parsedItems.length) {
       toast.error("Add at least one item.");
       return;
@@ -135,6 +216,13 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
       toast.error("Every item needs a valid quantity and unit cost.");
       return;
     }
+    const supplierName =
+      supplierOptions.find((o) => o.id === supplierId)?.name || legacySupplier.trim();
+    if (!supplierName) {
+      toast.error("Pick a supplier (add one in Suppliers first).");
+      return;
+    }
+    const rate = parseFloat(gstRate) || 0;
     setSaving(true);
     try {
       const res = await fetch(
@@ -142,7 +230,15 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
         {
           method: editingId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ date, supplier, invoiceNo, notes, items: parsedItems }),
+          body: JSON.stringify({
+            date,
+            supplier: supplierName,
+            supplierId,
+            gstRate: rate,
+            invoiceNo,
+            notes,
+            items: parsedItems,
+          }),
         }
       );
       const data = await res.json();
@@ -177,7 +273,13 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
         <Pager showInfo showNavigationButtons />
         <Column dataField="date" dataType="date" defaultSortOrder="desc" format="dd MMM yyyy" width={130} />
         <Column dataField="supplier" />
-        <Column dataField="invoiceNo" caption="Invoice #" width={130} />
+        <Column dataField="invoiceNo" caption="Invoice #" width={120} />
+        <Column
+          dataField="gstRate"
+          caption="GST %"
+          width={80}
+          calculateCellValue={(row: PurchaseRow) => (row.gstRate ? `${row.gstRate}%` : "—")}
+        />
         <Column
           dataField="total"
           caption="Total"
@@ -267,9 +369,39 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
             </div>
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="pu-supplier">Supplier</Label>
-              <Input id="pu-supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+              {supplierOptions.length === 0 && !legacySupplier ? (
+                <Input value="No suppliers yet — add one in Suppliers" disabled />
+              ) : (
+                <select
+                  id="pu-supplier"
+                  className="h-9 rounded-md border bg-background px-2 text-sm"
+                  value={supplierId}
+                  onChange={(e) => onSupplierChange(e.target.value)}
+                >
+                  {legacySupplier && (
+                    <option value="">{legacySupplier} (not linked)</option>
+                  )}
+                  {supplierOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="grid gap-2 sm:col-span-3">
+            <div className="grid gap-2">
+              <Label htmlFor="pu-gst">GST rate %</Label>
+              <Input
+                id="pu-gst"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={gstRate}
+                onChange={(e) => setGstRate(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="pu-invoice">Supplier invoice # (optional)</Label>
               <Input id="pu-invoice" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
             </div>
@@ -277,19 +409,58 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
 
           <div className="space-y-2">
             <Label>Items</Label>
+            <p className="text-xs text-muted-foreground">
+              Columns: <strong>item · packets · kg · ₹/kg</strong>. Choosing an item fills
+              ₹/kg (wholesale cost); typing the number of packets fills the kg
+              (12 × 250 g = 3 kg) and adds those packets to stock. You can still edit the
+              kg directly for loose/bulk buys.
+            </p>
             {items.map((item, idx) => (
               <div key={idx} className="space-y-1.5 rounded-lg border p-2.5">
-                <div className="grid grid-cols-[1fr_90px_110px_32px] items-center gap-2">
-                  <Input
-                    placeholder="e.g. Kadalai Mittai"
-                    value={item.description}
-                    onChange={(e) =>
-                      setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, description: e.target.value } : r)))
+                <div className="grid grid-cols-[1fr_64px_72px_88px_32px] items-center gap-2">
+                  <SelectBox
+                    dataSource={
+                      // Keep a since-deleted/legacy linked item selectable when editing
+                      item.variantId && !variantOptions.some((v) => v.id === item.variantId)
+                        ? [{ id: item.variantId, name: item.description || "Linked item" }, ...variantOptions]
+                        : variantOptions
                     }
+                    valueExpr="id"
+                    displayExpr="name"
+                    value={item.variantId || null}
+                    searchEnabled
+                    searchExpr="name"
+                    searchMode="contains"
+                    minSearchLength={0}
+                    placeholder="Search item…"
+                    showClearButton
+                    onValueChanged={(e) => {
+                      // Only react to user selection, not the programmatic initial value
+                      if (e.event) onItemVariantChange(idx, e.value ?? "");
+                    }}
+                    onInitialized={(e) => {
+                      if (idx === pendingFocus.current) {
+                        pendingFocus.current = -1;
+                        setTimeout(() => {
+                          e.component?.focus();
+                          e.component?.open();
+                        }, 0);
+                      }
+                    }}
+                    aria-label="Item"
+                  />
+                  <Input
+                    placeholder="packets"
+                    inputMode="numeric"
+                    aria-label="Number of packets"
+                    disabled={!item.variantId}
+                    value={item.packs}
+                    onChange={(e) => onPacketsChange(idx, e.target.value)}
                   />
                   <Input
                     placeholder="kg"
                     inputMode="decimal"
+                    aria-label="Total kg"
                     value={item.qty}
                     onChange={(e) =>
                       setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, qty: e.target.value } : r)))
@@ -298,6 +469,7 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
                   <Input
                     placeholder="₹/kg"
                     inputMode="decimal"
+                    aria-label="Cost per kg"
                     value={item.unitCostRupees}
                     onChange={(e) =>
                       setItems((rows) =>
@@ -315,44 +487,34 @@ export function PurchasesGrid({ variantOptions }: { variantOptions: VariantOptio
                     <Trash2 className="size-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-[1fr_110px] items-center gap-2">
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-sm"
-                    value={item.variantId}
-                    onChange={(e) =>
-                      setItems((rows) =>
-                        rows.map((r, i) => (i === idx ? { ...r, variantId: e.target.value } : r))
-                      )
-                    }
-                  >
-                    <option value="">Not added to stock</option>
-                    {variantOptions.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        Add to stock: {v.name}
-                      </option>
-                    ))}
-                  </select>
-                  {item.variantId && (
-                    <Input
-                      placeholder="packs"
-                      inputMode="numeric"
-                      className="h-8"
-                      value={item.packs}
-                      onChange={(e) =>
-                        setItems((rows) =>
-                          rows.map((r, i) => (i === idx ? { ...r, packs: e.target.value } : r))
-                        )
-                      }
-                    />
-                  )}
-                </div>
               </div>
             ))}
             <div className="flex items-center justify-between">
-              <Button type="button" variant="outline" size="sm" onClick={() => setItems((r) => [...r, { ...EMPTY_ITEM }])}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  pendingFocus.current = items.length; // the row about to be appended
+                  setItems((r) => [...r, { ...EMPTY_ITEM }]);
+                }}
+              >
                 <Plus className="size-3.5" /> Add item
               </Button>
-              <p className="text-sm font-semibold">Total: ₹{runningTotal.toLocaleString("en-IN")}</p>
+              <p className="text-right text-sm">
+                <span className="font-semibold">
+                  Total: ₹{runningTotal.toLocaleString("en-IN")}
+                </span>
+                {parseFloat(gstRate) > 0 && (
+                  <span className="block text-xs text-muted-foreground">
+                    incl. GST ₹
+                    {gstOf(runningTotal, parseFloat(gstRate)).toLocaleString("en-IN", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    ({gstRate}%)
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 

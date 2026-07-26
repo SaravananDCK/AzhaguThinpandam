@@ -36,6 +36,7 @@ export default async function AdminSettingsPage() {
           instagramHandle: settings[SETTINGS.INSTAGRAM_HANDLE] ?? "",
           instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
+          defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
         }}
       />
 

@@ -25,6 +25,7 @@ type Props = {
     instagramHandle: string;
     instagramReels: string;
     preLaunchNotice: string;
+    defaultGstRate: string;
   };
 };
 
@@ -122,19 +123,37 @@ export function SettingsForm({ values }: Props) {
             />
             Round computed sale prices UP to the next ₹5 (₹88 → ₹90)
           </label>
-          <div className="grid gap-2 sm:max-w-xs">
-            <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
-            <Input
-              id="s-packing"
-              name="packingCost"
-              type="number"
-              min="0"
-              step="0.01"
-              defaultValue={values.packingCostRupees}
-            />
-            <p className="text-xs text-muted-foreground">
-              Recorded on each new order for the P&amp;L — never charged to the customer.
-            </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
+              <Input
+                id="s-packing"
+                name="packingCost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.packingCostRupees}
+              />
+              <p className="text-xs text-muted-foreground">
+                Recorded on each new order for the P&amp;L — never charged to the customer.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-gst">Default GST rate %</Label>
+              <Input
+                id="s-gst"
+                name="defaultGstRate"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                defaultValue={values.defaultGstRate}
+              />
+              <p className="text-xs text-muted-foreground">
+                Applied to products with no GST rate of their own. Prices are
+                GST-inclusive; feeds the output-GST report in Finance.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

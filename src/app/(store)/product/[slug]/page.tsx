@@ -5,7 +5,12 @@ import { ChevronRight } from "lucide-react";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { AddToCart } from "@/components/store/add-to-cart";
 import { ProductCard } from "@/components/store/product-card";
+import { ProductReviews } from "@/components/store/product-reviews";
+import { Stars } from "@/components/store/stars";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getApprovedReviews, hasPurchasedProduct } from "@/lib/reviews";
 import { JsonLd, absoluteUrl, siteUrl } from "@/lib/seo";
 import { paiseToRupees } from "@/lib/money";
 
@@ -49,6 +54,26 @@ export default async function ProductPage({ params }: Props) {
   const prices = product.variants.map((v) => v.price);
   const inStock = product.variants.some((v) => v.stock > 0);
 
+  // Reviews: approved list for everyone, plus this customer's eligibility to post
+  const reviews = await getApprovedReviews(product.id);
+  const session = await auth();
+  let loggedIn = false;
+  let purchased = false;
+  let existingReview = null;
+  if (session?.user?.id) {
+    loggedIn = true;
+    purchased = await hasPurchasedProduct(
+      { id: session.user.id, phone: session.user.phone },
+      product.id
+    );
+    if (purchased) {
+      existingReview = await prisma.review.findUnique({
+        where: { productId_userId: { productId: product.id, userId: session.user.id } },
+        select: { rating: true, title: true, body: true, status: true },
+      });
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       {/* Rich-result structured data */}
@@ -62,6 +87,15 @@ export default async function ProductPage({ params }: Props) {
           image: product.images.map((i) => absoluteUrl(i.url)),
           brand: { "@type": "Brand", name: "Azhagu Thinpandam" },
           category: product.category.name,
+          ...(product.ratingCount > 0
+            ? {
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: product.ratingAvg,
+                  reviewCount: product.ratingCount,
+                },
+              }
+            : {}),
           offers: {
             "@type": "AggregateOffer",
             priceCurrency: "INR",
@@ -115,6 +149,14 @@ export default async function ProductPage({ params }: Props) {
           {product.tamilName && (
             <p className="mt-1 text-lg text-muted-foreground">{product.tamilName}</p>
           )}
+          {product.ratingCount > 0 && (
+            <a href="#reviews" className="mt-2 inline-flex items-center gap-1.5 text-sm">
+              <Stars value={product.ratingAvg ?? 0} size={16} />
+              <span className="text-muted-foreground">
+                {product.ratingAvg?.toFixed(1)} ({product.ratingCount})
+              </span>
+            </a>
+          )}
 
           <div className="mt-6">
             <AddToCart
@@ -140,6 +182,17 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <ProductReviews
+        productId={product.id}
+        productSlug={product.slug}
+        ratingAvg={product.ratingAvg}
+        ratingCount={product.ratingCount}
+        reviews={reviews}
+        loggedIn={loggedIn}
+        purchased={purchased}
+        existing={existingReview}
+      />
 
       {related.length > 0 && (
         <section className="mt-16">

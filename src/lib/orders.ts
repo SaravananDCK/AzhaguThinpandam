@@ -121,6 +121,9 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
   // Internal packing cost snapshot (P&L only — never charged to the customer)
   const settings = await getSettings();
   const packingCost = parseInt(settings[SETTINGS.PACKING_COST], 10) || 0;
+  // GST rate to snapshot on each line for output-GST reporting (prices are
+  // GST-inclusive). Per-product rate, falling back to the store default.
+  const defaultGstRate = parseFloat(settings[SETTINGS.DEFAULT_GST_RATE]) || 0;
 
   const order = await prisma.order.create({
     data: {
@@ -152,6 +155,7 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
           price: l.variant.price,
           qty: l.qty,
           basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
+          gstRate: l.variant.product.gstRate ?? defaultGstRate,
         })),
       },
     },

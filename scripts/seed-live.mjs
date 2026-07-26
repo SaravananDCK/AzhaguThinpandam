@@ -19,7 +19,12 @@ const COUPONS = [
 const SETTINGS = {
   box_discount_tiers: "1:5,3:10,4:15,6:20",
   round_prices_to_five: "1",
+  default_gst_rate: "5",
 };
+
+// Suppliers to ensure exist. Historical purchases recorded as free text with a
+// matching name get linked so the payables ledger covers past data too.
+const SUPPLIERS = [{ name: "Karthick Sweets & Kadalai Mittai", gstRate: 5 }];
 
 async function main() {
   const created = [];
@@ -38,6 +43,20 @@ async function main() {
       await prisma.setting.create({ data: { key, value } });
       created.push(`setting ${key}`);
     }
+  }
+
+  for (const s of SUPPLIERS) {
+    let supplier = await prisma.supplier.findFirst({ where: { name: s.name } });
+    if (!supplier) {
+      supplier = await prisma.supplier.create({ data: s });
+      created.push(`supplier ${s.name}`);
+    }
+    // Link any unlinked purchases with this exact supplier name (idempotent)
+    const linked = await prisma.purchase.updateMany({
+      where: { supplier: s.name, supplierId: null },
+      data: { supplierId: supplier.id },
+    });
+    if (linked.count) created.push(`linked ${linked.count} purchase(s) to ${s.name}`);
   }
 
   console.log(

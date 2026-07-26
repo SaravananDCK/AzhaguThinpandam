@@ -37,6 +37,16 @@ export const PAYMENT_STATUSES = {
   FAILED: "FAILED",
 } as const;
 
+export const REVIEW_STATUSES = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+} as const;
+export type ReviewStatus = keyof typeof REVIEW_STATUSES;
+
+// Orders that count as a completed purchase (gates who may review)
+export const PURCHASED_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"] as const;
+
 // Setting keys (values stored as strings in the Setting table)
 export const SETTINGS = {
   STORE_NAME: "store_name",
@@ -52,7 +62,17 @@ export const SETTINGS = {
   INSTAGRAM_HANDLE: "instagram_handle",
   INSTAGRAM_REELS: "instagram_reels",
   PRE_LAUNCH_NOTICE: "pre_launch_notice",
+  DEFAULT_GST_RATE: "default_gst_rate",
 } as const;
+
+// Ways a supplier payment can be made (stored as a plain string)
+export const SUPPLIER_PAYMENT_METHODS = [
+  "Cash",
+  "UPI",
+  "Bank transfer",
+  "Cheque",
+  "Other",
+] as const;
 
 export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.STORE_NAME]: "Azhagu Thinpandam",
@@ -77,6 +97,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // of taking payment. Clear it once the payment platform is live.
   [SETTINGS.PRE_LAUNCH_NOTICE]:
     "Our grand inauguration is on 3rd August 2026! 🎉 Online ordering opens then — thank you for your patience.",
+  // Default GST% (used for products with no per-product rate, and as the
+  // starting value on the purchase form). Prices are treated as GST-inclusive.
+  [SETTINGS.DEFAULT_GST_RATE]: "5",
 };
 
 // Suggested expense categories for the accounting module

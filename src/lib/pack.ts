@@ -3,7 +3,7 @@
 // product's smallest weight variant.
 const DEFAULT_PACKET_GRAMS = 250;
 
-function labelToGrams(label: string): number | null {
+export function labelToGrams(label: string): number | null {
   const m = label.trim().match(/^(\d+(?:\.\d+)?)\s*(g|kg)$/i);
   if (!m) return null;
   const value = parseFloat(m[1]);

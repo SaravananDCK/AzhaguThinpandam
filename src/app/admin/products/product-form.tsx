@@ -49,6 +49,7 @@ type ProductData = {
   isFlagship: boolean;
   purchasePricePerKg: number | null;
   profitMarginPct: number | null;
+  gstRate: number | null;
   images: { url: string }[];
   variants: {
     id: string;
@@ -88,6 +89,9 @@ export function ProductForm({
   );
   const [marginPct, setMarginPct] = useState(
     product?.profitMarginPct != null ? String(product.profitMarginPct) : ""
+  );
+  const [gstRate, setGstRate] = useState(
+    product?.gstRate != null ? String(product.gstRate) : ""
   );
   const [images, setImages] = useState<string[]>(product?.images.map((i) => i.url) ?? []);
   function recalcPrices() {
@@ -201,6 +205,7 @@ export function ProductForm({
         isFlagship,
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
         profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
+        gstRate: gstRate.trim() ? parseFloat(gstRate) : null,
         images,
         variants: parsedVariants,
       };
@@ -315,6 +320,23 @@ export function ProductForm({
                   Recalculate variant prices
                 </Button>
               </div>
+            </div>
+            <div className="grid gap-2 sm:max-w-[10rem]">
+              <Label htmlFor="p-gst">GST rate %</Label>
+              <Input
+                id="p-gst"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={gstRate}
+                onChange={(e) => setGstRate(e.target.value)}
+                placeholder="store default"
+              />
+              <p className="text-xs text-muted-foreground">
+                GST included in the sale price. Blank = use the store default (Settings).
+                Feeds the output-GST report.
+              </p>
             </div>
             <p className="text-xs text-muted-foreground">
               Fills the variant prices below from cost + margin

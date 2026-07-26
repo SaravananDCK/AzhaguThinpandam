@@ -6,6 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/money";
 import {
+  computeGst,
+  computePayables,
   computePnL,
   monthLabel,
   monthParamOf,
@@ -49,9 +51,11 @@ export default async function AdminFinancePage({
     to: startOfISTMonth(1),
   };
 
-  const [pnl, allTime, ...history] = await Promise.all([
+  const [pnl, allTime, gst, payables, ...history] = await Promise.all([
     computePnL(range.from, range.to),
     computePnL(new Date(0), new Date()),
+    computeGst(range.from, range.to),
+    computePayables(),
     ...[-5, -4, -3, -2, -1, 0].map((o) =>
       computePnL(startOfISTMonth(o), startOfISTMonth(o + 1))
     ),
@@ -126,6 +130,52 @@ export default async function AdminFinancePage({
               Cash-basis summary: purchases count as cost when bought, not when
               sold. Unsold stock on the shelf is therefore not shown as an asset
               here — your true position is this number plus inventory on hand.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* GST for the selected month */}
+        <Card>
+          <CardContent className="space-y-2.5">
+            <p className="font-semibold">GST — {monthLabel(range.from)}</p>
+            <Row label="Output GST (collected on sales)" amount={gst.outputGst} />
+            <Row label="Input GST (paid on purchases)" amount={gst.inputGst} negative />
+            <Separator />
+            <Row
+              label={gst.netPayable >= 0 ? "Net GST payable" : "Input credit carried forward"}
+              amount={Math.abs(gst.netPayable)}
+              bold
+            />
+            <p className="pt-1 text-xs text-muted-foreground">
+              Prices and purchase totals are treated as GST-inclusive; tax is
+              backed out at rate/(100+rate). Output GST uses each product&apos;s
+              rate (or the store default); input GST uses each purchase&apos;s
+              rate. An indicative figure — confirm with your accountant before
+              filing.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Supplier payables, all-time */}
+        <Card>
+          <CardContent className="space-y-2.5">
+            <p className="font-semibold">Owed to suppliers</p>
+            {payables.suppliers.filter((s) => s.owed !== 0).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                All suppliers are settled up.
+              </p>
+            ) : (
+              payables.suppliers
+                .filter((s) => s.owed !== 0)
+                .map((s) => <Row key={s.id} label={s.name} amount={s.owed} />)
+            )}
+            <Separator />
+            <Row label="Total outstanding" amount={payables.totalOwed} bold negative={payables.totalOwed > 0} />
+            <p className="pt-1 text-xs text-muted-foreground">
+              Purchases recorded against a supplier, minus payments logged in{" "}
+              Suppliers. Record payments there to bring these down.
             </p>
           </CardContent>
         </Card>

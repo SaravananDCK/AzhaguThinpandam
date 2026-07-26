@@ -11,6 +11,8 @@ export const productSchema = z.object({
   isFlagship: z.boolean().default(false),
   purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise
   profitMarginPct: z.number().min(0).max(1000).nullable().optional(),
+  gstRate: z.number().min(0).max(100).nullable().optional(), // GST% in the sale price
+
   images: z.array(z.string().min(1)).max(8),
   variants: z
     .array(

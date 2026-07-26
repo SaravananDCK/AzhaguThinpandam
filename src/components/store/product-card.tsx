@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
 import { CardAddToCart } from "@/components/store/card-add-to-cart";
+import { Stars } from "@/components/store/stars";
 import type { ProductWithDetails } from "@/lib/queries";
 
 export function ProductCard({ product }: { product: ProductWithDetails }) {
@@ -68,6 +69,13 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
             )}
           </h3>
         </Link>
+
+        {product.ratingCount > 0 && (
+          <span className="flex items-center gap-1.5">
+            <Stars value={product.ratingAvg ?? 0} size={13} />
+            <span className="text-xs text-muted-foreground">({product.ratingCount})</span>
+          </span>
+        )}
 
         {inStock ? (
           <p className="flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">

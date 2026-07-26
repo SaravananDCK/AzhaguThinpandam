@@ -29,6 +29,11 @@ export async function saveSettings(formData: FormData) {
     return { error: "Discount tiers must look like 1:10,2:15,3:20 (kg:percent, or be empty)." };
   }
 
+  const gstRate = parseFloat(String(formData.get("defaultGstRate") ?? "0"));
+  if (!Number.isFinite(gstRate) || gstRate < 0 || gstRate > 100) {
+    return { error: "Default GST rate must be between 0 and 100." };
+  }
+
   const values: Record<string, string> = {
     [SETTINGS.STORE_NAME]: String(formData.get("storeName") ?? "").trim(),
     [SETTINGS.STORE_PHONE]: String(formData.get("storePhone") ?? "").trim(),
@@ -45,6 +50,7 @@ export async function saveSettings(formData: FormData) {
       .replace(/^@/, ""),
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
+    [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
   };
 
   await prisma.$transaction(
