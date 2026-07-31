@@ -229,12 +229,49 @@ Nightly at 02:30, keeps 14 days of archives in `/opt/azhagu/backups`:
 ```
 
 Each archive contains the whole SQLite database + all uploaded images.
-**Also download a backup off the server periodically** (`scp` it to your PC) —
-a backup that lives only on the VPS won't survive the VPS dying:
+**A backup that lives only on the VPS won't survive the VPS dying**, so also
+grab one by hand now and then:
 
 ```powershell
 scp root@YOUR_VPS_IP:/opt/azhagu/backups/backup-*.tar.gz .
 ```
+
+### Off-site copies to Google Drive / OneDrive (recommended)
+
+`backup.sh` will push each archive to any [rclone](https://rclone.org) remote.
+One-time setup on the VPS:
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+rclone config
+```
+
+In `rclone config`: `n` (new remote) → name it `gdrive` (or `onedrive`) →
+storage type `drive` for Google Drive or `onedrive` for OneDrive → leave
+client_id/secret blank → scope `1` (full access) → **answer `n` to "Use web
+browser to automatically authenticate?"** (the VPS has no browser). It prints a
+command like `rclone authorize "drive"` — run *that* on your Windows PC (install
+rclone there too), log in when the browser opens, then paste the resulting token
+back into the VPS prompt.
+
+Then point the backup at it and test:
+
+```bash
+echo 'BACKUP_REMOTE="gdrive:azhagu-backups"' >> /opt/azhagu/.env
+/opt/azhagu/deploy/backup.sh          # should end with "uploaded to gdrive:…"
+rclone ls gdrive:azhagu-backups
+```
+
+The nightly cron picks it up automatically — no crontab change needed. Remote
+copies are kept 60 days (override with `BACKUP_REMOTE_KEEP_DAYS`); the local
+14-archive rotation is unchanged. If `BACKUP_REMOTE` is unset, backups stay
+local exactly as before.
+
+Archives contain customer names, phones and addresses. If you'd rather not have
+that sitting readable in a cloud account, wrap the remote in an rclone `crypt`
+remote (`rclone config` → type `crypt` → point it at `gdrive:azhagu-backups`)
+and set `BACKUP_REMOTE` to the crypt remote instead — **keep the crypt password
+somewhere safe, without it the archives are unrecoverable.**
 
 To restore: stop (`docker compose down`), extract the archive over `data/` and
 `uploads/`, start (`docker compose up -d`).
