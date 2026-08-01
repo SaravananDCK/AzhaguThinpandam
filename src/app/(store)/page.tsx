@@ -191,25 +191,6 @@ export default async function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
-        {/* Grand opening promo banner */}
-        <section className="mt-8 sm:mt-10">
-          <Reveal>
-            <Link
-              href="/products"
-              className="group block overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/banners/welcome.webp"
-                alt="Grand Opening Offer — 18% off your first order of Kovilpatti Kadalai Mittai with code AADIAMARKALAM18"
-                width={1672}
-                height={941}
-                className="w-full transition-transform duration-700 group-hover:scale-[1.02]"
-              />
-            </Link>
-          </Reveal>
-        </section>
-
         {/* Instagram reels (configurable in Admin → Settings) */}
         <InstagramReels handle={instaHandle} reels={instaReels} />
 
