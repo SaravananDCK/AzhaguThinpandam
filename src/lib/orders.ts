@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { computeShippingFee, getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
+import { getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
+import { computeShipping } from "@/lib/shipping";
 import { boxDiscount, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
@@ -49,10 +50,26 @@ export function generateOrderNumber() {
 export class CheckoutError extends Error {}
 
 /**
+ * Payment reference for orders settled manually over UPI. Mirrors the shape of
+ * a gateway order id so the whole confirmation path (markOrderPaid) is shared.
+ */
+export function manualPaymentRef(orderNumber: string): string {
+  return `UPI-${orderNumber}`;
+}
+
+/**
  * Validates cart items against the database (existence, active flags, stock,
  * current prices) and creates a PENDING order with snapshot items.
+ *
+ * `verifiedPhone` is the OTP-verified phone on the session. Coupon limits are
+ * keyed to it — never to the delivery phone, which the customer types freely
+ * (and would otherwise let them mint a fresh "one per customer" every order).
  */
-export async function createOrderFromCart(input: CheckoutInput, userId?: string) {
+export async function createOrderFromCart(
+  input: CheckoutInput,
+  userId?: string,
+  verifiedPhone?: string
+) {
   const variantIds = input.items.map((i) => i.variantId);
   if (new Set(variantIds).size !== variantIds.length) {
     throw new CheckoutError("Duplicate items in cart.");
@@ -104,7 +121,9 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
     const result = await validateCoupon({
       code: input.couponCode,
       subtotal,
-      phone: input.address.phone,
+      // Verified phone only. Falls back to the delivery phone for accounts
+      // without one (admins who log in by email).
+      phone: verifiedPhone || input.address.phone,
     });
     if (!result.ok) throw new CheckoutError(result.error);
     if (result.discount > boxDiscountAmt) {
@@ -115,7 +134,14 @@ export async function createOrderFromCart(input: CheckoutInput, userId?: string)
   }
 
   const shippingConfig = await getShippingConfig();
-  const shippingFee = computeShippingFee(subtotal - discount, shippingConfig);
+  // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg. boxKg
+  // (cart weight) is computed above for the bundle discount.
+  const shippingFee = computeShipping({
+    state: input.address.state,
+    weightKg: boxKg,
+    subtotal: subtotal - discount,
+    config: shippingConfig,
+  });
   const total = subtotal - discount + shippingFee;
 
   // Internal packing cost snapshot (P&L only — never charged to the customer)
@@ -177,11 +203,17 @@ export async function markOrderPaid(params: {
 }) {
   const payment = await prisma.payment.findUnique({
     where: { razorpayOrderId: params.razorpayOrderId },
-    include: { order: { include: { items: true } } },
+    include: {
+      order: { include: { items: true, user: { select: { phone: true } } } },
+    },
   });
   if (!payment) throw new CheckoutError("Payment record not found.");
 
   if (payment.status === PAYMENT_STATUSES.CAPTURED) return payment.order; // already processed
+
+  // Redemptions are keyed to the verified account phone (see createOrderFromCart),
+  // so the per-customer limit survives orders shipped to someone else's number.
+  const redemptionPhone = payment.order.user?.phone ?? payment.order.shipPhone;
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.payment.update({
@@ -227,7 +259,7 @@ export async function markOrderPaid(params: {
       await tx.couponRedemption.upsert({
         where: { orderId: order.id },
         update: {},
-        create: { couponId: order.couponId, phone: order.shipPhone, orderId: order.id },
+        create: { couponId: order.couponId, phone: redemptionPhone, orderId: order.id },
       });
     }
     return order;

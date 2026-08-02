@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { validateCoupon } from "@/lib/coupon";
 
 // Preview a coupon at checkout. The authoritative discount is recomputed
@@ -8,12 +9,6 @@ import { validateCoupon } from "@/lib/coupon";
 const schema = z.object({
   code: z.string().trim().min(1).max(40),
   subtotal: z.number().int().min(0),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^[6-9]\d{9}$/)
-    .optional()
-    .or(z.literal("")),
 });
 
 export async function POST(req: Request) {
@@ -22,10 +17,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ valid: false, error: "Enter a valid coupon code." }, { status: 400 });
   }
 
+  // Per-customer limits key off the OTP-verified session phone, never a number
+  // supplied by the client. Guests get the discount preview without the limit
+  // check; it is enforced for real once they verify and the order is created.
+  const session = await auth();
   const result = await validateCoupon({
     code: parsed.data.code,
     subtotal: parsed.data.subtotal,
-    phone: parsed.data.phone || "",
+    phone: session?.user?.phone ?? "",
   });
 
   if (!result.ok) {

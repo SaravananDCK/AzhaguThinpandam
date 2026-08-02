@@ -18,6 +18,7 @@ type Props = {
     storeAddress: string;
     shippingFeeRupees: string;
     freeShippingAboveRupees: string;
+    outsideTnPerKgRupees: string;
     lowStockThreshold: string;
     boxTiers: string;
     packingCostRupees: string;
@@ -26,6 +27,8 @@ type Props = {
     instagramReels: string;
     preLaunchNotice: string;
     defaultGstRate: string;
+    manualUpiPayment: boolean;
+    upiId: string;
   };
 };
 
@@ -79,9 +82,13 @@ export function SettingsForm({ values }: Props) {
       <Card>
         <CardContent className="space-y-4">
           <p className="font-semibold">Shipping & stock</p>
+          <p className="text-xs text-muted-foreground">
+            Inside Tamil Nadu: a flat fee, free above the threshold. Outside Tamil Nadu:
+            charged by weight (rounded up to the next kg), always — no free shipping.
+          </p>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2">
-              <Label htmlFor="s-fee">Shipping fee ₹</Label>
+              <Label htmlFor="s-fee">Shipping fee ₹ (inside TN)</Label>
               <Input
                 id="s-fee"
                 name="shippingFee"
@@ -92,7 +99,7 @@ export function SettingsForm({ values }: Props) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="s-free">Free shipping above ₹</Label>
+              <Label htmlFor="s-free">Free shipping above ₹ (inside TN)</Label>
               <Input
                 id="s-free"
                 name="freeShippingAbove"
@@ -102,6 +109,18 @@ export function SettingsForm({ values }: Props) {
                 defaultValue={values.freeShippingAboveRupees}
               />
               <p className="text-xs text-muted-foreground">0 disables free shipping.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-outtn">Outside TN ₹ per kg</Label>
+              <Input
+                id="s-outtn"
+                name="outsideTnPerKg"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.outsideTnPerKgRupees}
+              />
+              <p className="text-xs text-muted-foreground">Charged per kg, always.</p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="s-lowstock">Low stock alert at</Label>
@@ -176,20 +195,52 @@ export function SettingsForm({ values }: Props) {
 
       <Card>
         <CardContent className="space-y-4">
-          <p className="font-semibold">Pre-launch notice</p>
+          <p className="font-semibold">Payment mode</p>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="manualUpiPayment"
+              defaultChecked={values.manualUpiPayment}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span>
+              Collect payment by UPI over WhatsApp (payment gateway not live yet)
+            </span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            While this is on, customers still place real orders — they just get UPI
+            instructions instead of a card payment screen. The order sits at{" "}
+            <strong>Payment pending</strong> until you confirm the transfer from{" "}
+            <strong>Admin → Orders</strong>, which is when stock is deducted and the
+            confirmation email goes out. <strong>Turn this off</strong> once your
+            payment gateway is live.
+          </p>
           <div className="grid gap-2">
-            <Label htmlFor="s-prelaunch">Order-time message</Label>
+            <Label htmlFor="s-upi">UPI ID</Label>
+            <Input
+              id="s-upi"
+              name="upiId"
+              defaultValue={values.upiId}
+              placeholder="yourname@okicici"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown on the order page with a &ldquo;Pay by UPI&rdquo; button that opens
+              GPay / PhonePe / Paytm with the amount filled in. Leave empty and
+              customers are told you&apos;ll send payment details on WhatsApp
+              instead. The WhatsApp link uses your <strong>contact phone</strong> above.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-prelaunch">Checkout banner</Label>
             <Textarea
               id="s-prelaunch"
               name="preLaunchNotice"
               rows={2}
               defaultValue={values.preLaunchNotice}
-              placeholder="Our grand inauguration is on 3rd August 2026!"
+              placeholder="We're taking orders ahead of our grand inauguration!"
             />
             <p className="text-xs text-muted-foreground">
-              While this is set, clicking <strong>Pay</strong> shows this message instead of taking
-              payment. <strong>Clear the box and save</strong> to enable real checkout once your
-              payment gateway is live.
+              Shown at the top of checkout while UPI mode is on. Leave empty for no banner.
             </p>
           </div>
         </CardContent>

@@ -20,6 +20,7 @@ const SETTINGS = {
   box_discount_tiers: "1:5,3:10,4:15,6:20",
   round_prices_to_five: "1",
   default_gst_rate: "5",
+  outside_tn_shipping_per_kg_paise: "7000", // ₹70/kg outside Tamil Nadu
 };
 
 // Suppliers to ensure exist. Historical purchases recorded as free text with a

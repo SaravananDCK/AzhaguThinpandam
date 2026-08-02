@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
-import { SETTINGS } from "@/lib/constants";
+import { getBoxTiers, getManualPaymentConfig, getShippingConfig } from "@/lib/queries";
 import { CheckoutForm } from "@/components/store/checkout-form";
 
 export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
-  const [session, shippingConfig, tiers, settings] = await Promise.all([
+  const [session, shippingConfig, tiers, manual] = await Promise.all([
     auth(),
     getShippingConfig(),
     getBoxTiers(),
-    getSettings(),
+    getManualPaymentConfig(),
   ]);
-  const preLaunchNotice = (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim();
 
   let defaults: {
     email?: string;
@@ -50,10 +48,12 @@ export default async function CheckoutPage() {
       <CheckoutForm
         shippingFee={shippingConfig.shippingFee}
         freeShippingAbove={shippingConfig.freeShippingAbove}
+        outsideTnPerKg={shippingConfig.outsideTnPerKg}
         tiers={tiers}
         defaults={defaults}
         loggedIn={Boolean(session?.user)}
-        preLaunchNotice={preLaunchNotice}
+        manualPayment={manual.enabled}
+        notice={manual.notice}
       />
     </div>
   );

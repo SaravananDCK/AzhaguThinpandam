@@ -4,12 +4,12 @@ import { prisma } from "@/lib/prisma";
 import {
   checkoutSchema,
   createOrderFromCart,
+  manualPaymentRef,
   markOrderPaid,
   CheckoutError,
 } from "@/lib/orders";
 import { getRazorpay, isRazorpayConfigured } from "@/lib/razorpay";
-import { getSettings } from "@/lib/queries";
-import { SETTINGS } from "@/lib/constants";
+import { getManualPaymentConfig } from "@/lib/queries";
 
 export async function POST(req: Request) {
   try {
@@ -20,18 +20,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    // Pre-launch gate — refuse orders while the inauguration notice is set.
-    const settings = await getSettings();
-    const preLaunch = (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim();
-    if (preLaunch) {
-      return NextResponse.json({ error: preLaunch }, { status: 403 });
+    const manual = await getManualPaymentConfig();
+
+    // Orders require an OTP-verified account: it makes the delivery contact
+    // real, ties the order to a customer, and keeps coupon limits honest.
+    // The client opens an inline OTP dialog when it sees this 401.
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Please verify your mobile number to place the order.", needsAuth: true },
+        { status: 401 }
+      );
     }
 
-    const session = await auth();
-    const order = await createOrderFromCart(parsed.data, session?.user?.id);
+    const order = await createOrderFromCart(
+      parsed.data,
+      session.user.id,
+      session.user.phone ?? undefined
+    );
 
-    // Save the address to the logged-in user's address book for next time
-    if (session?.user?.id) {
+    // Save the address to the user's address book for next time
+    {
       const a = parsed.data.address;
       const existing = await prisma.address.findFirst({
         where: { userId: session.user.id, line1: a.line1, pincode: a.pincode },
@@ -52,6 +61,24 @@ export async function POST(req: Request) {
           },
         });
       }
+    }
+
+    // Manual UPI settlement (payment gateway not live yet): the order is real
+    // and PENDING. A placeholder payment row keeps the confirmation path
+    // identical to a gateway payment — the admin marking it PAID runs the same
+    // markOrderPaid, so stock, coupon redemption and the confirmation email all
+    // behave the same way.
+    if (manual.enabled) {
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          razorpayOrderId: manualPaymentRef(order.orderNumber),
+          amount: order.total,
+          status: "CREATED",
+          method: "upi-manual",
+        },
+      });
+      return NextResponse.json({ manualPayment: true, orderNumber: order.orderNumber });
     }
 
     // Dev fallback: without Razorpay keys (local testing), simulate a successful

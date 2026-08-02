@@ -20,7 +20,10 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 // Statuses an admin can move an order to, from each status
 export const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ["CANCELLED"],
+  // PENDING → PAID is the manual UPI confirmation: the admin checks the
+  // transfer landed, then marks it paid (which decrements stock, records any
+  // coupon redemption and sends the confirmation email).
+  PENDING: ["PAID", "CANCELLED"],
   PAID: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["SHIPPED", "CANCELLED"],
   SHIPPED: ["DELIVERED"],
@@ -53,8 +56,9 @@ export const SETTINGS = {
   STORE_PHONE: "store_phone",
   STORE_EMAIL: "store_email",
   STORE_ADDRESS: "store_address",
-  SHIPPING_FEE: "shipping_fee_paise",
-  FREE_SHIPPING_ABOVE: "free_shipping_above_paise",
+  SHIPPING_FEE: "shipping_fee_paise", // inside Tamil Nadu, flat
+  FREE_SHIPPING_ABOVE: "free_shipping_above_paise", // inside Tamil Nadu threshold
+  OUTSIDE_TN_PER_KG: "outside_tn_shipping_per_kg_paise", // per kg, always charged
   LOW_STOCK_THRESHOLD: "low_stock_threshold",
   BOX_TIERS: "box_discount_tiers",
   PACKING_COST: "packing_cost_paise",
@@ -63,6 +67,10 @@ export const SETTINGS = {
   INSTAGRAM_REELS: "instagram_reels",
   PRE_LAUNCH_NOTICE: "pre_launch_notice",
   DEFAULT_GST_RATE: "default_gst_rate",
+  // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
+  // opening the payment gateway. For use until the gateway goes live.
+  MANUAL_UPI_PAYMENT: "manual_upi_payment",
+  UPI_ID: "upi_id",
 } as const;
 
 // Ways a supplier payment can be made (stored as a plain string)
@@ -79,8 +87,11 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.STORE_PHONE]: "93440 22162",
   [SETTINGS.STORE_EMAIL]: "",
   [SETTINGS.STORE_ADDRESS]: "Kovilpatti, Tamil Nadu",
-  [SETTINGS.SHIPPING_FEE]: "6000", // ₹60
-  [SETTINGS.FREE_SHIPPING_ABOVE]: "99900", // free shipping above ₹999
+  [SETTINGS.SHIPPING_FEE]: "6000", // ₹60 flat, inside Tamil Nadu
+  [SETTINGS.FREE_SHIPPING_ABOVE]: "99900", // free inside TN above ₹999
+  // Outside Tamil Nadu: charged by weight (rounded up to the next kg), always —
+  // no free shipping. ₹70/kg default.
+  [SETTINGS.OUTSIDE_TN_PER_KG]: "7000",
   [SETTINGS.LOW_STOCK_THRESHOLD]: "5",
   // "kg:percent" pairs — discount on the whole order once the cart's total
   // weight reaches that many kilograms. Applied server-side at checkout.
@@ -93,10 +104,16 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.INSTAGRAM_HANDLE]: "azhagintamilmozhi05",
   // Reel/post URLs to feature on the homepage — one per line (or comma-separated)
   [SETTINGS.INSTAGRAM_REELS]: "",
-  // Pre-launch gate: when non-empty, placing an order shows this notice instead
-  // of taking payment. Clear it once the payment platform is live.
+  // Shown as a banner on the cart/checkout while manual UPI payment is on.
+  // Orders are still placed — only the gateway step is replaced.
   [SETTINGS.PRE_LAUNCH_NOTICE]:
-    "Our grand inauguration is on 3rd August 2026! 🎉 Online ordering opens then — thank you for your patience.",
+    "We're taking orders ahead of our grand inauguration! 🎉 Card payments go live shortly — until then, pay by UPI and send us the screenshot on WhatsApp.",
+  // Manual UPI settlement until the payment gateway is live. Turn off ("0")
+  // once the gateway is configured and checkout should open it instead.
+  [SETTINGS.MANUAL_UPI_PAYMENT]: "1",
+  // UPI ID (VPA) customers pay to, e.g. "azhagu@okicici". Empty falls back to
+  // "we'll message you the payment details on WhatsApp".
+  [SETTINGS.UPI_ID]: "",
   // Default GST% (used for products with no per-product rate, and as the
   // starting value on the purchase form). Prices are treated as GST-inclusive.
   [SETTINGS.DEFAULT_GST_RATE]: "5",

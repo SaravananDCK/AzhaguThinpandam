@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CheckCircle2, Package } from "lucide-react";
+import { CheckCircle2, IndianRupee, MessageCircle, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { formatINR } from "@/lib/money";
+import { formatINR, paiseToRupees } from "@/lib/money";
+import { getManualPaymentConfig } from "@/lib/queries";
+import { upiPayLink, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
@@ -31,14 +33,35 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const { orderNumber } = await params;
   const { placed } = await searchParams;
 
-  const order = await prisma.order.findUnique({
-    where: { orderNumber: orderNumber.toUpperCase() },
-    include: { items: true, payment: true },
-  });
+  const [order, manual] = await Promise.all([
+    prisma.order.findUnique({
+      where: { orderNumber: orderNumber.toUpperCase() },
+      include: { items: true, payment: true },
+    }),
+    getManualPaymentConfig(),
+  ]);
   if (!order) notFound();
 
   const statusLabel =
     ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status;
+
+  // Awaiting a manual UPI transfer: show how to pay and how to tell us.
+  const awaitingUpi = manual.enabled && order.status === "PENDING";
+  const upiLink = awaitingUpi
+    ? upiPayLink({
+        upiId: manual.upiId,
+        payeeName: manual.payeeName,
+        amountPaise: order.total,
+        orderNumber: order.orderNumber,
+      })
+    : null;
+  const waLink = awaitingUpi
+    ? whatsappOrderLink({
+        phone: manual.whatsappPhone,
+        orderNumber: order.orderNumber,
+        amountRupees: paiseToRupees(order.total),
+      })
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -48,11 +71,64 @@ export default async function OrderPage({ params, searchParams }: Props) {
           <div>
             <p className="font-semibold">Thank you! Your order is placed.</p>
             <p className="text-sm opacity-90">
-              A confirmation has been sent to {order.email}. Save your order number:{" "}
+              {awaitingUpi
+                ? "It's reserved for you — complete the UPI payment below to confirm it."
+                : `A confirmation has been sent to ${order.email}.`}{" "}
+              Save your order number:{" "}
               <span className="font-mono font-semibold">{order.orderNumber}</span>
             </p>
           </div>
         </div>
+      )}
+
+      {awaitingUpi && (
+        <Card className="mb-6 border-amber-300 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/40">
+          <CardContent className="space-y-4">
+            <p className="flex items-center gap-2 font-semibold">
+              <IndianRupee className="size-4" /> Complete your payment
+            </p>
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+              <li>
+                Pay <span className="font-semibold text-foreground">{formatINR(order.total)}</span>{" "}
+                {manual.upiId ? (
+                  <>
+                    to UPI ID{" "}
+                    <span className="font-mono font-semibold text-foreground">{manual.upiId}</span>
+                  </>
+                ) : (
+                  <>using the payment details we&apos;ll send you on WhatsApp</>
+                )}
+                .
+              </li>
+              <li>
+                Send us the payment screenshot on WhatsApp, quoting order{" "}
+                <span className="font-mono font-semibold text-foreground">{order.orderNumber}</span>.
+              </li>
+              <li>We confirm your order as soon as the payment shows up.</li>
+            </ol>
+            <div className="flex flex-wrap gap-2">
+              {upiLink && (
+                <Button asChild>
+                  {/* Opens GPay / PhonePe / Paytm with the amount prefilled */}
+                  <a href={upiLink}>
+                    <IndianRupee className="size-4" /> Pay {formatINR(order.total)} by UPI
+                  </a>
+                </Button>
+              )}
+              {waLink && (
+                <Button asChild variant={upiLink ? "outline" : "default"}>
+                  <a href={waLink} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="size-4" /> Send screenshot on WhatsApp
+                  </a>
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The UPI button works on a phone with a payment app installed. On a
+              computer, pay from your phone using the UPI ID above.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

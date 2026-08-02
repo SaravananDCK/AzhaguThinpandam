@@ -104,20 +104,29 @@ export async function getSettings(): Promise<Record<string, string>> {
   return map;
 }
 
+/**
+ * Manual UPI settlement config — used until the payment gateway is live.
+ * When `enabled`, checkout places the order and hands the customer UPI
+ * instructions instead of opening the gateway.
+ */
+export async function getManualPaymentConfig() {
+  const settings = await getSettings();
+  return {
+    enabled: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
+    upiId: (settings[SETTINGS.UPI_ID] ?? "").trim(),
+    payeeName: (settings[SETTINGS.STORE_NAME] ?? "").trim(),
+    whatsappPhone: (settings[SETTINGS.STORE_PHONE] ?? "").trim(),
+    notice: (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim(),
+  };
+}
+
 export async function getShippingConfig() {
   const settings = await getSettings();
   return {
     shippingFee: parseInt(settings[SETTINGS.SHIPPING_FEE], 10) || 0,
     freeShippingAbove: parseInt(settings[SETTINGS.FREE_SHIPPING_ABOVE], 10) || 0,
+    outsideTnPerKg: parseInt(settings[SETTINGS.OUTSIDE_TN_PER_KG], 10) || 0,
   };
-}
-
-export function computeShippingFee(
-  subtotal: number,
-  config: { shippingFee: number; freeShippingAbove: number }
-) {
-  if (config.freeShippingAbove > 0 && subtotal >= config.freeShippingAbove) return 0;
-  return config.shippingFee;
 }
 
 /** Build-your-box discount tiers from settings. */

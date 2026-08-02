@@ -27,6 +27,9 @@ export default async function AdminSettingsPage() {
           freeShippingAboveRupees: paiseToRupees(
             parseInt(settings[SETTINGS.FREE_SHIPPING_ABOVE], 10) || 0
           ),
+          outsideTnPerKgRupees: paiseToRupees(
+            parseInt(settings[SETTINGS.OUTSIDE_TN_PER_KG], 10) || 0
+          ),
           lowStockThreshold: settings[SETTINGS.LOW_STOCK_THRESHOLD],
           boxTiers: settings[SETTINGS.BOX_TIERS],
           packingCostRupees: paiseToRupees(
@@ -37,6 +40,8 @@ export default async function AdminSettingsPage() {
           instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
+          manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
+          upiId: settings[SETTINGS.UPI_ID] ?? "",
         }}
       />
 

@@ -11,12 +11,14 @@ export async function saveSettings(formData: FormData) {
 
   const shippingFee = rupeesToPaise(String(formData.get("shippingFee") ?? ""));
   const freeAbove = rupeesToPaise(String(formData.get("freeShippingAbove") ?? ""));
+  const outsideTnPerKg = rupeesToPaise(String(formData.get("outsideTnPerKg") ?? "0"));
   const packingCost = rupeesToPaise(String(formData.get("packingCost") ?? "0"));
   const lowStock = parseInt(String(formData.get("lowStockThreshold") ?? ""), 10);
 
   if (
     shippingFee === null ||
     freeAbove === null ||
+    outsideTnPerKg === null ||
     packingCost === null ||
     Number.isNaN(lowStock) ||
     lowStock < 0
@@ -34,6 +36,14 @@ export async function saveSettings(formData: FormData) {
     return { error: "Default GST rate must be between 0 and 100." };
   }
 
+  const upiId = String(formData.get("upiId") ?? "").trim();
+  if (upiId && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upiId)) {
+    return { error: "UPI ID should look like yourname@bank." };
+  }
+  // Manual mode without a UPI ID is allowed — the order page then tells the
+  // customer we'll send payment details on WhatsApp instead.
+  const manualUpi = formData.get("manualUpiPayment") ? "1" : "0";
+
   const values: Record<string, string> = {
     [SETTINGS.STORE_NAME]: String(formData.get("storeName") ?? "").trim(),
     [SETTINGS.STORE_PHONE]: String(formData.get("storePhone") ?? "").trim(),
@@ -41,6 +51,7 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.STORE_ADDRESS]: String(formData.get("storeAddress") ?? "").trim(),
     [SETTINGS.SHIPPING_FEE]: String(shippingFee),
     [SETTINGS.FREE_SHIPPING_ABOVE]: String(freeAbove),
+    [SETTINGS.OUTSIDE_TN_PER_KG]: String(outsideTnPerKg),
     [SETTINGS.LOW_STOCK_THRESHOLD]: String(lowStock),
     [SETTINGS.BOX_TIERS]: boxTiers,
     [SETTINGS.PACKING_COST]: String(packingCost),
@@ -51,6 +62,8 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
+    [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,
+    [SETTINGS.UPI_ID]: upiId,
   };
 
   await prisma.$transaction(

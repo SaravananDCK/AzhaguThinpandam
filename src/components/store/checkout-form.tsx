@@ -3,7 +3,8 @@
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Lock, PartyPopper, Tag, X } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { Check, Loader2, Lock, MessageCircle, PartyPopper, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,8 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
 import { activeTier, boxDiscount, totalKg, type BoxTier } from "@/lib/box";
+import { billableKg, computeShipping, isTamilNadu } from "@/lib/shipping";
+import { INDIAN_STATES } from "@/lib/india-states";
 
 declare global {
   interface Window {
@@ -28,36 +31,82 @@ declare global {
   }
 }
 
+const RESEND_COOLDOWN_SECONDS = 30;
+
+/** The exact body POSTed to /api/checkout, held while the customer verifies. */
+type CheckoutPayload = {
+  email: string;
+  notes?: string;
+  address: {
+    name: string;
+    phone: string;
+    line1: string;
+    line2: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  items: { variantId: string; qty: number }[];
+  couponCode?: string;
+};
+
 type Props = {
   shippingFee: number;
   freeShippingAbove: number;
+  outsideTnPerKg: number;
   tiers: BoxTier[];
   defaults: Partial<
     Record<"email" | "name" | "phone" | "line1" | "line2" | "city" | "state" | "pincode", string>
   >;
   loggedIn: boolean;
-  // When set (pre-launch), placing an order shows this notice instead of paying.
-  preLaunchNotice?: string;
+  // Manual UPI settlement: the order is placed as normal, but instead of
+  // opening the payment gateway the customer gets UPI + WhatsApp instructions.
+  manualPayment: boolean;
+  // Banner copy shown while manual payment is on (store-configurable).
+  notice?: string;
 };
 
 export function CheckoutForm({
   shippingFee,
   freeShippingAbove,
+  outsideTnPerKg,
   tiers,
   defaults,
   loggedIn,
-  preLaunchNotice,
+  manualPayment,
+  notice,
 }: Props) {
   const router = useRouter();
   const { items, clear } = useCart();
   const mounted = useMounted();
   const [submitting, setSubmitting] = useState(false);
-  const [noticeOpen, setNoticeOpen] = useState(false);
-  const phoneRef = useRef<HTMLInputElement>(null);
+  // Controlled so shipping recalculates as the customer picks their state
+  const [state, setState] = useState(defaults.state ?? "");
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  // Inline OTP gate — guests verify their mobile in a dialog on submit, then
+  // the held payload continues straight to /api/checkout. Never a redirect to
+  // /login: that would throw away everything they just typed.
+  const [authed, setAuthed] = useState(loggedIn);
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpStep, setOtpStep] = useState<"phone" | "code">("phone");
+  const [otpPhone, setOtpPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [resendWait, setResendWait] = useState(0);
+  const pendingRef = useRef<CheckoutPayload | null>(null);
+
+  // Resend cooldown, counted down a second at a time — no timer runs once it
+  // hits zero, so there is no permanent interval on the page.
+  useEffect(() => {
+    if (resendWait <= 0) return;
+    const t = setTimeout(() => setResendWait((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendWait]);
 
   const subtotal = cartSubtotal(items);
   // Mirrors the server-side math in createOrderFromCart
@@ -69,7 +118,17 @@ export function CheckoutForm({
   const couponWins = couponDisc > boxDisc;
   const discount = Math.max(boxDisc, couponDisc);
   const discounted = subtotal - discount;
-  const fee = freeShippingAbove > 0 && discounted >= freeShippingAbove ? 0 : shippingFee;
+  // Mirrors createOrderFromCart: inside TN flat/free-above, outside TN weight × ₹/kg
+  const stateChosen = state.trim().length > 0;
+  const outsideTn = stateChosen && !isTamilNadu(state);
+  const fee = stateChosen
+    ? computeShipping({
+        state,
+        weightKg,
+        subtotal: discounted,
+        config: { shippingFee, freeShippingAbove, outsideTnPerKg },
+      })
+    : 0;
   const total = discounted + fee;
 
   async function applyCoupon() {
@@ -81,7 +140,9 @@ export function CheckoutForm({
       const res = await fetch("/api/coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, subtotal, phone: phoneRef.current?.value?.trim() ?? "" }),
+        // No phone: per-customer limits are checked against the verified
+        // session on the server, not against anything we send from here.
+        body: JSON.stringify({ code, subtotal }),
       });
       const data = await res.json();
       if (!data.valid) {
@@ -116,44 +177,170 @@ export function CheckoutForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Pre-launch: don't place the order, just show the inauguration notice.
-    if (preLaunchNotice) {
-      setNoticeOpen(true);
+    const form = new FormData(e.currentTarget);
+    const payload: CheckoutPayload = {
+      email: String(form.get("email") ?? ""),
+      notes: (form.get("notes") as string) || undefined,
+      address: {
+        name: String(form.get("name") ?? ""),
+        phone: String(form.get("phone") ?? ""),
+        line1: String(form.get("line1") ?? ""),
+        line2: String(form.get("line2") ?? ""),
+        city: String(form.get("city") ?? ""),
+        state: String(form.get("state") ?? ""),
+        pincode: String(form.get("pincode") ?? ""),
+      },
+      items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
+      // Only send the coupon when it actually beats the box discount, so a
+      // non-winning (or stale) code never blocks checkout.
+      couponCode: couponWins ? coupon?.code : undefined,
+    };
+
+    // Guests verify first. The delivery number they just typed is the default,
+    // so most people only have to enter the code.
+    if (!authed) {
+      pendingRef.current = payload;
+      setOtpPhone(payload.address.phone);
+      setOtpCode("");
+      setOtpStep("phone");
+      setDevCode(null);
+      setOtpOpen(true);
+      await sendOtp(payload.address.phone);
       return;
     }
-    const form = new FormData(e.currentTarget);
+
+    await placeOrder(payload);
+  }
+
+  /** Requests a code; stays on the phone step so they can retry if it fails. */
+  async function sendOtp(phone: string) {
+    setOtpBusy(true);
+    try {
+      const res = await fetch("/api/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not send the code.");
+        return;
+      }
+      setDevCode(data.devCode ?? null);
+      setResendWait(RESEND_COOLDOWN_SECONDS);
+      setOtpStep("code");
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
+
+  /**
+   * Re-prices the coupon now that the phone is verified — the preview ran
+   * without a session, so this is the first real per-customer check. Returns
+   * the discount, or null if the code is no longer usable.
+   */
+  async function recheckCoupon(code: string): Promise<number | null> {
+    try {
+      const res = await fetch("/api/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const data = await res.json();
+      if (!data.valid) {
+        setCoupon(null);
+        setCouponInput("");
+        setCouponMsg(data.error ?? "This coupon isn't valid.");
+        toast.error(data.error ?? "This coupon isn't valid.");
+        return null;
+      }
+      setCoupon({ code: data.code, discount: data.discount });
+      return data.discount as number;
+    } catch {
+      toast.error("Couldn't re-check the coupon. Please try again.");
+      return null;
+    }
+  }
+
+  async function handleOtpVerify(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setOtpBusy(true);
+    const res = await signIn("phone-otp", {
+      phone: otpPhone,
+      code: otpCode,
+      redirect: false,
+    });
+    if (res?.error) {
+      toast.error("Incorrect or expired code. Please try again.");
+      setOtpBusy(false);
+      return;
+    }
+    setAuthed(true);
+    setOtpOpen(false);
+    setOtpBusy(false);
+
+    const payload = pendingRef.current;
+    pendingRef.current = null;
+    if (!payload) return;
+
+    // First-ever login: the checkout form already has their name and email, so
+    // fill the profile from it instead of asking again.
+    try {
+      const session = await fetch("/api/auth/session").then((r) => r.json());
+      if (!session?.user?.name) {
+        await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: payload.address.name, email: payload.email }),
+        });
+      }
+    } catch {
+      // Never block the order on profile completion
+    }
+
+    if (payload.couponCode) {
+      const discountNow = await recheckCoupon(payload.couponCode);
+      if (discountNow === null) return; // dead code — let them re-check the total
+      // Bundle discount may now be the better deal; don't send a losing coupon.
+      if (discountNow <= boxDisc) payload.couponCode = undefined;
+    }
+
+    await placeOrder(payload);
+  }
+
+  async function placeOrder(payload: CheckoutPayload) {
     setSubmitting(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.get("email"),
-          notes: form.get("notes") || undefined,
-          address: {
-            name: form.get("name"),
-            phone: form.get("phone"),
-            line1: form.get("line1"),
-            line2: form.get("line2") || "",
-            city: form.get("city"),
-            state: form.get("state"),
-            pincode: form.get("pincode"),
-          },
-          items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
-          // Only send the coupon when it actually beats the box discount, so a
-          // non-winning (or stale) code never blocks checkout.
-          couponCode: couponWins ? coupon?.code : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
+        // Session expired between verifying and paying — verify again.
+        if (res.status === 401 && data.needsAuth) {
+          setAuthed(false);
+          pendingRef.current = payload;
+          setOtpPhone(payload.address.phone);
+          setOtpCode("");
+          setOtpStep("phone");
+          setDevCode(null);
+          setSubmitting(false);
+          setOtpOpen(true);
+          await sendOtp(payload.address.phone);
+          return;
+        }
         toast.error(data.error ?? "Could not place the order.");
         setSubmitting(false);
         return;
       }
 
-      // Dev fallback without Razorpay keys — order marked paid on the server
-      if (data.simulated) {
+      // Manual UPI settlement, or the dev fallback without Razorpay keys —
+      // either way the order exists and there is no gateway to open.
+      if (data.manualPayment || data.simulated) {
         clear();
         router.push(`/order/${data.orderNumber}?placed=1`);
         return;
@@ -210,6 +397,14 @@ export function CheckoutForm({
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+
+      {manualPayment && notice && (
+        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
+          <PartyPopper className="mt-0.5 size-5 shrink-0" />
+          <p className="text-sm leading-relaxed">{notice}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-6 grid gap-6 md:grid-cols-[1fr_300px]">
         <div className="space-y-6">
           <Card>
@@ -225,12 +420,11 @@ export function CheckoutForm({
                   defaultValue={defaults.email}
                   placeholder="you@example.com"
                 />
-                {!loggedIn && (
+                {!authed && (
                   <p className="text-xs text-muted-foreground">
-                    Your order confirmation is sent here. Have an account?{" "}
-                    <a href="/login?callbackUrl=/checkout" className="text-primary hover:underline">
-                      Log in
-                    </a>
+                    Your order confirmation is sent here. We&apos;ll WhatsApp a
+                    one-time code to your mobile number to confirm the order —
+                    no password needed.
                   </p>
                 )}
               </div>
@@ -255,7 +449,6 @@ export function CheckoutForm({
                     pattern="[6-9][0-9]{9}"
                     title="10-digit mobile number"
                     defaultValue={defaults.phone}
-                    ref={phoneRef}
                   />
                 </div>
               </div>
@@ -285,7 +478,23 @@ export function CheckoutForm({
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="state">State</Label>
-                  <Input id="state" name="state" required defaultValue={defaults.state} />
+                  <select
+                    id="state"
+                    name="state"
+                    required
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="h-9 rounded-md border bg-background px-2 text-sm"
+                  >
+                    <option value="" disabled>
+                      Select state…
+                    </option>
+                    {INDIAN_STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="pincode">Pincode</Label>
@@ -402,13 +611,28 @@ export function CheckoutForm({
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping</span>
-              <span className="font-medium">{fee === 0 ? "FREE" : formatINR(fee)}</span>
+              <span className="font-medium">
+                {!stateChosen ? "—" : fee === 0 ? "FREE" : formatINR(fee)}
+              </span>
             </div>
-            {fee > 0 && freeShippingAbove > 0 && (
+            {!stateChosen ? (
               <p className="text-xs text-muted-foreground">
-                Free shipping on {discount > 0 ? "the after-discount total" : "orders"} above{" "}
-                {formatINR(freeShippingAbove)}
+                Select your delivery state to see the shipping charge.
               </p>
+            ) : outsideTn ? (
+              <p className="text-xs text-muted-foreground">
+                Outside Tamil Nadu — charged by weight: {billableKg(weightKg)} kg ×{" "}
+                {formatINR(outsideTnPerKg)}/kg (rounded up to the next kg).
+              </p>
+            ) : (
+              fee > 0 &&
+              freeShippingAbove > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Free shipping within Tamil Nadu on{" "}
+                  {discount > 0 ? "the after-discount total" : "orders"} above{" "}
+                  {formatINR(freeShippingAbove)}
+                </p>
+              )
             )}
             <Separator />
             <div className="flex justify-between font-semibold">
@@ -422,34 +646,130 @@ export function CheckoutForm({
                 </>
               ) : (
                 <>
-                  <Lock className="size-4" /> Pay {formatINR(total)}
+                  <Lock className="size-4" />
+                  {authed ? "" : "Verify & "}
+                  {manualPayment ? "Place order" : "Pay"} {formatINR(total)}
                 </>
               )}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              Secure payments — UPI, cards, netbanking & wallets
+              {manualPayment
+                ? "Pay by UPI after placing the order — instructions come next"
+                : "Secure payments — UPI, cards, netbanking & wallets"}
             </p>
           </CardContent>
         </Card>
       </form>
 
-      {/* Pre-launch inauguration notice (shown instead of taking payment) */}
-      <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Inline mobile verification — holds the order until the code checks out */}
+      <Dialog
+        open={otpOpen}
+        onOpenChange={(open) => {
+          setOtpOpen(open);
+          // Abandoning the dialog must not leave a payload primed to fire
+          if (!open) pendingRef.current = null;
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader className="items-center text-center">
-            <span className="mb-2 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <PartyPopper className="size-7" />
+            <span className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MessageCircle className="size-6" />
             </span>
-            <DialogTitle className="font-heading text-xl">Launching soon!</DialogTitle>
+            <DialogTitle className="font-heading text-lg">
+              {otpStep === "phone" ? "Confirm your mobile number" : "Enter the code"}
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-center text-sm leading-relaxed text-muted-foreground">
-            {preLaunchNotice}
-          </p>
-          <Button className="mt-2 w-full" onClick={() => setNoticeOpen(false)}>
-            Got it
-          </Button>
+
+          {otpStep === "phone" ? (
+            <form
+              key="otp-phone"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendOtp(otpPhone);
+              }}
+              className="space-y-4"
+            >
+              <div className="grid gap-2">
+                <Label htmlFor="otp-phone">Mobile number</Label>
+                <Input
+                  id="otp-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  required
+                  autoComplete="tel"
+                  value={otpPhone}
+                  onChange={(e) => setOtpPhone(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll send a one-time code here to confirm your order.
+                </p>
+              </div>
+              <Button type="submit" className="w-full" disabled={otpBusy}>
+                {otpBusy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <MessageCircle className="size-4" />
+                )}
+                Send code on WhatsApp
+              </Button>
+            </form>
+          ) : (
+            <form key="otp-code" onSubmit={handleOtpVerify} className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="otp-code">6-digit code</Label>
+                <Input
+                  id="otp-code"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  required
+                  autoComplete="one-time-code"
+                  autoFocus
+                  className="text-center text-lg tracking-[0.5em]"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Sent via WhatsApp to <span className="font-medium">{otpPhone}</span>.{" "}
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => {
+                      setOtpStep("phone");
+                      setOtpCode("");
+                      setDevCode(null);
+                    }}
+                  >
+                    Change number
+                  </button>
+                </p>
+                {devCode && (
+                  <p className="rounded-md bg-amber-100 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                    Dev mode (WhatsApp not configured) — your code is{" "}
+                    <span className="font-mono font-bold">{devCode}</span>
+                  </p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={otpBusy}>
+                {otpBusy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+                {manualPayment ? "Verify & place order" : "Verify & continue to payment"}
+              </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                Didn&apos;t get it?{" "}
+                <button
+                  type="button"
+                  className="text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={otpBusy || resendWait > 0}
+                  onClick={() => sendOtp(otpPhone)}
+                >
+                  {resendWait > 0 ? `Resend in ${resendWait}s` : "Resend code"}
+                </button>
+              </p>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
+
     </>
   );
 }
