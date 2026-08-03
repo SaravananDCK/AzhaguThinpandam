@@ -7,7 +7,12 @@ import { assertAdmin } from "@/lib/admin";
 import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
 import { createOrderForCustomer, lookupCustomerByPhone } from "@/lib/admin-orders";
-import { manualPaymentRef, markOrderPaid } from "@/lib/orders";
+import {
+  CheckoutError,
+  manualPaymentRef,
+  markOrderPaid,
+  repriceOrderItems,
+} from "@/lib/orders";
 import { rupeesToPaise } from "@/lib/money";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 
@@ -174,6 +179,40 @@ export async function updateOrderDetails(orderId: string, formData: FormData) {
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath(`/order/${order.orderNumber}`);
   return { ok: true };
+}
+
+/**
+ * Replaces the items on an unpaid order and reprices it. PENDING only — see
+ * repriceOrderItems for why.
+ */
+export async function updateOrderItems(
+  orderId: string,
+  items: { variantId: string; qty: number }[],
+  couponCode?: string
+) {
+  await assertAdmin();
+
+  if (!Array.isArray(items) || !items.length) {
+    return { error: "An order needs at least one item." };
+  }
+  if (new Set(items.map((i) => i.variantId)).size !== items.length) {
+    return { error: "The same item is listed twice — combine them into one line." };
+  }
+  if (items.some((i) => !Number.isInteger(i.qty) || i.qty < 1 || i.qty > 99)) {
+    return { error: "Quantities must be between 1 and 99." };
+  }
+
+  try {
+    const order = await repriceOrderItems({ orderId, items, couponCode });
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath(`/order/${order.orderNumber}`);
+    return { ok: true, total: order.total };
+  } catch (e) {
+    if (e instanceof CheckoutError) return { error: e.message };
+    console.error("Order item update failed:", e);
+    return { error: "Could not update the order. Please try again." };
+  }
 }
 
 /** Sets the internal packing cost of an order (P&L only). */

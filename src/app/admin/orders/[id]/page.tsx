@@ -12,6 +12,7 @@ import { formatINR, paiseToRupees } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
 import { EditOrderDetails } from "./edit-details";
+import { EditOrderItems } from "./edit-items";
 import { updatePackingCost } from "../actions";
 
 export const metadata: Metadata = { title: "Order Detail" };
@@ -20,10 +21,17 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: { items: true, payment: true, user: true },
-  });
+  const [order, variants] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id },
+      include: { items: true, payment: true, user: true },
+    }),
+    prisma.productVariant.findMany({
+      where: { isActive: true, product: { isActive: true } },
+      include: { product: { select: { name: true } } },
+      orderBy: [{ product: { name: "asc" } }, { label: "asc" }],
+    }),
+  ]);
   if (!order) notFound();
 
   return (
@@ -84,6 +92,21 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <p className="font-medium">{formatINR(item.price * item.qty)}</p>
             </div>
           ))}
+          {order.status === "PENDING" && (
+            <EditOrderItems
+              orderId={order.id}
+              couponCode={order.couponCode}
+              currentItems={order.items
+                .filter((i) => i.variantId)
+                .map((i) => ({ variantId: i.variantId!, qty: i.qty }))}
+              variants={variants.map((v) => ({
+                id: v.id,
+                label: `${v.product.name} — ${v.label}`,
+                price: v.price,
+                stock: v.stock,
+              }))}
+            />
+          )}
           <Separator />
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">

@@ -81,15 +81,26 @@ export function manualPaymentRef(orderNumber: string): string {
  * keyed to it — never to the delivery phone, which the customer types freely
  * (and would otherwise let them mint a fresh "one per customer" every order).
  */
-export async function createOrderFromCart(
-  input: Omit<CheckoutInput, "email"> & { email?: string },
-  userId?: string,
-  verifiedPhone?: string
-) {
-  const variantIds = input.items.map((i) => i.variantId);
+/**
+ * Prices a set of cart lines against the database: validates availability and
+ * stock, then computes subtotal, bundle discount, coupon, shipping, packing
+ * cost and the GST rate for each line.
+ *
+ * Shared by checkout and by admin order editing so a repriced order can never
+ * drift from what the storefront would have charged.
+ */
+export async function priceOrderLines(params: {
+  items: { variantId: string; qty: number }[];
+  state: string;
+  couponCode?: string;
+  /** Coupon limits key to the verified phone, never a client-supplied one. */
+  couponPhone: string;
+}) {
+  const variantIds = params.items.map((i) => i.variantId);
   if (new Set(variantIds).size !== variantIds.length) {
     throw new CheckoutError("Duplicate items in cart.");
   }
+  if (!params.items.length) throw new CheckoutError("An order needs at least one item.");
 
   const variants = await prisma.productVariant.findMany({
     where: { id: { in: variantIds } },
@@ -104,7 +115,7 @@ export async function createOrderFromCart(
   });
   const byId = new Map(variants.map((v) => [v.id, v]));
 
-  const lines = input.items.map((item) => {
+  const lines = params.items.map((item) => {
     const variant = byId.get(item.variantId);
     if (!variant || !variant.isActive || !variant.product.isActive) {
       throw new CheckoutError(
@@ -133,13 +144,11 @@ export async function createOrderFromCart(
   let discount = boxDiscountAmt;
   let couponId: string | null = null;
   let couponCode: string | null = null;
-  if (input.couponCode) {
+  if (params.couponCode) {
     const result = await validateCoupon({
-      code: input.couponCode,
+      code: params.couponCode,
       subtotal,
-      // Verified phone only. Falls back to the delivery phone for accounts
-      // without one (admins who log in by email).
-      phone: verifiedPhone || input.address.phone,
+      phone: params.couponPhone,
     });
     if (!result.ok) throw new CheckoutError(result.error);
     if (result.discount > boxDiscountAmt) {
@@ -150,10 +159,9 @@ export async function createOrderFromCart(
   }
 
   const shippingConfig = await getShippingConfig();
-  // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg. boxKg
-  // (cart weight) is computed above for the bundle discount.
+  // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg.
   const shippingFee = computeShipping({
-    state: input.address.state,
+    state: params.state,
     weightKg: boxKg,
     subtotal: subtotal - discount,
     config: shippingConfig,
@@ -166,6 +174,54 @@ export async function createOrderFromCart(
   // GST rate to snapshot on each line for output-GST reporting (prices are
   // GST-inclusive). Per-product rate, falling back to the store default.
   const defaultGstRate = parseFloat(settings[SETTINGS.DEFAULT_GST_RATE]) || 0;
+
+  const itemData = lines.map((l) => ({
+    variantId: l.variant.id,
+    productName: l.variant.product.name,
+    variantLabel: l.variant.label,
+    image: l.variant.product.images[0]?.url ?? null,
+    price: l.variant.price,
+    qty: l.qty,
+    basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
+    gstRate: l.variant.product.gstRate ?? defaultGstRate,
+  }));
+
+  return {
+    lines,
+    itemData,
+    subtotal,
+    discount,
+    couponId,
+    couponCode,
+    shippingFee,
+    total,
+    packingCost,
+    weightKg: boxKg,
+  };
+}
+
+/**
+ * Validates cart items against the database (existence, active flags, stock,
+ * current prices) and creates a PENDING order with snapshot items.
+ *
+ * `verifiedPhone` is the OTP-verified phone on the session. Coupon limits are
+ * keyed to it — never to the delivery phone, which the customer types freely
+ * (and would otherwise let them mint a fresh "one per customer" every order).
+ */
+export async function createOrderFromCart(
+  input: Omit<CheckoutInput, "email"> & { email?: string },
+  userId?: string,
+  verifiedPhone?: string
+) {
+  const priced = await priceOrderLines({
+    items: input.items,
+    state: input.address.state,
+    couponCode: input.couponCode || undefined,
+    // Verified phone only. Falls back to the delivery phone for accounts
+    // without one (admins who log in by email).
+    couponPhone: verifiedPhone || input.address.phone,
+  });
+  const { subtotal, discount, couponId, couponCode, shippingFee, total, packingCost } = priced;
 
   const order = await prisma.order.create({
     data: {
@@ -189,23 +245,76 @@ export async function createOrderFromCart(
       couponId,
       couponCode,
       notes: input.notes || null,
-      items: {
-        create: lines.map((l) => ({
-          variantId: l.variant.id,
-          productName: l.variant.product.name,
-          variantLabel: l.variant.label,
-          image: l.variant.product.images[0]?.url ?? null,
-          price: l.variant.price,
-          qty: l.qty,
-          basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
-          gstRate: l.variant.product.gstRate ?? defaultGstRate,
-        })),
-      },
+      items: { create: priced.itemData },
     },
     include: { items: true },
   });
 
   return order;
+}
+
+/**
+ * Replaces the items on an unpaid order and reprices it from scratch, using the
+ * same rules as the storefront.
+ *
+ * Restricted to PENDING orders on purpose. Once an order is PAID, stock has
+ * been deducted, money has been captured against a specific total and any
+ * coupon redemption is recorded — changing items then would need a stock
+ * correction and a refund or top-up, so those are cancelled and re-created
+ * instead.
+ */
+export async function repriceOrderItems(params: {
+  orderId: string;
+  items: { variantId: string; qty: number }[];
+  couponCode?: string;
+}) {
+  const order = await prisma.order.findUnique({
+    where: { id: params.orderId },
+    include: { payment: true },
+  });
+  if (!order) throw new CheckoutError("Order not found.");
+  if (order.status !== "PENDING") {
+    throw new CheckoutError(
+      `Only unpaid orders can have their items changed — this one is ${order.status.toLowerCase()}. Cancel it and create a new order instead.`
+    );
+  }
+
+  const priced = await priceOrderLines({
+    items: params.items,
+    state: order.shipState,
+    couponCode: params.couponCode || undefined,
+    // The account phone if the order has one, else the delivery number
+    couponPhone: order.shipPhone,
+  });
+
+  return prisma.$transaction(async (tx) => {
+    await tx.orderItem.deleteMany({ where: { orderId: order.id } });
+    const updated = await tx.order.update({
+      where: { id: order.id },
+      data: {
+        subtotal: priced.subtotal,
+        discount: priced.discount,
+        shippingFee: priced.shippingFee,
+        total: priced.total,
+        packingCost: priced.packingCost,
+        couponId: priced.couponId,
+        couponCode: priced.couponCode,
+        items: { create: priced.itemData },
+      },
+      include: { items: true },
+    });
+
+    // Keep the pending payment in step with the new total, or the UPI QR and
+    // the amount the customer is asked for would still show the old figure.
+    if (order.payment && order.payment.status !== PAYMENT_STATUSES.CAPTURED) {
+      await tx.payment.update({
+        where: { id: order.payment.id },
+        data: { amount: priced.total },
+      });
+    }
+
+    return updated;
+  });
 }
 
 /**
