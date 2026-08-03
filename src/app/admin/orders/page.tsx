@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { OrdersGrid } from "@/components/admin/orders-grid";
@@ -36,11 +36,18 @@ export default async function AdminOrdersPage() {
             status or payment.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/orders/new">
-            <Plus className="size-4" /> New order
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/orders/slips">
+              <Printer className="size-4" /> Shipping slips
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/orders/new">
+              <Plus className="size-4" /> New order
+            </Link>
+          </Button>
+        </div>
       </div>
       <OrdersGrid rows={rows} />
     </div>

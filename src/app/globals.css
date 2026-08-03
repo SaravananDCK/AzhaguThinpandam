@@ -256,3 +256,60 @@
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Printing (admin invoices and shipping slips)
+
+   Print pages live inside the admin layout so they keep its auth guard, which
+   means the sidebar and nav have to be hidden explicitly. Anything that must
+   not appear on paper carries .no-print; the sheet itself is .print-sheet.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Admin chrome and any on-screen-only controls */
+  aside,
+  nav,
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Undo the layout padding so the sheet uses the full page */
+  main {
+    padding: 0 !important;
+  }
+
+  .print-sheet {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Keep a slip or a table row from being split across two pages */
+  .print-slip,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Browsers drop backgrounds by default; keep the ones that carry meaning */
+  .print-keep-bg {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,9 +45,16 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               : "Guest checkout"}
           </p>
         </div>
-        <Badge variant="outline" className="ml-auto px-3 py-1">
-          {ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status}
-        </Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/orders/${order.id}/print`}>
+              <Printer className="size-4" /> Print
+            </Link>
+          </Button>
+          <Badge variant="outline" className="px-3 py-1">
+            {ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status}
+          </Badge>
+        </div>
       </div>
 
       <Card>
