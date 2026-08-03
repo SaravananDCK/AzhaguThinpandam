@@ -3,7 +3,8 @@ import type { Order, OrderItem } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
-import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { ORDER_STATUS_LABELS, SETTINGS, type OrderStatus } from "@/lib/constants";
+import { getSettings } from "@/lib/queries";
 
 function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
@@ -18,13 +19,38 @@ function getTransport() {
   });
 }
 
+/**
+ * Sender for customer mail: the store's own contact address, so order updates
+ * come from somewhere customers recognise and can reply to.
+ *
+ * Reads Admin → Settings first (changeable without a redeploy), falling back to
+ * SMTP_FROM and then the SMTP login. Note that most providers require the From
+ * address to belong to the authenticated mailbox or domain — if the store email
+ * is changed to something the SMTP account can't send as, delivery will fail or
+ * land in spam.
+ */
+export async function fromAddress(): Promise<{ from: string; replyTo?: string }> {
+  const settings = await getSettings();
+  const storeEmail = (settings[SETTINGS.STORE_EMAIL] ?? "").trim();
+  const storeName = (settings[SETTINGS.STORE_NAME] ?? "").trim();
+  if (storeEmail) {
+    return {
+      from: storeName ? `"${storeName}" <${storeEmail}>` : storeEmail,
+      replyTo: storeEmail,
+    };
+  }
+  return { from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "" };
+}
+
 async function sendMail(to: string, subject: string, html: string) {
   if (!isSmtpConfigured()) {
     console.log(`[email:dev] To: ${to} | ${subject}`);
     return;
   }
+  const { from, replyTo } = await fromAddress();
   await getTransport().sendMail({
-    from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+    from,
+    ...(replyTo ? { replyTo } : {}),
     to,
     subject,
     html,
