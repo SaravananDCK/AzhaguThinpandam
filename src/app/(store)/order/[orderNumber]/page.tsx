@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { formatINR, paiseToRupees } from "@/lib/money";
 import { getManualPaymentConfig } from "@/lib/queries";
-import { upiPayLink, whatsappOrderLink } from "@/lib/upi";
+import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
@@ -62,6 +62,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
         amountRupees: paiseToRupees(order.total),
       })
     : null;
+  const qrSvg = upiLink ? await upiQrSvg(upiLink) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -87,6 +88,27 @@ export default async function OrderPage({ params, searchParams }: Props) {
             <p className="flex items-center gap-2 font-semibold">
               <IndianRupee className="size-4" /> Complete your payment
             </p>
+
+            {qrSvg && (
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:gap-5">
+                <div className="shrink-0 rounded-xl bg-white p-3 shadow-sm">
+                  {/* Inline SVG from qrcode — generated server-side, no request */}
+                  <div
+                    className="[&>svg]:size-[180px]"
+                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+                  />
+                  <p className="mt-1 text-center text-[11px] font-medium text-neutral-600">
+                    Scan to pay {formatINR(order.total)}
+                  </p>
+                </div>
+                <p className="text-sm text-muted-foreground sm:pt-2">
+                  Scan with any UPI app — Google Pay, PhonePe, Paytm, or your
+                  bank app. The amount and your order number are already filled
+                  in, so there&apos;s nothing to type.
+                </p>
+              </div>
+            )}
+
             <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
               <li>
                 Pay <span className="font-semibold text-foreground">{formatINR(order.total)}</span>{" "}

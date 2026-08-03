@@ -66,6 +66,8 @@ export async function sendOrderConfirmationEmail(orderNumber: string) {
     include: { items: true },
   });
   if (!order) return;
+  // Admin-entered WhatsApp orders may have no email — nothing to send to.
+  if (!order.email) return;
 
   const trackUrl = `${appUrl()}/order/${order.orderNumber}`;
   await sendMail(
@@ -105,6 +107,7 @@ export async function sendOrderStatusEmail(orderNumber: string, status: OrderSta
     include: { items: true },
   });
   if (!order) return;
+  if (!order.email) return; // admin-entered order without an email address
 
   const messages: Partial<Record<OrderStatus, string>> = {
     CONFIRMED: "Your order is confirmed and being prepared fresh.",

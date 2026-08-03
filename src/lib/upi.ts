@@ -30,7 +30,29 @@ export function upiPayLink(params: {
     cu: "INR",
     tn: `Order ${params.orderNumber}`,
   });
-  return `upi://pay?${q.toString()}`;
+  // URLSearchParams encodes spaces as "+", which several UPI apps show
+  // literally ("Azhagu+Thinpandam"). %20 is understood everywhere.
+  return `upi://pay?${q.toString().replace(/\+/g, "%20")}`;
+}
+
+/**
+ * QR for a UPI link, as an inline SVG string. Generated per order so the
+ * amount and order number are encoded — the customer scans and pays the exact
+ * sum instead of typing it, which is where wrong payments come from. Inline
+ * (not an <img>) so it costs no extra request on a slow connection.
+ */
+export async function upiQrSvg(link: string): Promise<string | null> {
+  try {
+    const QRCode = (await import("qrcode")).default;
+    return await QRCode.toString(link, {
+      type: "svg",
+      margin: 1,
+      width: 220,
+      errorCorrectionLevel: "M",
+    });
+  } catch {
+    return null; // a missing QR must never break the order page
+  }
 }
 
 /** wa.me link with the order details prefilled for the customer to send. */

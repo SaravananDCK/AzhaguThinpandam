@@ -21,6 +21,10 @@ const SETTINGS = {
   round_prices_to_five: "1",
   default_gst_rate: "5",
   outside_tn_shipping_per_kg_paise: "7000", // ₹70/kg outside Tamil Nadu
+  // UPI settlement while the payment gateway isn't live. Public information —
+  // it's printed on the payment QR customers scan. Change it in Admin →
+  // Settings; this only fills the key in when it's missing.
+  upi_id: "azhagintamilmozhi05@okhdfcbank",
 };
 
 // Suppliers to ensure exist. Historical purchases recorded as free text with a

@@ -38,6 +38,22 @@ export const checkoutSchema = z.object({
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
+/**
+ * Orders an admin enters by hand for a customer who ordered over WhatsApp.
+ * Same shape as a customer checkout except the email is optional — WhatsApp
+ * customers often don't have one, and Order.email is stored as "" in that case
+ * (the email senders skip empty addresses). Pricing rules are identical: this
+ * goes through createOrderFromCart like any other order, so discounts,
+ * shipping, GST and packing cost can't drift from the storefront.
+ */
+export const adminOrderSchema = checkoutSchema.extend({
+  email: z.string().trim().email().max(200).optional().or(z.literal("")),
+  customerName: z.string().trim().min(2).max(100).optional().or(z.literal("")),
+  markPaid: z.boolean().optional(),
+});
+
+export type AdminOrderInput = z.infer<typeof adminOrderSchema>;
+
 export function generateOrderNumber() {
   // Unambiguous alphabet (no 0/O, 1/I/L) — long enough that order URLs are unguessable
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -66,7 +82,7 @@ export function manualPaymentRef(orderNumber: string): string {
  * (and would otherwise let them mint a fresh "one per customer" every order).
  */
 export async function createOrderFromCart(
-  input: CheckoutInput,
+  input: Omit<CheckoutInput, "email"> & { email?: string },
   userId?: string,
   verifiedPhone?: string
 ) {
@@ -155,7 +171,8 @@ export async function createOrderFromCart(
     data: {
       orderNumber: generateOrderNumber(),
       userId: userId ?? null,
-      email: input.email.toLowerCase(),
+      // "" for admin-entered orders with no email on file (see adminOrderSchema)
+      email: input.email?.trim().toLowerCase() ?? "",
       status: "PENDING",
       shipName: input.address.name,
       shipPhone: input.address.phone,

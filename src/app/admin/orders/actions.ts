@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
+import { createOrderForCustomer } from "@/lib/admin-orders";
 import { manualPaymentRef, markOrderPaid } from "@/lib/orders";
 import { rupeesToPaise } from "@/lib/money";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
@@ -89,6 +90,19 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath(`/order/${order.orderNumber}`);
   return { ok: true };
+}
+
+/**
+ * Creates an order on a customer's behalf — for orders taken over WhatsApp.
+ * Auth only; the work lives in createOrderForCustomer so it stays testable
+ * outside a request context.
+ */
+export async function createAdminOrder(input: unknown) {
+  await assertAdmin();
+  const res = await createOrderForCustomer(input);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/admin/orders");
+  return { ok: true, orderNumber: res.orderNumber };
 }
 
 /** Sets the internal packing cost of an order (P&L only). */
