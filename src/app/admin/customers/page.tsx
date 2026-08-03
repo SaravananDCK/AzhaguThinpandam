@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
 import { REVENUE_STATUSES } from "@/lib/finance";
@@ -126,13 +129,21 @@ export default async function AdminCustomersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-heading text-2xl font-bold">Customers</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Registered accounts and guest buyers (grouped by phone number) in one
-          view. Guest orders placed with a registered customer&apos;s number count
-          toward their profile. Expand a row for recent orders.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-bold">Customers</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Registered accounts and guest buyers (grouped by phone number) in one
+            view. Guest orders placed with a registered customer&apos;s number count
+            toward their profile. Click a registered name to edit them; expand a
+            row for recent orders.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/customers/new">
+            <Plus className="size-4" /> New customer
+          </Link>
+        </Button>
       </div>
       <CustomersGrid rows={rows} />
     </div>

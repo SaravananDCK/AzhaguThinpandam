@@ -51,9 +51,23 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
       <Column
         dataField="name"
         caption="Customer"
-        cellRender={({ data }: { data: CustomerRow }) => (
-          <span className="font-medium">{data.name ?? <span className="text-muted-foreground">No name yet</span>}</span>
-        )}
+        cellRender={({ data }: { data: CustomerRow }) => {
+          const label = data.name ?? (
+            <span className="text-muted-foreground">No name yet</span>
+          );
+          // Guest rows are synthetic (grouped by phone), so there's no profile
+          // to open — only registered accounts are editable.
+          return data.type === "REGISTERED" ? (
+            <Link
+              href={`/admin/customers/${data.id}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {label}
+            </Link>
+          ) : (
+            <span className="font-medium">{label}</span>
+          );
+        }}
       />
       <Column
         dataField="type"

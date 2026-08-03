@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
-import { createOrderForCustomer } from "@/lib/admin-orders";
+import { createOrderForCustomer, lookupCustomerByPhone } from "@/lib/admin-orders";
 import { manualPaymentRef, markOrderPaid } from "@/lib/orders";
 import { rupeesToPaise } from "@/lib/money";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
@@ -97,12 +98,82 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
  * Auth only; the work lives in createOrderForCustomer so it stays testable
  * outside a request context.
  */
+/** Phone lookup for the new-order form, so returning customers aren't retyped. */
+export async function findCustomerByPhone(phone: string) {
+  await assertAdmin();
+  return lookupCustomerByPhone(phone);
+}
+
 export async function createAdminOrder(input: unknown) {
   await assertAdmin();
   const res = await createOrderForCustomer(input);
   if (!res.ok) return { error: res.error };
   revalidatePath("/admin/orders");
   return { ok: true, orderNumber: res.orderNumber };
+}
+
+const orderDetailsSchema = z.object({
+  shipName: z.string().trim().min(2, "Enter the recipient's name").max(100),
+  shipPhone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+  shipLine1: z.string().trim().min(3, "Enter the address").max(200),
+  shipLine2: z.string().trim().max(200).optional().or(z.literal("")),
+  shipCity: z.string().trim().min(2, "Enter the city").max(100),
+  shipState: z.string().trim().min(2, "Select the state").max(100),
+  shipPincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
+  email: z.string().trim().email("Enter a valid email").max(200).optional().or(z.literal("")),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
+/**
+ * Corrects the delivery details on an existing order — a wrong flat number or
+ * a changed phone, typically after the customer messages about it.
+ *
+ * Deliberately limited to contact and delivery fields. Items, quantities and
+ * prices are NOT editable: they're a snapshot the totals, stock movements, GST
+ * and any coupon redemption were all derived from, so editing them after the
+ * fact would silently desynchronise money and stock. Cancel and re-create the
+ * order instead.
+ */
+export async function updateOrderDetails(orderId: string, formData: FormData) {
+  await assertAdmin();
+
+  const parsed = orderDetailsSchema.safeParse({
+    shipName: formData.get("shipName") ?? "",
+    shipPhone: formData.get("shipPhone") ?? "",
+    shipLine1: formData.get("shipLine1") ?? "",
+    shipLine2: formData.get("shipLine2") ?? "",
+    shipCity: formData.get("shipCity") ?? "",
+    shipState: formData.get("shipState") ?? "",
+    shipPincode: formData.get("shipPincode") ?? "",
+    email: formData.get("email") ?? "",
+    notes: formData.get("notes") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
+  }
+  const d = parsed.data;
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { error: "Order not found." };
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      shipName: d.shipName,
+      shipPhone: d.shipPhone,
+      shipLine1: d.shipLine1,
+      shipLine2: d.shipLine2 || null,
+      shipCity: d.shipCity,
+      shipState: d.shipState,
+      shipPincode: d.shipPincode,
+      email: d.email ? d.email.toLowerCase() : "",
+      notes: d.notes || null,
+    },
+  });
+
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  return { ok: true };
 }
 
 /** Sets the internal packing cost of an order (P&L only). */

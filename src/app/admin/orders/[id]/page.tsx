@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { formatINR, paiseToRupees } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
+import { EditOrderDetails } from "./edit-details";
 import { updatePackingCost } from "../actions";
 
 export const metadata: Metadata = { title: "Order Detail" };
@@ -125,9 +126,9 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <CardContent className="text-sm">
-            <p className="font-semibold">Customer & delivery</p>
-            <div className="mt-2 text-muted-foreground">
+          <CardContent className="space-y-3 text-sm">
+            <p className="font-semibold">Customer &amp; delivery</p>
+            <div className="text-muted-foreground">
               <p className="font-medium text-foreground">{order.shipName}</p>
               <p>{order.shipLine1}</p>
               {order.shipLine2 && <p>{order.shipLine2}</p>}
@@ -135,13 +136,27 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 {order.shipCity}, {order.shipState} — {order.shipPincode}
               </p>
               <p className="mt-1.5">📞 {order.shipPhone}</p>
-              <p>✉️ {order.email}</p>
+              <p>✉️ {order.email || <span className="italic">no email on file</span>}</p>
               {order.notes && (
                 <p className="mt-2 rounded-lg bg-secondary p-2 text-xs">
                   <span className="font-medium">Note:</span> {order.notes}
                 </p>
               )}
             </div>
+            <EditOrderDetails
+              order={{
+                id: order.id,
+                shipName: order.shipName,
+                shipPhone: order.shipPhone,
+                shipLine1: order.shipLine1,
+                shipLine2: order.shipLine2 ?? "",
+                shipCity: order.shipCity,
+                shipState: order.shipState,
+                shipPincode: order.shipPincode,
+                email: order.email,
+                notes: order.notes ?? "",
+              }}
+            />
           </CardContent>
         </Card>
         <Card>

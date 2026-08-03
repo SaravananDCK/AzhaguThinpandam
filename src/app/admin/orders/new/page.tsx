@@ -2,12 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { lookupCustomerByPhone } from "@/lib/admin-orders";
 import { Button } from "@/components/ui/button";
 import { NewOrderForm } from "./new-order-form";
 
 export const metadata: Metadata = { title: "New order" };
 
-export default async function AdminNewOrderPage() {
+type Props = { searchParams: Promise<{ phone?: string }> };
+
+export default async function AdminNewOrderPage({ searchParams }: Props) {
+  const { phone } = await searchParams;
+  // Resolved here rather than in an effect: arriving back from "create
+  // customer" should show them already matched, with no client round-trip.
+  const initialLookup = phone ? await lookupCustomerByPhone(phone) : null;
   // Everything sellable, so the picker matches what a customer could order
   const variants = await prisma.productVariant.findMany({
     where: { isActive: true, product: { isActive: true } },
@@ -32,6 +39,8 @@ export default async function AdminNewOrderPage() {
         </p>
       </div>
       <NewOrderForm
+        initialPhone={phone}
+        initialLookup={initialLookup}
         variants={variants.map((v) => ({
           id: v.id,
           label: `${v.product.name} — ${v.label}`,

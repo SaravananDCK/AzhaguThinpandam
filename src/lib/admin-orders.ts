@@ -13,6 +13,99 @@ export type AdminOrderResult =
   | { ok: true; orderNumber: string }
   | { ok: false; error: string };
 
+export type CustomerLookup = {
+  found: boolean;
+  /** "account" = registered user; "orders" = only prior orders on this number */
+  source: "account" | "orders" | null;
+  name: string;
+  email: string;
+  orderCount: number;
+  address: {
+    name: string;
+    line1: string;
+    line2: string;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
+};
+
+const EMPTY_LOOKUP: CustomerLookup = {
+  found: false,
+  source: null,
+  name: "",
+  email: "",
+  orderCount: 0,
+  address: null,
+};
+
+/**
+ * Finds a customer by phone so the new-order form can prefill instead of making
+ * the admin retype a returning customer's details.
+ *
+ * Falls back to prior orders on the same number when there's no account — that
+ * covers everyone who bought as a guest before checkout required verification.
+ * Matching is on the normalized phone, so "+91 98765 43210", "098765 43210" and
+ * "9876543210" all find the same person.
+ */
+export async function lookupCustomerByPhone(rawPhone: string): Promise<CustomerLookup> {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return EMPTY_LOOKUP;
+
+  const user = await prisma.user.findUnique({
+    where: { phone },
+    include: {
+      addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }], take: 1 },
+      orders: { select: { id: true } },
+    },
+  });
+
+  if (user) {
+    const a = user.addresses[0];
+    return {
+      found: true,
+      source: "account",
+      name: user.name ?? "",
+      email: user.email ?? "",
+      orderCount: user.orders.length,
+      address: a
+        ? {
+            name: a.name,
+            line1: a.line1,
+            line2: a.line2 ?? "",
+            city: a.city,
+            state: a.state,
+            pincode: a.pincode,
+          }
+        : null,
+    };
+  }
+
+  // No account — reuse the details from their most recent order, if any
+  const orders = await prisma.order.findMany({
+    where: { shipPhone: phone },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!orders.length) return EMPTY_LOOKUP;
+
+  const latest = orders[0];
+  return {
+    found: true,
+    source: "orders",
+    name: latest.shipName,
+    email: latest.email,
+    orderCount: orders.length,
+    address: {
+      name: latest.shipName,
+      line1: latest.shipLine1,
+      line2: latest.shipLine2 ?? "",
+      city: latest.shipCity,
+      state: latest.shipState,
+      pincode: latest.shipPincode,
+    },
+  };
+}
+
 /**
  * Creates an order on a customer's behalf — for orders taken over WhatsApp.
  *
