@@ -31,7 +31,11 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+# Both patterns matter: ".env*" catches ".env.local", "*.env" catches copies
+# like "config - Copy.env" that a file manager or editor leaves behind — those
+# hold real secrets and would otherwise be swept up by "git add -A".
 .env*
+*.env
 !.env.example
 
 # runtime data on the server (docker volumes)

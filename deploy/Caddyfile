@@ -1,5 +1,14 @@
 # Caddy reverse proxy with automatic HTTPS (Let's Encrypt).
 # DOMAIN comes from the environment (set it in .env next to docker-compose.yml).
+
+# www points at this server in DNS, so it must be served too — without this
+# block Caddy has no certificate for it and the TLS handshake fails outright
+# (browsers just show "can't open this site"). Redirect to the bare domain so
+# there is a single canonical URL.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
 {$DOMAIN} {
 	encode gzip
 

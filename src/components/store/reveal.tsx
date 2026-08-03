@@ -1,9 +1,19 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-/** Fades content up into view the first time it enters the viewport. */
+/**
+ * Fades content up on load. Deliberately CSS-only and NOT a client component:
+ * the animation runs the moment the stylesheet parses, so server-rendered
+ * content is readable without waiting for the JS bundle.
+ *
+ * This used to be an IntersectionObserver in a useEffect with `opacity: 0` in
+ * CSS, which meant every wrapped block stayed invisible until ~776 KB of
+ * JavaScript downloaded and hydrated — a blank white page for the better part
+ * of a minute on a slow mobile connection. Content is now visible by default
+ * and the animation is pure enhancement, so a slow or failed script load can
+ * never blank the page again.
+ *
+ * `delay` staggers items in a grid (milliseconds).
+ */
 export function Reveal({
   children,
   className,
@@ -13,29 +23,10 @@ export function Reveal({
   className?: string;
   delay?: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("is-visible");
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div
-      ref={ref}
       className={cn("reveal", className)}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={delay ? ({ "--reveal-delay": `${delay}ms` } as React.CSSProperties) : undefined}
     >
       {children}
     </div>

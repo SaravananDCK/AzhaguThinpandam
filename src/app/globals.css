@@ -229,21 +229,30 @@
 }
 
 /* Scroll-reveal (see components/store/reveal.tsx) */
+/* Visible by DEFAULT. The fade-up is a pure-CSS enhancement that starts as soon
+   as the stylesheet parses — it must never gate whether content is readable.
+   This previously used opacity:0 plus a JS IntersectionObserver to add
+   .is-visible, which meant the whole page stayed blank until ~776 KB of
+   JavaScript had downloaded and hydrated. On a slow mobile connection that was
+   the better part of a minute of white screen. */
 .reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.reveal.is-visible {
   opacity: 1;
-  transform: none;
 }
-@media (prefers-reduced-motion: reduce) {
+
+@media (prefers-reduced-motion: no-preference) {
   .reveal {
+    animation: reveal-in 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
     opacity: 1;
     transform: none;
-    transition: none;
   }
 }
