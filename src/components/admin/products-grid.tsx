@@ -6,6 +6,7 @@ import DataGrid, {
   Column,
   FilterRow,
   HeaderFilter,
+  Lookup,
   Pager,
   Paging,
   SearchPanel,
@@ -26,6 +27,22 @@ export type ProductRow = {
   isFeatured: boolean;
   isFlagship: boolean;
 };
+
+/**
+ * A product's headline state, as one sortable/filterable value.
+ *
+ * The badges aren't mutually exclusive (a flagship can also be featured), so
+ * this picks the one that matters most: hidden beats everything, then flagship,
+ * then featured. The cell still renders every badge that applies.
+ */
+const STATUSES = ["Hidden", "Flagship", "Featured", "Live"] as const;
+
+function statusOf(row: ProductRow): (typeof STATUSES)[number] {
+  if (!row.isActive) return "Hidden";
+  if (row.isFlagship) return "Flagship";
+  if (row.isFeatured) return "Featured";
+  return "Live";
+}
 
 function priceText(row: ProductRow) {
   if (row.priceMinRupees === null) return "—";
@@ -101,8 +118,10 @@ export function ProductsGrid({ rows }: { rows: ProductRow[] }) {
       <Column
         caption="Status"
         width={170}
-        allowSorting={false}
-        allowFiltering={false}
+        // Derived from isActive/isFlagship/isFeatured, so the grid needs an
+        // explicit value to sort and filter on — the badges alone aren't data.
+        calculateCellValue={statusOf}
+        dataType="string"
         cellRender={({ data }: { data: ProductRow }) => (
           <span className="flex gap-1">
             {!data.isActive && <Badge variant="secondary">Hidden</Badge>}
@@ -111,7 +130,10 @@ export function ProductsGrid({ rows }: { rows: ProductRow[] }) {
             {data.isActive && !data.isFeatured && <Badge variant="outline">Live</Badge>}
           </span>
         )}
-      />
+      >
+        {/* Dropdown of the four states instead of free-text matching */}
+        <Lookup dataSource={[...STATUSES]} />
+      </Column>
       <Column dataField="isActive" caption="Visible" dataType="boolean" width={95} />
     </DataGrid>
   );
