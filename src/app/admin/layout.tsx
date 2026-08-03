@@ -74,8 +74,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       <div className="flex-1">
-        {/* Mobile top bar */}
-        <div className="flex items-center gap-1 overflow-x-auto border-b p-2 md:hidden">
+        {/* Mobile top bar. `no-print` matters for more than tidiness: md:hidden
+            doesn't apply at A4 width, and overflow-x-auto can't scroll on paper,
+            so this row of nav buttons would lay out at full width and push the
+            page wider than the sheet — clipping the invoice's right edge. */}
+        <div className="no-print flex items-center gap-1 overflow-x-auto border-b p-2 md:hidden">
           {NAV.map((item) => (
             <Button key={item.href} asChild variant="ghost" size="sm">
               <Link href={item.href}>{item.label}</Link>

@@ -94,37 +94,51 @@ export function SlipsView({ orders, from }: { orders: Slip[]; from: FromAddress 
         </CardContent>
       </Card>
 
-      {/* The sheet itself. Two columns of A6-ish slips = 4 per A4 page. */}
-      <div className="grid grid-cols-2 gap-0 print:gap-0">
+      {/* Three full-width slips per A4. Single column so the address gets the
+          whole page width and can be set large enough to read at arm's length
+          on a parcel. 88mm each × 3 = 264mm, inside A4's 277mm printable height. */}
+      <div className="grid grid-cols-1 gap-0">
         {chosen.map((o) => (
           <div
             key={o.id}
-            className="print-slip flex h-[74mm] flex-col justify-between border border-dashed border-neutral-400 p-4 text-black"
+            className="print-slip flex h-[88mm] flex-col justify-between border border-dashed border-neutral-400 p-5 text-black"
           >
-            <div>
-              <p className="text-[10px] uppercase tracking-wide text-neutral-500">To</p>
-              <p className="text-base font-bold leading-tight">{o.name}</p>
-              <p className="mt-0.5 text-sm leading-snug">{o.line1}</p>
-              {o.line2 && <p className="text-sm leading-snug">{o.line2}</p>}
-              <p className="text-sm leading-snug">
-                {o.city}, {o.state}
-              </p>
-              <p className="text-sm font-semibold">PIN {o.pincode}</p>
-              <p className="mt-1 text-sm">📞 {o.phone}</p>
+            {/* Sender strip */}
+            <div className="flex items-center justify-between gap-3 border-b border-neutral-300 pb-2">
+              <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="" className="size-9 shrink-0 rounded-full" />
+                <div className="leading-tight">
+                  <p className="text-sm font-bold">{from.name}</p>
+                  <p className="text-[10px] text-neutral-600">
+                    {from.address}
+                    {from.phone && ` · ${from.phone}`}
+                  </p>
+                </div>
+              </div>
+              <p className="shrink-0 font-mono text-xs font-semibold">{o.orderNumber}</p>
             </div>
 
-            <div className="mt-2 border-t border-neutral-300 pt-2">
-              <div className="flex items-baseline justify-between">
-                <p className="font-mono text-xs font-semibold">{o.orderNumber}</p>
-                <p className="text-[10px] text-neutral-600">
-                  {o.itemCount} item{o.itemCount === 1 ? "" : "s"}
-                </p>
-              </div>
-              <p className="mt-1 text-[10px] leading-tight text-neutral-600">
-                <span className="font-medium">From:</span> {from.name}, {from.address}
-                {from.phone && ` · ${from.phone}`}
+            {/* Recipient — the part that has to be readable on a parcel */}
+            <div className="flex-1 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+                To
               </p>
+              <p className="text-2xl font-bold leading-tight">{o.name}</p>
+              <p className="mt-1 text-lg leading-snug">{o.line1}</p>
+              {o.line2 && <p className="text-lg leading-snug">{o.line2}</p>}
+              <p className="text-lg leading-snug">
+                {o.city}, {o.state}
+              </p>
+              <div className="mt-1.5 flex items-baseline gap-5">
+                <p className="text-xl font-bold">PIN {o.pincode}</p>
+                <p className="text-lg font-medium">📞 {o.phone}</p>
+              </div>
             </div>
+
+            <p className="text-right text-[11px] text-neutral-600">
+              {o.itemCount} item{o.itemCount === 1 ? "" : "s"}
+            </p>
           </div>
         ))}
       </div>

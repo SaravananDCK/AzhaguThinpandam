@@ -282,6 +282,11 @@
   body {
     background: #fff !important;
     color: #000 !important;
+    /* Nothing may make the page box wider than the sheet, or the right-hand
+       edge of every table and total gets clipped */
+    width: auto !important;
+    max-width: 100% !important;
+    overflow: visible !important;
   }
 
   /* Undo the layout padding so the sheet uses the full page */
@@ -290,6 +295,7 @@
   }
 
   .print-sheet {
+    width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;

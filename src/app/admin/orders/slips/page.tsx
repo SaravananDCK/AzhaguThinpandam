@@ -33,8 +33,8 @@ export default async function ShippingSlipsPage() {
         </Button>
         <h1 className="mt-2 font-heading text-2xl font-bold">Shipping slips</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Four slips per A4 sheet — print, cut along the lines and stick one on
-          each parcel. Showing paid orders that haven&apos;t been delivered yet.
+          Three slips per A4 sheet — print, cut along the dashed lines and stick
+          one on each parcel. Showing paid orders that haven&apos;t been delivered yet.
         </p>
       </div>
 
