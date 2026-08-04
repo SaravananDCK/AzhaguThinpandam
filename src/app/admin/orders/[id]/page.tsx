@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft, Printer } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { computeOrderCost } from "@/lib/order-cost";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
 import { EditOrderDetails } from "./edit-details";
 import { EditOrderItems } from "./edit-items";
+import { CostPanel } from "./cost-panel";
 import { updatePackingCost } from "../actions";
 
 export const metadata: Metadata = { title: "Order Detail" };
@@ -33,6 +35,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     }),
   ]);
   if (!order) notFound();
+
+  const cost = await computeOrderCost(order.id);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -153,6 +157,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {cost && <CostPanel cost={cost} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
