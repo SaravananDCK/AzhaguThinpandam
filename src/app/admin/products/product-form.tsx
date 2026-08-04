@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { paiseToRupees, rupeesToPaise } from "@/lib/money";
+import { PRODUCT_LINES, PRODUCT_LINE_LABELS } from "@/lib/constants";
 import { applyMarginPricing } from "@/lib/pricing";
 
 type VariantRow = {
@@ -35,6 +36,8 @@ type VariantRow = {
   mrpRupees: string;
   stock: string;
   sku: string;
+  weightGrams: string;
+  unitCostRupees: string;
 };
 
 type ProductData = {
@@ -47,6 +50,7 @@ type ProductData = {
   isActive: boolean;
   isFeatured: boolean;
   isFlagship: boolean;
+  line: string;
   purchasePricePerKg: number | null;
   profitMarginPct: number | null;
   gstRate: number | null;
@@ -58,6 +62,8 @@ type ProductData = {
     mrp: number | null;
     stock: number;
     sku: string | null;
+    weightGrams: number | null;
+    unitCost: number | null;
   }[];
 };
 
@@ -84,6 +90,7 @@ export function ProductForm({
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [isFlagship, setIsFlagship] = useState(product?.isFlagship ?? false);
+  const [line, setLine] = useState<string>(product?.line ?? "SNACKS");
   const [purchasePerKg, setPurchasePerKg] = useState(
     product?.purchasePricePerKg ? paiseToRupees(product.purchasePricePerKg) : ""
   );
@@ -131,7 +138,19 @@ export function ProductForm({
       mrpRupees: v.mrp ? paiseToRupees(v.mrp) : "",
       stock: String(v.stock),
       sku: v.sku ?? "",
-    })) ?? [{ label: "250 g", priceRupees: "", mrpRupees: "", stock: "0", sku: "" }]
+      weightGrams: v.weightGrams != null ? String(v.weightGrams) : "",
+      unitCostRupees: v.unitCost != null ? String(v.unitCost / 100) : "",
+    })) ?? [
+      {
+        label: "250 g",
+        priceRupees: "",
+        mrpRupees: "",
+        stock: "0",
+        sku: "",
+        weightGrams: "",
+        unitCostRupees: "",
+      },
+    ]
   );
 
   function setVariant(index: number, patch: Partial<VariantRow>) {
@@ -189,6 +208,8 @@ export function ProductForm({
         mrp,
         stock,
         sku: v.sku.trim(),
+        weightGrams: v.weightGrams.trim() ? parseInt(v.weightGrams, 10) : null,
+        unitCost: v.unitCostRupees.trim() ? rupeesToPaise(v.unitCostRupees) : null,
       });
     }
 
@@ -203,6 +224,7 @@ export function ProductForm({
         isActive,
         isFeatured,
         isFlagship,
+        line,
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
         profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
         gstRate: gstRate.trim() ? parseFloat(gstRate) : null,
@@ -360,7 +382,15 @@ export function ProductForm({
                 onClick={() =>
                   setVariants((rows) => [
                     ...rows,
-                    { label: "", priceRupees: "", mrpRupees: "", stock: "0", sku: "" },
+                    {
+                      label: "",
+                      priceRupees: "",
+                      mrpRupees: "",
+                      stock: "0",
+                      sku: "",
+                      weightGrams: "",
+                      unitCostRupees: "",
+                    },
                   ])
                 }
               >
@@ -428,6 +458,27 @@ export function ProductForm({
                       min="0"
                       value={v.stock}
                       onChange={(e) => setVariant(i, { stock: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs">Weight g</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="auto"
+                      value={v.weightGrams}
+                      onChange={(e) => setVariant(i, { weightGrams: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label className="text-xs">Unit cost ₹</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="per kg"
+                      value={v.unitCostRupees}
+                      onChange={(e) => setVariant(i, { unitCostRupees: e.target.value })}
                     />
                   </div>
                   <div className="grid gap-1">
@@ -500,6 +551,29 @@ export function ProductForm({
               />
               Flagship — pinned first with a “Signature” badge
             </label>
+
+            <div className="grid gap-1.5 border-t pt-3">
+              <Label htmlFor="p-line" className="text-sm">Product line</Label>
+              <select
+                id="p-line"
+                value={line}
+                onChange={(e) => setLine(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                {PRODUCT_LINES.map((l) => (
+                  <option key={l} value={l}>
+                    {PRODUCT_LINE_LABELS[l]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Snacks are priced and discounted by weight and appear in the main
+                shop. Magnets get their own page at <code>/magnets</code>, are left
+                out of Build Your Box, and don&apos;t earn or receive the weight
+                discount — so give each variant an explicit <strong>weight</strong>{" "}
+                and <strong>unit cost</strong> below.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

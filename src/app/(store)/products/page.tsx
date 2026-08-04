@@ -66,7 +66,8 @@ export default async function ProductsPage({ searchParams }: Props) {
   const requestedPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const [categories, { products, total, page, pageCount, perPage }, tiers] = await Promise.all([
     getCategories(),
-    getProductsPage({ q, categorySlug: category, page: requestedPage }),
+    // Snacks only — merchandise has its own section at /magnets
+    getProductsPage({ q, categorySlug: category, page: requestedPage, line: "SNACKS" }),
     getBoxTiers(),
   ]);
   const activeCategory = categories.find((c) => c.slug === category);

@@ -56,6 +56,8 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
           variant: {
             select: {
               label: true,
+              weightGrams: true,
+              unitCost: true,
               product: { select: { purchasePricePerKg: true } },
             },
           },
@@ -70,9 +72,24 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
 
   const lines: OrderCostLine[] = order.items.map((item) => {
     const perKg = item.variant?.product.purchasePricePerKg ?? null;
-    // The order snapshots the label, so this still works if the variant is gone
-    const grams = gramsOf(item.variantLabel);
+    // Explicit weight wins; the order snapshots the label so this still works
+    // if the variant has since been deleted.
+    const grams = item.variant?.weightGrams ?? gramsOf(item.variantLabel);
     const revenue = item.price * item.qty;
+
+    // Merchandise isn't bought by the kilo — a per-unit cost takes precedence.
+    const unitCost = item.variant?.unitCost ?? null;
+    if (unitCost != null && unitCost > 0) {
+      const cost = unitCost * item.qty;
+      goodsCost += cost;
+      return {
+        productName: item.productName,
+        variantLabel: item.variantLabel,
+        qty: item.qty,
+        cost,
+        revenue,
+      };
+    }
 
     // Zero counts as "not set", not as "free": the pricing API accepts 0
     // (z.number().min(0)) and recomputeProductPrices already skips it, so a

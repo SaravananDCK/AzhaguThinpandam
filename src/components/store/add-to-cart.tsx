@@ -16,6 +16,8 @@ type Variant = {
   price: number;
   mrp: number | null;
   stock: number;
+  /** Real pack weight — merchandise labels don't parse to one */
+  weightGrams?: number | null;
 };
 
 type Props = {
@@ -24,9 +26,18 @@ type Props = {
   tamilName?: string | null;
   image?: string | null;
   variants: Variant[];
+  /** PRODUCT_LINES — carried into the cart so only snacks earn the weight discount */
+  line?: string;
 };
 
-export function AddToCart({ productSlug, productName, tamilName, image, variants }: Props) {
+export function AddToCart({
+  productSlug,
+  productName,
+  tamilName,
+  image,
+  variants,
+  line,
+}: Props) {
   const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const [qty, setQty] = useState(1);
@@ -140,6 +151,8 @@ export function AddToCart({ productSlug, productName, tamilName, image, variants
                 image,
                 maxStock: selected.stock,
                 packetGrams,
+                weightGrams: selected.weightGrams ?? null,
+                line,
               },
               qty
             );

@@ -6,6 +6,7 @@
 // authoritative discount is computed server-side at checkout.
 
 import { gramsOf } from "@/lib/pricing";
+import { WEIGHT_DISCOUNT_LINES, type ProductLine } from "@/lib/constants";
 
 export type BoxTier = { count: number; percent: number }; // count = kilograms
 
@@ -22,9 +23,23 @@ export function parseBoxTiers(value: string | undefined | null): BoxTier[] {
   return tiers.sort((a, b) => a.count - b.count);
 }
 
-/** Total weight in kg for a set of (variant label, qty) pairs. */
-export function totalKg(items: { label: string; qty: number }[]): number {
-  const grams = items.reduce((sum, i) => sum + (gramsOf(i.label) ?? 0) * i.qty, 0);
+/**
+ * Weight of one pack in grams. An explicit `weightGrams` always wins; the label
+ * is only a fallback for snack packs named by weight ("250 g").
+ *
+ * Merchandise labels ("Single", "Set of 4") parse to nothing, so without an
+ * explicit weight such an item weighs zero — and a zero-weight order ships free
+ * outside Tamil Nadu, where the fee is weight × ₹/kg.
+ */
+export function packGrams(item: { label: string; weightGrams?: number | null }): number {
+  return item.weightGrams ?? gramsOf(item.label) ?? 0;
+}
+
+/** Total weight in kg for a set of packs. */
+export function totalKg(
+  items: { label: string; qty: number; weightGrams?: number | null }[]
+): number {
+  const grams = items.reduce((sum, i) => sum + packGrams(i) * i.qty, 0);
   return grams / 1000;
 }
 
@@ -51,4 +66,24 @@ export function boxDiscount(tiers: BoxTier[], count: number, subtotal: number): 
   const tier = activeTier(tiers, count);
   if (!tier) return 0;
   return Math.round((subtotal * tier.percent) / 100);
+}
+
+/**
+ * Client-side mirror of the server's weight/discount split (priceOrderLines).
+ * The cart and checkout summaries must agree with what checkout actually
+ * charges, so both use the same rule: every pack counts toward shipping weight,
+ * but only snacks earn — or receive — the bundle discount.
+ */
+export function cartWeights(
+  items: { variantLabel: string; qty: number; weightGrams?: number | null; line?: string; price: number }[]
+) {
+  const shippingKg = totalKg(
+    items.map((i) => ({ label: i.variantLabel, qty: i.qty, weightGrams: i.weightGrams }))
+  );
+  const food = items.filter((i) => WEIGHT_DISCOUNT_LINES.includes((i.line ?? "SNACKS") as ProductLine));
+  const foodKg = totalKg(
+    food.map((i) => ({ label: i.variantLabel, qty: i.qty, weightGrams: i.weightGrams }))
+  );
+  const foodSubtotal = food.reduce((s, i) => s + i.price * i.qty, 0);
+  return { shippingKg, foodKg, foodSubtotal };
 }

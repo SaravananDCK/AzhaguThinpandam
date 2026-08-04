@@ -164,12 +164,14 @@ export default async function ProductPage({ params }: Props) {
               productName={product.name}
               tamilName={product.tamilName}
               image={product.images[0]?.url}
+              line={product.line}
               variants={product.variants.map((v) => ({
                 id: v.id,
                 label: v.label,
                 price: v.price,
                 mrp: v.mrp,
                 stock: v.stock,
+                weightGrams: v.weightGrams,
               }))}
             />
           </div>

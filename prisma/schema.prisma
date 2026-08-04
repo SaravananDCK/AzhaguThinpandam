@@ -63,6 +63,11 @@ model Product {
   isActive    Boolean          @default(true)
   isFeatured  Boolean          @default(false)
   isFlagship  Boolean          @default(false) // hero products pinned to the top of listings
+  // Which product line this belongs to — see PRODUCT_LINES. Snacks are priced
+  // and discounted by weight; merchandise (fridge magnets) is not, so the two
+  // are listed separately on the storefront. SQLite has no enums.
+  line        String      @default("SNACKS")
+
   // Pricing rule: wholesale cost + target margin drive variant sale prices
   purchasePricePerKg Int? // paise per kg (wholesale cost)
   profitMarginPct    Float? // e.g. 25 = sell at cost + 25%
@@ -99,6 +104,13 @@ model ProductVariant {
   label         String // e.g. "250 g", "500 g", "1 kg"
   price         Int // selling price in paise
   mrp           Int? // strike-through price in paise
+  // Actual pack weight in grams. Snack labels ("250 g") parse to this, but
+  // merchandise labels ("Single", "Set of 4") don't — without it a magnet
+  // weighs nothing and ships free outside Tamil Nadu.
+  weightGrams   Int?
+  // Per-unit wholesale cost in paise, for items not priced by the kilo.
+  // Takes precedence over the product's purchasePricePerKg when set.
+  unitCost      Int?
   stock         Int             @default(0)
   sku           String?         @unique
   sortOrder     Int             @default(0)

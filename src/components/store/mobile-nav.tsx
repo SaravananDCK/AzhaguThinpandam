@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, PackageSearch } from "lucide-react";
+import { Menu, PackageSearch, Sparkles } from "lucide-react";
 import type { Category } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +82,17 @@ export function MobileNav({ categories }: { categories: Category[] }) {
               {c.name}
             </DrawerLink>
           ))}
+          <p className="mb-1 mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            More
+          </p>
+          <Link
+            href="/magnets"
+            onClick={close}
+            className="group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            <span className="absolute bottom-1 left-0 top-1 w-1 rounded-r bg-primary-600 opacity-0 transition-opacity group-hover:opacity-100" />
+            <Sparkles className="size-4 text-muted-foreground" /> Azhagu Magnets
+          </Link>
           <p className="mb-1 mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Orders
           </p>

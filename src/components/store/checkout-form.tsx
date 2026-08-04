@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
-import { activeTier, boxDiscount, totalKg, type BoxTier } from "@/lib/box";
+import { activeTier, boxDiscount, cartWeights, type BoxTier } from "@/lib/box";
 import { billableKg, computeShipping, isTamilNadu } from "@/lib/shipping";
 import { INDIAN_STATES } from "@/lib/india-states";
 
@@ -110,9 +110,11 @@ export function CheckoutForm({
 
   const subtotal = cartSubtotal(items);
   // Mirrors the server-side math in createOrderFromCart
-  const weightKg = totalKg(items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
-  const tier = activeTier(tiers, weightKg);
-  const boxDisc = boxDiscount(tiers, weightKg, subtotal);
+  // Mirrors priceOrderLines: shipping weighs the whole parcel, the bundle
+  // discount only looks at snacks.
+  const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
+  const tier = activeTier(tiers, foodKg);
+  const boxDisc = boxDiscount(tiers, foodKg, foodSubtotal);
   // Whichever is larger — coupon or box discount, never both.
   const couponDisc = coupon?.discount ?? 0;
   const couponWins = couponDisc > boxDisc;

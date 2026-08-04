@@ -7,7 +7,12 @@ import { boxDiscount, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { basePacketGrams } from "@/lib/pack";
-import { PAYMENT_STATUSES, SETTINGS } from "@/lib/constants";
+import {
+  PAYMENT_STATUSES,
+  SETTINGS,
+  WEIGHT_DISCOUNT_LINES,
+  type ProductLine,
+} from "@/lib/constants";
 
 export const checkoutSchema = z.object({
   email: z.string().email().max(200),
@@ -132,11 +137,34 @@ export async function priceOrderLines(params: {
 
   const subtotal = lines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
 
-  // Tiered bundle discount: total weight (kg, any mix) → % off the whole order.
+  // Two different weights, and conflating them is a money bug:
+  //   shippingKg — every pack in the parcel, since the courier weighs the lot
+  //   foodKg     — snacks only, because the bundle discount rewards buying
+  //                snacks in bulk
+  const shippingKg = totalKg(
+    lines.map((l) => ({
+      label: l.variant.label,
+      qty: l.qty,
+      weightGrams: l.variant.weightGrams,
+    }))
+  );
+  const foodLines = lines.filter((l) =>
+    WEIGHT_DISCOUNT_LINES.includes(l.variant.product.line as ProductLine)
+  );
+  const foodKg = totalKg(
+    foodLines.map((l) => ({
+      label: l.variant.label,
+      qty: l.qty,
+      weightGrams: l.variant.weightGrams,
+    }))
+  );
+  const foodSubtotal = foodLines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
+
+  // Tiered bundle discount: snack weight → % off the snacks. Merchandise in the
+  // same cart neither counts toward the tier nor gets discounted by it.
   // Computed here, never trusted from the client.
-  const boxKg = totalKg(lines.map((l) => ({ label: l.variant.label, qty: l.qty })));
   const tiers = await getBoxTiers();
-  const boxDiscountAmt = boxDiscount(tiers, boxKg, subtotal);
+  const boxDiscountAmt = boxDiscount(tiers, foodKg, foodSubtotal);
 
   // Coupon (optional). The customer gets whichever is larger — the coupon or
   // the box discount, never both. An invalid coupon fails the checkout so the
@@ -162,7 +190,7 @@ export async function priceOrderLines(params: {
   // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg.
   const shippingFee = computeShipping({
     state: params.state,
-    weightKg: boxKg,
+    weightKg: shippingKg,
     subtotal: subtotal - discount,
     config: shippingConfig,
   });
@@ -196,7 +224,7 @@ export async function priceOrderLines(params: {
     shippingFee,
     total,
     packingCost,
-    weightKg: boxKg,
+    weightKg: shippingKg,
   };
 }
 

@@ -14,6 +14,8 @@ type Variant = {
   price: number;
   mrp: number | null;
   stock: number;
+  /** Real pack weight — merchandise labels don't parse to one */
+  weightGrams?: number | null;
 };
 
 type Props = {
@@ -22,11 +24,20 @@ type Props = {
   tamilName?: string | null;
   image?: string | null;
   variants: Variant[];
+  /** PRODUCT_LINES — carried into the cart so only snacks earn the weight discount */
+  line?: string;
 };
 
 /** Compact price + size picker + add button, used inside product cards so
  *  customers can add to cart without opening the detail page. */
-export function CardAddToCart({ productSlug, productName, tamilName, image, variants }: Props) {
+export function CardAddToCart({
+  productSlug,
+  productName,
+  tamilName,
+  image,
+  variants,
+  line,
+}: Props) {
   const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const addItem = useCart((s) => s.addItem);
@@ -55,6 +66,8 @@ export function CardAddToCart({ productSlug, productName, tamilName, image, vari
       image,
       maxStock: selected.stock,
       packetGrams,
+      weightGrams: selected.weightGrams ?? null,
+      line,
     });
     toast.success(`${productName} (${selected.label}) added to cart`);
   }

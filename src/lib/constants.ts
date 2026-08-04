@@ -1,3 +1,16 @@
+// Product lines. Snacks are priced, discounted and shipped by weight;
+// merchandise isn't, and is listed in its own storefront section.
+export const PRODUCT_LINES = ["SNACKS", "MAGNETS"] as const;
+export type ProductLine = (typeof PRODUCT_LINES)[number];
+
+export const PRODUCT_LINE_LABELS: Record<ProductLine, string> = {
+  SNACKS: "Snacks",
+  MAGNETS: "Magnets",
+};
+
+/** Lines that count toward the build-your-box weight discount. */
+export const WEIGHT_DISCOUNT_LINES: ProductLine[] = ["SNACKS"];
+
 export const ORDER_STATUSES = [
   "PENDING",
   "PAID",

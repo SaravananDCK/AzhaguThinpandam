@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default async function BuildBoxPage() {
-  const [products, tiers] = await Promise.all([getProducts(), getBoxTiers()]);
+  const [products, tiers] = // Build-your-box is a weight-based snack deal — merchandise can't take part
+    await Promise.all([getProducts({ line: "SNACKS" }), getBoxTiers()]);
 
   // One row per product: its base (smallest) in-stock pack is the box unit
   const items = products

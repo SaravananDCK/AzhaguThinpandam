@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SETTINGS, SETTINGS } from "@/lib/constants";
+import { DEFAULT_SETTINGS, SETTINGS, type ProductLine } from "@/lib/constants";
 import { parseBoxTiers } from "@/lib/box";
 
 const productInclude = {
@@ -20,24 +20,31 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
     (Admin pages query all categories directly.) */
 export function getCategories() {
   return prisma.category.findMany({
-    where: { products: { some: { isActive: true } } },
+    where: { products: { some: { isActive: true, line: "SNACKS" } } },
     orderBy: { sortOrder: "asc" },
   });
 }
 
 export function getFeaturedProducts(take = 8) {
   return prisma.product.findMany({
-    where: { isActive: true, isFeatured: true },
+    where: { isActive: true, isFeatured: true, line: "SNACKS" },
     include: productInclude,
     orderBy: [{ isFlagship: "desc" }, { createdAt: "asc" }],
     take,
   });
 }
 
-function productsWhere(opts: { categorySlug?: string; q?: string }): Prisma.ProductWhereInput {
-  const { categorySlug, q } = opts;
+function productsWhere(opts: {
+  categorySlug?: string;
+  q?: string;
+  line?: ProductLine;
+}): Prisma.ProductWhereInput {
+  const { categorySlug, q, line } = opts;
   return {
     isActive: true,
+    // Each line has its own storefront section, so a listing never mixes
+    // snacks and merchandise unless it deliberately asks for both.
+    ...(line ? { line } : {}),
     ...(categorySlug ? { category: { slug: categorySlug } } : {}),
     ...(q
       ? {
@@ -52,7 +59,9 @@ function productsWhere(opts: { categorySlug?: string; q?: string }): Prisma.Prod
 }
 
 /** Full unpaginated list — used by Build Your Box (client filters locally). */
-export function getProducts(opts: { categorySlug?: string; q?: string } = {}) {
+export function getProducts(
+  opts: { categorySlug?: string; q?: string; line?: ProductLine } = {}
+) {
   return prisma.product.findMany({
     where: productsWhere(opts),
     include: productInclude,
@@ -64,7 +73,13 @@ export const PRODUCTS_PER_PAGE = 24;
 
 /** Paginated listing for /products — scales to large catalogs. */
 export async function getProductsPage(
-  opts: { categorySlug?: string; q?: string; page?: number; perPage?: number } = {}
+  opts: {
+    categorySlug?: string;
+    q?: string;
+    page?: number;
+    perPage?: number;
+    line?: ProductLine;
+  } = {}
 ) {
   const where = productsWhere(opts);
   const perPage = opts.perPage ?? PRODUCTS_PER_PAGE;

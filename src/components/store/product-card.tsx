@@ -93,11 +93,13 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           productName={product.name}
           tamilName={product.tamilName}
           image={image}
+          line={product.line}
           variants={product.variants.map((v) => ({
             id: v.id,
             label: v.label,
             price: v.price,
             mrp: v.mrp,
+            weightGrams: v.weightGrams,
             stock: v.stock,
           }))}
         />

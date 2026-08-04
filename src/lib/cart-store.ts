@@ -14,6 +14,10 @@ export type CartItem = {
   qty: number;
   maxStock: number;
   packetGrams?: number; // base packet size (200/250) for the delivery note
+  // Both optional so carts saved before magnets existed still work: undefined
+  // falls back to the old behaviour (weight from the label, treated as snacks).
+  weightGrams?: number | null; // real pack weight, for shipping
+  line?: string; // PRODUCT_LINES — only snacks earn the weight discount
 };
 
 type CartState = {

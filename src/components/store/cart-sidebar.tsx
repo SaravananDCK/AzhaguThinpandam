@@ -5,7 +5,14 @@ import { Gift, Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useCart, cartSubtotal, cartCount } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
-import { activeTier, boxDiscount, formatKg, nextTier, totalKg, type BoxTier } from "@/lib/box";
+import {
+  activeTier,
+  boxDiscount,
+  cartWeights,
+  formatKg,
+  nextTier,
+  type BoxTier,
+} from "@/lib/box";
 import { Button } from "@/components/ui/button";
 
 /** Live cart panel shown alongside the products grid (desktop only). */
@@ -17,10 +24,11 @@ export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
 
   const subtotal = mounted ? cartSubtotal(items) : 0;
   const count = mounted ? cartCount(items) : 0;
-  const weightKg = mounted ? totalKg(items.map((i) => ({ label: i.variantLabel, qty: i.qty }))) : 0;
-  const tier = activeTier(tiers, weightKg);
-  const next = nextTier(tiers, weightKg);
-  const discount = boxDiscount(tiers, weightKg, subtotal);
+  const w = mounted ? cartWeights(items) : { shippingKg: 0, foodKg: 0, foodSubtotal: 0 };
+  const weightKg = w.shippingKg;
+  const tier = activeTier(tiers, w.foodKg);
+  const next = nextTier(tiers, w.foodKg);
+  const discount = boxDiscount(tiers, w.foodKg, w.foodSubtotal);
 
   return (
     <div className="rounded-2xl border bg-card p-4 shadow-sm">
@@ -113,7 +121,7 @@ export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
           {next && (
             <p className="mt-2 flex items-center gap-1.5 rounded-md bg-primary-50 px-2.5 py-2 text-xs font-medium text-primary-800 dark:bg-primary-950/60 dark:text-primary-300">
               <Gift className="size-3.5 shrink-0" />
-              Add {formatKg(next.count - weightKg)} more to{" "}
+              Add {formatKg(next.count - w.foodKg)} more to{" "}
               {tier ? `bump your discount to ${next.percent}%` : `unlock ${next.percent}% off`}
             </p>
           )}

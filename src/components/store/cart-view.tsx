@@ -9,7 +9,14 @@ import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
-import { activeTier, boxDiscount, formatKg, nextTier, totalKg, type BoxTier } from "@/lib/box";
+import {
+  activeTier,
+  boxDiscount,
+  cartWeights,
+  formatKg,
+  nextTier,
+  type BoxTier,
+} from "@/lib/box";
 
 export function CartView({
   shippingFee,
@@ -41,10 +48,10 @@ export function CartView({
   }
 
   const subtotal = cartSubtotal(items);
-  const weightKg = totalKg(items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
-  const tier = activeTier(tiers, weightKg);
-  const next = nextTier(tiers, weightKg);
-  const discount = boxDiscount(tiers, weightKg, subtotal);
+  const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
+  const tier = activeTier(tiers, foodKg);
+  const next = nextTier(tiers, foodKg);
+  const discount = boxDiscount(tiers, foodKg, foodSubtotal);
   // Shipping threshold applies to the discounted amount (matches the server)
   const discounted = subtotal - discount;
   const freeShipping = discounted >= freeShippingAbove;
@@ -147,7 +154,7 @@ export function CartView({
             {next && (
               <p className="flex items-center gap-1.5 rounded-md bg-primary-50 px-2.5 py-2 text-xs font-medium text-primary-800 dark:bg-primary-950/60 dark:text-primary-300">
                 <Gift className="size-3.5 shrink-0" />
-                Add {formatKg(next.count - weightKg)} more to{" "}
+                Add {formatKg(next.count - foodKg)} more to{" "}
                 {tier ? `bump your discount to ${next.percent}%` : `unlock ${next.percent}% off`}
               </p>
             )}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRODUCT_LINES } from "@/lib/constants";
 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Name is too short").max(200),
@@ -9,6 +10,7 @@ export const productSchema = z.object({
   isActive: z.boolean(),
   isFeatured: z.boolean(),
   isFlagship: z.boolean().default(false),
+  line: z.enum(PRODUCT_LINES).default("SNACKS"),
   purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise
   profitMarginPct: z.number().min(0).max(1000).nullable().optional(),
   gstRate: z.number().min(0).max(100).nullable().optional(), // GST% in the sale price
@@ -22,6 +24,11 @@ export const productSchema = z.object({
         price: z.number().int().min(100, "Price must be at least ₹1"), // paise
         mrp: z.number().int().min(100).nullable().optional(),
         stock: z.number().int().min(0).max(100000),
+        // Needed for anything whose label isn't a weight ("Single", "Set of 4"):
+        // without it the pack weighs nothing and ships free outside Tamil Nadu.
+        weightGrams: z.number().int().min(1).max(100000).nullable().optional(),
+        // Per-unit wholesale cost (paise) for items not bought by the kilo
+        unitCost: z.number().int().min(1).nullable().optional(),
         sku: z.string().trim().max(100).optional().or(z.literal("")),
       })
     )
