@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ArrowLeft, Printer } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { computeOrderCost } from "@/lib/order-cost";
+import { formatKg, totalKg } from "@/lib/box";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +38,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   if (!order) notFound();
 
   const cost = await computeOrderCost(order.id);
+  // Same weight the shipping and bundle-discount rules use
+  const orderKg = totalKg(order.items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -131,6 +134,25 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <span className="text-muted-foreground">Shipping</span>
               <span>{order.shippingFee === 0 ? "FREE" : formatINR(order.shippingFee)}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total weight</span>
+              <span>{formatKg(orderKg)}</span>
+            </div>
+            {cost && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Goods cost <span className="text-xs">(internal)</span>
+                </span>
+                <span>
+                  {formatINR(cost.goodsCost)}
+                  {cost.unknownLines > 0 && (
+                    <span className="ml-1 text-xs text-amber-700 dark:text-amber-500">
+                      + {cost.unknownLines} unpriced
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
             <form
               action={updatePackingCost.bind(null, order.id)}
               className="flex items-center justify-between gap-2"
