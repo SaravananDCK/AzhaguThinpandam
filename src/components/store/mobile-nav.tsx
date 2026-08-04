@@ -85,13 +85,15 @@ export function MobileNav({ categories }: { categories: Category[] }) {
           <p className="mb-1 mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Orders
           </p>
+          {/* Tracking lives inside an order now — customers reach it from their
+              own order list rather than a separate lookup page */}
           <Link
-            href="/track-order"
+            href="/account/orders"
             onClick={close}
             className="group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
           >
             <span className="absolute bottom-1 left-0 top-1 w-1 rounded-r bg-primary-600 opacity-0 transition-opacity group-hover:opacity-100" />
-            <PackageSearch className="size-4 text-muted-foreground" /> Track Order
+            <PackageSearch className="size-4 text-muted-foreground" /> My Orders
           </Link>
         </div>
       </SheetContent>
