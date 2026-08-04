@@ -21,7 +21,10 @@ export type OrderCost = {
   margin: number;
   /** Margin as a share of net revenue, or null when there's nothing to divide by */
   marginPct: number | null;
-  /** Lines with no purchase price or a non-weight label — cost is understated */
+  /**
+   * Lines whose cost couldn't be derived — no purchase price, a price of zero,
+   * or a non-weight label. Cost is understated and margin overstated by these.
+   */
   unknownLines: number;
 };
 
@@ -63,8 +66,11 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
     const grams = gramsOf(item.variantLabel);
     const revenue = item.price * item.qty;
 
-    // No purchase price set, or a label like "Combo" with no weight to price
-    if (perKg == null || grams == null) {
+    // Zero counts as "not set", not as "free": the pricing API accepts 0
+    // (z.number().min(0)) and recomputeProductPrices already skips it, so a
+    // zero here means nobody has entered a cost. Treating it as a real ₹0 would
+    // silently report a 100% margin and invite a discount that loses money.
+    if (perKg == null || perKg <= 0 || grams == null) {
       unknownLines++;
       return {
         productName: item.productName,

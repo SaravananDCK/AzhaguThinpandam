@@ -58,7 +58,9 @@ export function CostPanel({ cost }: { cost: OrderCost }) {
           </div>
         </div>
 
-        {!loss && cost.margin > 0 && (
+        {/* Only claim headroom when every line's cost is actually known —
+            otherwise this is the number that talks you into a losing discount */}
+        {!loss && cost.margin > 0 && cost.unknownLines === 0 && (
           <p className="rounded-md bg-secondary px-3 py-2 text-xs">
             You can discount up to{" "}
             <span className="font-semibold">{formatINR(cost.margin)}</span> more
@@ -70,11 +72,12 @@ export function CostPanel({ cost }: { cost: OrderCost }) {
           <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-100">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              {cost.unknownLines} item{cost.unknownLines === 1 ? " has" : "s have"} no
-              wholesale price or a non-weight pack size, so the cost above is
-              understated and the real margin is lower. Set the purchase price
-              per kg in <strong>Admin → Pricing</strong> to include{" "}
-              {cost.unknownLines === 1 ? "it" : "them"}.
+              {cost.unknownLines} item{cost.unknownLines === 1 ? " has" : "s have"} a
+              wholesale price of zero or unset, or a non-weight pack size — so
+              the cost above is understated and the real margin is{" "}
+              <strong>lower than shown</strong>. Don&apos;t base a discount on
+              this figure until the purchase price per kg is set in{" "}
+              <strong>Admin → Pricing</strong>.
             </span>
           </p>
         )}
