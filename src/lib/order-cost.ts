@@ -15,8 +15,16 @@ export type OrderCost = {
   /** Wholesale cost of the goods, paise. Excludes lines we couldn't price. */
   goodsCost: number;
   packingCost: number;
+  /** What the courier charged us, paise. 0 means it hasn't been recorded. */
+  shippingCost: number;
+  /** What the customer paid for shipping, paise */
+  shippingIncome: number;
+  /** shippingIncome − shippingCost: negative when a flat rate undercharges */
+  shippingDelta: number;
+  /** True when there's a parcel to pay for but no courier cost recorded */
+  shippingCostMissing: boolean;
   totalCost: number;
-  /** What the store keeps for the goods: subtotal − discount, excluding shipping */
+  /** Goods revenue: subtotal − discount, excluding shipping */
   netRevenue: number;
   margin: number;
   /** Margin as a share of net revenue, or null when there's nothing to divide by */
@@ -36,8 +44,8 @@ export type OrderCost = {
  * parsed from the variant label. That means it reflects what the goods cost
  * *today*, not what they cost when the order was placed — right for deciding a
  * discount now, but not a substitute for the Finance module's historical
- * figures. Shipping is excluded on both sides: it's collected from the customer
- * and paid straight out to the courier.
+ * figures. Shipping appears on both sides — what the customer paid and what the
+ * courier charged — because a flat rate can quietly undercharge a heavy parcel.
  */
 export async function computeOrderCost(orderId: string): Promise<OrderCost | null> {
   const order = await prisma.order.findUnique({
@@ -92,14 +100,28 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
     };
   });
 
-  const totalCost = goodsCost + order.packingCost;
+  // Shipping now appears on both sides: what the customer paid, and what the
+  // courier charged. A flat rate that undercharges shows up as a negative
+  // delta, which is otherwise invisible.
+  const shippingIncome = order.shippingFee;
+  const shippingCost = order.shippingCost;
+  const shippingDelta = shippingIncome - shippingCost;
+  // Zero is "not recorded", not "free" — same reasoning as a zero wholesale
+  // price. Only flag it when a parcel actually went out.
+  const shippingCostMissing = shippingCost === 0 && order.items.length > 0;
+
+  const totalCost = goodsCost + order.packingCost + shippingCost;
   const netRevenue = order.subtotal - order.discount;
-  const margin = netRevenue - totalCost;
+  const margin = netRevenue + shippingIncome - totalCost;
 
   return {
     lines,
     goodsCost,
     packingCost: order.packingCost,
+    shippingCost,
+    shippingIncome,
+    shippingDelta,
+    shippingCostMissing,
     totalCost,
     netRevenue,
     margin,

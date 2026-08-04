@@ -66,7 +66,7 @@ export default async function AdminFinancePage({
   const monthly = history.map((h) => ({
     month: monthLabel(h.from),
     revenue: Math.round((h.revenue + h.shippingIncome) / 100),
-    costs: Math.round((h.cogs + h.packing + h.expensesTotal) / 100),
+    costs: Math.round((h.cogs + h.packing + h.shippingSpend + h.expensesTotal) / 100),
     profit: Math.round(h.netProfit / 100),
   }));
   const expenseSlices = pnl.expenses.map((e) => ({
@@ -105,6 +105,7 @@ export default async function AdminFinancePage({
             <Separator />
             <Row label="Stock purchases (COGS)" amount={pnl.cogs} negative />
             <Row label="Packing costs" amount={pnl.packing} negative />
+            <Row label="Courier costs" amount={pnl.shippingSpend} negative />
             {pnl.expenses.map((e) => (
               <Row key={e.category} label={e.category} amount={e.amount} negative />
             ))}
@@ -123,6 +124,7 @@ export default async function AdminFinancePage({
             />
             <Row label="Total stock purchases" amount={allTime.cogs} negative />
             <Row label="Total packing costs" amount={allTime.packing} negative />
+            <Row label="Total courier costs" amount={allTime.shippingSpend} negative />
             <Row label="Total expenses" amount={allTime.expensesTotal} negative />
             <Separator />
             <Row label="Net position" amount={allTime.netProfit} bold negative={allTime.netProfit < 0} />

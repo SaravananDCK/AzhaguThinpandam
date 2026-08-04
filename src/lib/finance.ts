@@ -15,6 +15,7 @@ export type PnL = {
   revenue: number; // subtotal - discount
   shippingIncome: number;
   cogs: number; // purchases in period
+  shippingSpend: number; // courier costs recorded on orders
   packing: number; // internal packing costs on orders
   expenses: ExpenseLine[];
   expensesTotal: number;
@@ -25,7 +26,13 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
   const [orders, purchases, expensesRaw] = await Promise.all([
     prisma.order.findMany({
       where: { status: { in: REVENUE_STATUSES }, createdAt: { gte: from, lt: to } },
-      select: { subtotal: true, discount: true, shippingFee: true, packingCost: true },
+      select: {
+        subtotal: true,
+        discount: true,
+        shippingFee: true,
+        packingCost: true,
+        shippingCost: true,
+      },
     }),
     prisma.purchase.aggregate({
       _sum: { total: true },
@@ -41,6 +48,9 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
   const revenue = orders.reduce((s, o) => s + o.subtotal - o.discount, 0);
   const shippingIncome = orders.reduce((s, o) => s + o.shippingFee, 0);
   const packing = orders.reduce((s, o) => s + o.packingCost, 0);
+  // What couriers actually charged, as recorded per order. Shown against
+  // shippingIncome so an undercharging flat rate is visible.
+  const shippingSpend = orders.reduce((s, o) => s + o.shippingCost, 0);
   const cogs = purchases._sum.total ?? 0;
   const expenses = expensesRaw
     .map((e) => ({ category: e.category, amount: e._sum.amount ?? 0 }))
@@ -54,10 +64,11 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
     revenue,
     shippingIncome,
     cogs,
+    shippingSpend,
     packing,
     expenses,
     expensesTotal,
-    netProfit: revenue + shippingIncome - cogs - packing - expensesTotal,
+    netProfit: revenue + shippingIncome - cogs - packing - shippingSpend - expensesTotal,
   };
 }
 

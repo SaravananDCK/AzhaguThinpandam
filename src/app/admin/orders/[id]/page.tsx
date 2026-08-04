@@ -16,7 +16,7 @@ import { StatusButtons } from "./status-buttons";
 import { EditOrderDetails } from "./edit-details";
 import { EditOrderItems } from "./edit-items";
 import { CostPanel } from "./cost-panel";
-import { updatePackingCost } from "../actions";
+import { updatePackingCost, updateShippingCost } from "../actions";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -153,6 +153,27 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 </span>
               </div>
             )}
+            <form
+              action={updateShippingCost.bind(null, order.id)}
+              className="flex items-center justify-between gap-2"
+            >
+              <span className="text-muted-foreground">
+                Courier cost <span className="text-xs">(internal)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Input
+                  name="shippingCost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={paiseToRupees(order.shippingCost)}
+                  className="h-7 w-24 text-right text-sm"
+                />
+                <Button type="submit" variant="outline" size="sm" className="h-7">
+                  Save
+                </Button>
+              </span>
+            </form>
             <form
               action={updatePackingCost.bind(null, order.id)}
               className="flex items-center justify-between gap-2"

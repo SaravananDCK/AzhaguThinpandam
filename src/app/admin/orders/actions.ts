@@ -223,3 +223,17 @@ export async function updatePackingCost(orderId: string, formData: FormData): Pr
   await prisma.order.update({ where: { id: orderId }, data: { packingCost } }).catch(() => {});
   revalidatePath(`/admin/orders/${orderId}`);
 }
+
+/**
+ * Sets what the courier actually charged for this order (P&L only, never shown
+ * to the customer). Separate from `shippingFee`, which is what they paid us —
+ * the gap between the two is the real cost of a flat shipping rate.
+ */
+export async function updateShippingCost(orderId: string, formData: FormData): Promise<void> {
+  await assertAdmin();
+  const shippingCost = rupeesToPaise(String(formData.get("shippingCost") ?? ""));
+  if (shippingCost === null) return; // invalid input — leave unchanged
+  await prisma.order.update({ where: { id: orderId }, data: { shippingCost } }).catch(() => {});
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/finance");
+}

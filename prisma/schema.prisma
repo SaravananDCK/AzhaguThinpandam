@@ -167,6 +167,10 @@ model Order {
   shippingFee Int // paise
   total       Int // paise (subtotal - discount + shippingFee)
   packingCost Int         @default(0) // paise — internal cost (not charged to customer)
+  // What the courier actually charged us, paise. `shippingFee` above is what
+  // the customer was charged — the two differ (flat ₹60 collected on a 2 kg
+  // parcel that cost ₹120), and the gap is only visible if both are recorded.
+  shippingCost Int        @default(0)
   notes       String?
   // Coupon snapshot — set only when a coupon actually applied (beat the box
   // discount). `discount` above holds the winning amount (box vs coupon).
