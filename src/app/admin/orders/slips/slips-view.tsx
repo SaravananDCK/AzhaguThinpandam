@@ -23,7 +23,12 @@ export type Slip = {
 export type FromAddress = { name: string; address: string; phone: string };
 
 export function SlipsView({ orders, from }: { orders: Slip[]; from: FromAddress }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set(orders.map((o) => o.id)));
+  // Pre-select what's actually going out. Already-shipped orders only appear
+  // when you ask for them (for a reprint), so they start unticked — otherwise
+  // "Print" would reprint labels for parcels that already left.
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(orders.filter((o) => o.status !== "SHIPPED").map((o) => o.id))
+  );
 
   const chosen = orders.filter((o) => selected.has(o.id));
 
@@ -39,7 +44,8 @@ export function SlipsView({ orders, from }: { orders: Slip[]; from: FromAddress 
   if (!orders.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        No orders are waiting to be shipped.
+        Nothing is waiting to be dispatched. Orders appear here once they&apos;re
+        marked paid or confirmed.
       </p>
     );
   }
@@ -87,6 +93,7 @@ export function SlipsView({ orders, from }: { orders: Slip[]; from: FromAddress 
                 <span className="hidden truncate text-muted-foreground sm:block">
                   {o.city}, {o.state}
                 </span>
+                <span className="text-xs text-muted-foreground">{o.status}</span>
                 <span className="text-xs text-muted-foreground">{o.createdAt}</span>
               </label>
             ))}
