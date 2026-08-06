@@ -322,8 +322,9 @@ export function NewOrderForm({
             <span className="font-semibold">{formatINR(subtotal)}</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Bundle discount and shipping are added when you save, using the same
-            rules as the website — the final total appears on the order.
+            Bundle discount or free goodies, and shipping, are added when you
+            save, using the same rules as the website — the final total appears
+            on the order.
           </p>
         </CardContent>
       </Card>

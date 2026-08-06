@@ -214,6 +214,7 @@ model OrderItem {
   qty           Int
   basePackGrams Int? // base packet size for the "N × Ng packets" delivery note
   gstRate       Float? // GST% included in `price`, snapshot at order time (output GST)
+  isFreebie     Boolean         @default(false) // ₹0 goodie added by the weight-goodies discount
 
   @@index([orderId])
   @@index([variantId])

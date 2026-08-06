@@ -21,7 +21,16 @@ import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { formatINR } from "@/lib/money";
-import { activeTier, boxDiscount, cartWeights, type BoxTier } from "@/lib/box";
+import {
+  activeTier,
+  boxDiscount,
+  cartWeights,
+  goodiesForKg,
+  totalKg,
+  type BoxTier,
+} from "@/lib/box";
+import type { DiscountType } from "@/lib/constants";
+import type { GoodieInfo } from "@/lib/queries";
 import { billableKg, computeShipping, isTamilNadu } from "@/lib/shipping";
 import { INDIAN_STATES } from "@/lib/india-states";
 
@@ -55,6 +64,8 @@ type Props = {
   freeShippingAbove: number;
   outsideTnPerKg: number;
   tiers: BoxTier[];
+  discountType: DiscountType;
+  goodieTiers: GoodieInfo[];
   defaults: Partial<
     Record<"email" | "name" | "phone" | "line1" | "line2" | "city" | "state" | "pincode", string>
   >;
@@ -71,6 +82,8 @@ export function CheckoutForm({
   freeShippingAbove,
   outsideTnPerKg,
   tiers,
+  discountType,
+  goodieTiers,
   defaults,
   loggedIn,
   manualPayment,
@@ -113,20 +126,40 @@ export function CheckoutForm({
   // Mirrors priceOrderLines: shipping weighs the whole parcel, the bundle
   // discount only looks at snacks.
   const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
-  const tier = activeTier(tiers, foodKg);
-  const boxDisc = boxDiscount(tiers, foodKg, foodSubtotal);
-  // Whichever is larger — coupon or box discount, never both.
+  const percentMode = discountType === "percent";
+  const tier = percentMode ? activeTier(tiers, foodKg) : null;
+  const boxDisc = percentMode ? boxDiscount(tiers, foodKg, foodSubtotal) : 0;
+  // Whichever is larger — coupon or box discount, never both. In goodies mode
+  // boxDisc is 0, so any valid coupon wins (and replaces the goodies).
   const couponDisc = coupon?.discount ?? 0;
   const couponWins = couponDisc > boxDisc;
   const discount = Math.max(boxDisc, couponDisc);
   const discounted = subtotal - discount;
+  // Goodies mode mirror of priceOrderLines: free items from the highest
+  // reached tier, suppressed by a winning coupon (one benefit per order).
+  const activeGoodies = percentMode
+    ? []
+    : goodiesForKg(goodieTiers.filter((g) => g.available), foodKg);
+  const goodiesApply = activeGoodies.length > 0 && !couponWins;
+  // Goodies ride in the parcel, so they count toward the shipping weight.
+  const parcelKg =
+    weightKg +
+    (goodiesApply
+      ? totalKg(
+          activeGoodies.map((g) => ({
+            label: g.variantLabel,
+            qty: g.qty,
+            weightGrams: g.weightGrams,
+          }))
+        )
+      : 0);
   // Mirrors createOrderFromCart: inside TN flat/free-above, outside TN weight × ₹/kg
   const stateChosen = state.trim().length > 0;
   const outsideTn = stateChosen && !isTamilNadu(state);
   const fee = stateChosen
     ? computeShipping({
         state,
-        weightKg,
+        weightKg: parcelKg,
         subtotal: discounted,
         config: { shippingFee, freeShippingAbove, outsideTnPerKg },
       })
@@ -592,6 +625,37 @@ export function CheckoutForm({
             {couponMsg && (
               <p className="text-xs text-muted-foreground">{couponMsg}</p>
             )}
+            {!coupon && activeGoodies.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Note: applying a coupon replaces your free goodies — one offer per order.
+              </p>
+            )}
+
+            {/* Free goodies (or the note that a coupon displaced them) */}
+            {goodiesApply && (
+              <div className="space-y-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-sm dark:border-green-900 dark:bg-green-950/50">
+                <p className="flex items-center gap-1.5 font-medium text-green-700 dark:text-green-300">
+                  <PartyPopper className="size-4 shrink-0" /> Free goodies with your order
+                </p>
+                {activeGoodies.map((g) => (
+                  <div
+                    key={`${g.variantId}-${g.kg}`}
+                    className="flex justify-between text-xs text-green-800 dark:text-green-300"
+                  >
+                    <span>
+                      {g.productName} ({g.variantLabel}){g.qty > 1 ? ` × ${g.qty}` : ""}
+                    </span>
+                    <span className="font-semibold">FREE</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeGoodies.length > 0 && couponWins && (
+              <p className="text-xs text-muted-foreground">
+                Coupon {coupon?.code} applied — free goodies are skipped (one offer per
+                order). Remove the coupon to get the goodies instead.
+              </p>
+            )}
 
             {discount > 0 && (
               <div className="flex justify-between text-sm">
@@ -623,8 +687,9 @@ export function CheckoutForm({
               </p>
             ) : outsideTn ? (
               <p className="text-xs text-muted-foreground">
-                Outside Tamil Nadu — charged by weight: {billableKg(weightKg)} kg ×{" "}
-                {formatINR(outsideTnPerKg)}/kg (rounded up to the next kg).
+                Outside Tamil Nadu — charged by weight: {billableKg(parcelKg)} kg ×{" "}
+                {formatINR(outsideTnPerKg)}/kg (rounded up to the next kg
+                {goodiesApply ? ", free goodies included" : ""}).
               </p>
             ) : (
               fee > 0 &&

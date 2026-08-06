@@ -11,6 +11,12 @@ export const PRODUCT_LINE_LABELS: Record<ProductLine, string> = {
 /** Lines that count toward the build-your-box weight discount. */
 export const WEIGHT_DISCOUNT_LINES: ProductLine[] = ["SNACKS"];
 
+// What the customer earns when the cart crosses a weight tier: a percent off
+// the snack subtotal, or free products ("goodies"). SQLite has no enums —
+// stored as a validated string setting.
+export const DISCOUNT_TYPES = ["percent", "goodies"] as const;
+export type DiscountType = (typeof DISCOUNT_TYPES)[number];
+
 export const ORDER_STATUSES = [
   "PENDING",
   "PAID",
@@ -74,6 +80,8 @@ export const SETTINGS = {
   OUTSIDE_TN_PER_KG: "outside_tn_shipping_per_kg_paise", // per kg, always charged
   LOW_STOCK_THRESHOLD: "low_stock_threshold",
   BOX_TIERS: "box_discount_tiers",
+  DISCOUNT_TYPE: "discount_type", // "percent" | "goodies" (DISCOUNT_TYPES)
+  GOODIE_TIERS: "goodie_tiers", // JSON: [{"kg":2,"variantId":"…","qty":1},…]
   PACKING_COST: "packing_cost_paise",
   ROUND_TO_FIVE: "round_prices_to_five",
   INSTAGRAM_HANDLE: "instagram_handle",
@@ -109,6 +117,12 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // "kg:percent" pairs — discount on the whole order once the cart's total
   // weight reaches that many kilograms. Applied server-side at checkout.
   [SETTINGS.BOX_TIERS]: "1:3,3:5,4:7,6:10",
+  // Which weight-tier reward is live: "percent" uses BOX_TIERS, "goodies" adds
+  // the GOODIE_TIERS items free of charge.
+  [SETTINGS.DISCOUNT_TYPE]: "percent",
+  // Goodie tiers as JSON rows. Several rows may share a kg threshold (the tier
+  // then gives all of them). Only the highest reached tier applies.
+  [SETTINGS.GOODIE_TIERS]: "[]",
   // Internal packing cost recorded on each new order (₹, for P&L only)
   [SETTINGS.PACKING_COST]: "0",
   // "1" = computed sale prices ceil to the next ₹5; "0" = exact to the ₹1

@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SETTINGS, SETTINGS, type ProductLine } from "@/lib/constants";
-import { parseBoxTiers } from "@/lib/box";
+import {
+  DEFAULT_SETTINGS,
+  DISCOUNT_TYPES,
+  SETTINGS,
+  type DiscountType,
+  type ProductLine,
+} from "@/lib/constants";
+import { parseBoxTiers, parseGoodieTiers, type BoxTier, type GoodieTier } from "@/lib/box";
 
 const productInclude = {
   images: { orderBy: { sortOrder: "asc" as const } },
@@ -148,4 +154,69 @@ export async function getShippingConfig() {
 export async function getBoxTiers() {
   const settings = await getSettings();
   return parseBoxTiers(settings[SETTINGS.BOX_TIERS]);
+}
+
+/** A goodie tier row enriched with its variant's display/stock data. */
+export type GoodieInfo = GoodieTier & {
+  productName: string;
+  variantLabel: string;
+  image: string | null;
+  weightGrams: number | null;
+  stock: number;
+  /** Variant + product active and enough stock for the goodie qty. */
+  available: boolean;
+};
+
+export type DiscountConfig = {
+  type: DiscountType;
+  /** Percent tiers (used when type is "percent"). */
+  tiers: BoxTier[];
+  /** Goodie rows (empty unless type is "goodies"). */
+  goodieTiers: GoodieInfo[];
+};
+
+/**
+ * The full weight-reward config: which discount type is live plus its tiers.
+ * Goodie rows whose variant was deleted are dropped; `available` marks rows
+ * the storefront may advertise (checkout re-checks stock authoritatively).
+ */
+export async function getDiscountConfig(): Promise<DiscountConfig> {
+  const settings = await getSettings();
+  const rawType = settings[SETTINGS.DISCOUNT_TYPE];
+  const type: DiscountType = DISCOUNT_TYPES.includes(rawType as DiscountType)
+    ? (rawType as DiscountType)
+    : "percent";
+  const tiers = parseBoxTiers(settings[SETTINGS.BOX_TIERS]);
+  const parsed = parseGoodieTiers(settings[SETTINGS.GOODIE_TIERS]);
+  if (type !== "goodies" || parsed.length === 0) return { type, tiers, goodieTiers: [] };
+
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: [...new Set(parsed.map((g) => g.variantId))] } },
+    include: {
+      product: {
+        select: {
+          name: true,
+          isActive: true,
+          images: { orderBy: { sortOrder: "asc" }, take: 1 },
+        },
+      },
+    },
+  });
+  const byId = new Map(variants.map((v) => [v.id, v]));
+  const goodieTiers = parsed.flatMap((g) => {
+    const v = byId.get(g.variantId);
+    if (!v) return [];
+    return [
+      {
+        ...g,
+        productName: v.product.name,
+        variantLabel: v.label,
+        image: v.product.images[0]?.url ?? null,
+        weightGrams: v.weightGrams,
+        stock: v.stock,
+        available: v.isActive && v.product.isActive && v.stock >= g.qty,
+      },
+    ];
+  });
+  return { type, tiers, goodieTiers };
 }

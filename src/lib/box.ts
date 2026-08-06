@@ -68,6 +68,60 @@ export function boxDiscount(tiers: BoxTier[], count: number, subtotal: number): 
   return Math.round((subtotal * tier.percent) / 100);
 }
 
+// ---------------------------------------------------------------------------
+// Goodie tiers — the "goodies" discount type. Instead of a percent off, the
+// cart's snack weight unlocks free products. Config comes from the
+// `goodie_tiers` setting as JSON rows; several rows may share a kg threshold
+// (that tier then gives all of them), and only the highest reached tier
+// applies — tiers never stack.
+
+export type GoodieTier = { kg: number; variantId: string; qty: number };
+
+/** Parses the goodie_tiers JSON setting. Bad JSON / bad rows are dropped. */
+export function parseGoodieTiers(value: string | undefined | null): GoodieTier[] {
+  if (!value) return [];
+  try {
+    const raw: unknown = JSON.parse(value);
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter(
+        (r): r is GoodieTier =>
+          !!r &&
+          typeof r === "object" &&
+          typeof (r as GoodieTier).kg === "number" &&
+          Number.isFinite((r as GoodieTier).kg) &&
+          (r as GoodieTier).kg > 0 &&
+          typeof (r as GoodieTier).variantId === "string" &&
+          (r as GoodieTier).variantId.length > 0 &&
+          Number.isInteger((r as GoodieTier).qty) &&
+          (r as GoodieTier).qty >= 1 &&
+          (r as GoodieTier).qty <= 99
+      )
+      .sort((a, b) => a.kg - b.kg);
+  } catch {
+    return [];
+  }
+}
+
+/** Highest goodie threshold unlocked at `kg`, or null. (Mirrors activeTier.) */
+export function activeGoodieKg(tiers: GoodieTier[], kg: number): number | null {
+  let active: number | null = null;
+  for (const t of tiers) if (kg >= t.kg) active = t.kg;
+  return active;
+}
+
+/** The next still-locked goodie threshold, or null when maxed out. */
+export function nextGoodieKg(tiers: GoodieTier[], kg: number): number | null {
+  for (const t of tiers) if (kg < t.kg) return t.kg;
+  return null;
+}
+
+/** Rows of the single active tier — highest tier only, tiers never stack. */
+export function goodiesForKg<T extends GoodieTier>(tiers: T[], kg: number): T[] {
+  const active = activeGoodieKg(tiers, kg);
+  return active === null ? [] : tiers.filter((t) => t.kg === active);
+}
+
 /**
  * Client-side mirror of the server's weight/discount split (priceOrderLines).
  * The cart and checkout summaries must agree with what checkout actually

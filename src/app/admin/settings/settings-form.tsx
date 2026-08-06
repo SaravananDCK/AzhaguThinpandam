@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { DiscountType } from "@/lib/constants";
+import type { GoodieTier } from "@/lib/box";
+import { GoodieTiersEditor, type GoodieVariantOption } from "./goodie-tiers-editor";
 import { saveSettings } from "./actions";
 
 type Props = {
@@ -21,6 +24,8 @@ type Props = {
     outsideTnPerKgRupees: string;
     lowStockThreshold: string;
     boxTiers: string;
+    discountType: DiscountType;
+    goodieTiers: GoodieTier[];
     packingCostRupees: string;
     roundToFive: boolean;
     instagramHandle: string;
@@ -30,10 +35,12 @@ type Props = {
     manualUpiPayment: boolean;
     upiId: string;
   };
+  variantOptions: GoodieVariantOption[];
 };
 
-export function SettingsForm({ values }: Props) {
+export function SettingsForm({ values, variantOptions }: Props) {
   const [pending, startTransition] = useTransition();
+  const [discountType, setDiscountType] = useState<DiscountType>(values.discountType);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -181,6 +188,36 @@ export function SettingsForm({ values }: Props) {
         <CardContent className="space-y-4">
           <p className="font-semibold">Build-your-box discounts</p>
           <div className="grid gap-2">
+            <Label>Discount type</Label>
+            <div className="flex flex-col gap-1.5 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="discountType"
+                  value="percent"
+                  checked={discountType === "percent"}
+                  onChange={() => setDiscountType("percent")}
+                  className="size-4 accent-primary"
+                />
+                Weight discount tiers (% off snacks)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="discountType"
+                  value="goodies"
+                  checked={discountType === "goodies"}
+                  onChange={() => setDiscountType("goodies")}
+                  className="size-4 accent-primary"
+                />
+                Goodies based on weight (free items — more profitable)
+              </label>
+            </div>
+          </div>
+          {/* Both editors stay mounted whichever type is active: saveSettings
+              upserts every submitted key, so unmounting one would wipe its
+              config on save. The inactive one is just dimmed. */}
+          <div className={discountType === "percent" ? "grid gap-2" : "grid gap-2 opacity-50"}>
             <Label htmlFor="s-tiers">Weight discount tiers</Label>
             <Input id="s-tiers" name="boxTiers" defaultValue={values.boxTiers} />
             <p className="text-xs text-muted-foreground">
@@ -188,6 +225,19 @@ export function SettingsForm({ values }: Props) {
               <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
               3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
               the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
+              {discountType !== "percent" && " Not in use while goodies are selected."}
+            </p>
+          </div>
+          <div className={discountType === "goodies" ? "grid gap-2" : "grid gap-2 opacity-50"}>
+            <Label>Goodie tiers</Label>
+            <GoodieTiersEditor initial={values.goodieTiers} variants={variantOptions} />
+            <p className="text-xs text-muted-foreground">
+              Once the cart&apos;s snack weight reaches a tier, that tier&apos;s items are
+              added to the order free. Several rows may share the same kg — that tier then
+              gives all of them. Only the <strong>highest reached tier</strong> applies;
+              tiers don&apos;t stack. Coupons replace goodies (one offer per order), and
+              out-of-stock goodies are skipped.
+              {discountType !== "goodies" && " Not in use while percent tiers are selected."}
             </p>
           </div>
         </CardContent>

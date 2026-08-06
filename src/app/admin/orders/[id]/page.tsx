@@ -91,20 +91,34 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{item.productName}</p>
+                <p className="font-medium">
+                  {item.productName}
+                  {item.isFreebie && (
+                    <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-950/60 dark:text-green-400">
+                      GOODIE
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {item.variantLabel} × {item.qty} @ {formatINR(item.price)}
                 </p>
               </div>
-              <p className="font-medium">{formatINR(item.price * item.qty)}</p>
+              {item.isFreebie ? (
+                <p className="font-semibold text-green-600 dark:text-green-400">FREE</p>
+              ) : (
+                <p className="font-medium">{formatINR(item.price * item.qty)}</p>
+              )}
             </div>
           ))}
           {order.status === "PENDING" && (
             <EditOrderItems
               orderId={order.id}
               couponCode={order.couponCode}
+              // Goodie lines are excluded: repricing regenerates them for the
+              // new weight (seeding them here would re-price them at full cost
+              // or trip the duplicate-item check).
               currentItems={order.items
-                .filter((i) => i.variantId)
+                .filter((i) => i.variantId && !i.isFreebie)
                 .map((i) => ({ variantId: i.variantId!, qty: i.qty }))}
               variants={variants.map((v) => ({
                 id: v.id,

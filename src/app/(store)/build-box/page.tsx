@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getBoxTiers, getProducts } from "@/lib/queries";
+import { getDiscountConfig, getProducts } from "@/lib/queries";
 import { BoxBuilder } from "@/components/store/box-builder";
 
 export const metadata: Metadata = {
@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default async function BuildBoxPage() {
-  const [products, tiers] = // Build-your-box is a weight-based snack deal — merchandise can't take part
-    await Promise.all([getProducts({ line: "SNACKS" }), getBoxTiers()]);
+  const [products, discount] = // Build-your-box is a weight-based snack deal — merchandise can't take part
+    await Promise.all([getProducts({ line: "SNACKS" }), getDiscountConfig()]);
 
   // One row per product: its base (smallest) in-stock pack is the box unit
   const items = products
@@ -37,7 +37,12 @@ export default async function BuildBoxPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Mix and match your favourites — the fuller the box, the bigger the discount.
       </p>
-      <BoxBuilder items={items} tiers={tiers} />
+      <BoxBuilder
+        items={items}
+        tiers={discount.tiers}
+        discountType={discount.type}
+        goodieTiers={discount.goodieTiers}
+      />
     </div>
   );
 }

@@ -10,13 +10,25 @@ import {
   boxDiscount,
   cartWeights,
   formatKg,
+  goodiesForKg,
+  nextGoodieKg,
   nextTier,
   type BoxTier,
 } from "@/lib/box";
+import type { DiscountType } from "@/lib/constants";
+import type { GoodieInfo } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 
 /** Live cart panel shown alongside the products grid (desktop only). */
-export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
+export function CartSidebar({
+  tiers,
+  discountType,
+  goodieTiers,
+}: {
+  tiers: BoxTier[];
+  discountType: DiscountType;
+  goodieTiers: GoodieInfo[];
+}) {
   const items = useCart((s) => s.items);
   const removeItem = useCart((s) => s.removeItem);
   const setQty = useCart((s) => s.setQty);
@@ -26,9 +38,13 @@ export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
   const count = mounted ? cartCount(items) : 0;
   const w = mounted ? cartWeights(items) : { shippingKg: 0, foodKg: 0, foodSubtotal: 0 };
   const weightKg = w.shippingKg;
-  const tier = activeTier(tiers, w.foodKg);
-  const next = nextTier(tiers, w.foodKg);
-  const discount = boxDiscount(tiers, w.foodKg, w.foodSubtotal);
+  const percentMode = discountType === "percent";
+  const tier = percentMode ? activeTier(tiers, w.foodKg) : null;
+  const next = percentMode ? nextTier(tiers, w.foodKg) : null;
+  const discount = percentMode ? boxDiscount(tiers, w.foodKg, w.foodSubtotal) : 0;
+  const availableGoodies = goodieTiers.filter((g) => g.available);
+  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, w.foodKg);
+  const nextGoodie = percentMode ? null : nextGoodieKg(availableGoodies, w.foodKg);
 
   return (
     <div className="rounded-2xl border bg-card p-4 shadow-sm">
@@ -112,6 +128,14 @@ export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
                 </span>
               </div>
             )}
+            {activeGoodies.map((g) => (
+              <div key={`${g.variantId}-${g.kg}`} className="flex justify-between">
+                <span className="truncate text-muted-foreground">
+                  🎁 {g.productName} ({g.variantLabel}){g.qty > 1 ? ` × ${g.qty}` : ""}
+                </span>
+                <span className="font-semibold text-green-600 dark:text-green-400">FREE</span>
+              </div>
+            ))}
             <div className="flex justify-between font-semibold">
               <span>{discount > 0 ? "After discount" : "Total"}</span>
               <span>{formatINR(subtotal - discount)}</span>
@@ -123,6 +147,13 @@ export function CartSidebar({ tiers }: { tiers: BoxTier[] }) {
               <Gift className="size-3.5 shrink-0" />
               Add {formatKg(next.count - w.foodKg)} more to{" "}
               {tier ? `bump your discount to ${next.percent}%` : `unlock ${next.percent}% off`}
+            </p>
+          )}
+          {nextGoodie !== null && (
+            <p className="mt-2 flex items-center gap-1.5 rounded-md bg-primary-50 px-2.5 py-2 text-xs font-medium text-primary-800 dark:bg-primary-950/60 dark:text-primary-300">
+              <Gift className="size-3.5 shrink-0" />
+              Add {formatKg(nextGoodie - w.foodKg)} more to unlock{" "}
+              {activeGoodies.length > 0 ? "even more free goodies" : "free goodies"}!
             </p>
           )}
 

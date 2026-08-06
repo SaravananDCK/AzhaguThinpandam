@@ -186,14 +186,21 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{item.productName}</p>
+                <p className="text-sm font-medium">
+                  {item.isFreebie && "🎁 "}
+                  {item.productName}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {item.variantLabel} × {item.qty}
                   {packNote(item.variantLabel, item.basePackGrams ?? undefined) &&
                     ` · ${packNote(item.variantLabel, item.basePackGrams ?? undefined)}`}
                 </p>
               </div>
-              <p className="text-sm font-medium">{formatINR(item.price * item.qty)}</p>
+              {item.isFreebie ? (
+                <p className="text-sm font-semibold text-green-600 dark:text-green-400">FREE</p>
+              ) : (
+                <p className="text-sm font-medium">{formatINR(item.price * item.qty)}</p>
+              )}
             </div>
           ))}
           <Separator />

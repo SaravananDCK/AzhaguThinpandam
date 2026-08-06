@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getBoxTiers, getSettings, getShippingConfig } from "@/lib/queries";
+import { getDiscountConfig, getSettings, getShippingConfig } from "@/lib/queries";
 import { computeShipping } from "@/lib/shipping";
-import { boxDiscount, totalKg } from "@/lib/box";
+import { boxDiscount, goodiesForKg, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { basePacketGrams } from "@/lib/pack";
@@ -160,15 +160,20 @@ export async function priceOrderLines(params: {
   );
   const foodSubtotal = foodLines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
 
-  // Tiered bundle discount: snack weight → % off the snacks. Merchandise in the
-  // same cart neither counts toward the tier nor gets discounted by it.
-  // Computed here, never trusted from the client.
-  const tiers = await getBoxTiers();
-  const boxDiscountAmt = boxDiscount(tiers, foodKg, foodSubtotal);
+  // Tiered weight reward: snack weight → % off the snacks (percent mode) or
+  // free goodies (goodies mode). Merchandise in the same cart neither counts
+  // toward the tier nor earns from it. Computed here, never trusted from the
+  // client.
+  const discountConfig = await getDiscountConfig();
+  const boxDiscountAmt =
+    discountConfig.type === "percent"
+      ? boxDiscount(discountConfig.tiers, foodKg, foodSubtotal)
+      : 0;
 
   // Coupon (optional). The customer gets whichever is larger — the coupon or
   // the box discount, never both. An invalid coupon fails the checkout so the
-  // total the customer sees always matches.
+  // total the customer sees always matches. In goodies mode boxDiscountAmt is
+  // 0, so any valid coupon wins outright.
   let discount = boxDiscountAmt;
   let couponId: string | null = null;
   let couponCode: string | null = null;
@@ -186,11 +191,55 @@ export async function priceOrderLines(params: {
     }
   }
 
+  // Goodies mode: free items from the highest reached tier, added as ₹0 lines.
+  // One benefit per order — a coupon suppresses the goodies. A goodie is
+  // silently skipped when stock can't cover the customer's own purchase of
+  // that variant plus the freebie (never blocks checkout over a free item).
+  let freebies: { variant: (typeof lines)[number]["variant"]; qty: number }[] = [];
+  if (discountConfig.type === "goodies" && !params.couponCode) {
+    const rows = goodiesForKg(
+      discountConfig.goodieTiers.filter((g) => g.available),
+      foodKg
+    );
+    if (rows.length) {
+      const purchasedQty = new Map(lines.map((l) => [l.variant.id, l.qty]));
+      const goodieVariants = await prisma.productVariant.findMany({
+        where: { id: { in: rows.map((r) => r.variantId) } },
+        include: {
+          product: {
+            include: {
+              images: { orderBy: { sortOrder: "asc" } },
+              variants: { where: { isActive: true }, select: { label: true } },
+            },
+          },
+        },
+      });
+      const gById = new Map(goodieVariants.map((v) => [v.id, v]));
+      freebies = rows.flatMap((r) => {
+        const v = gById.get(r.variantId);
+        if (!v || !v.isActive || !v.product.isActive) return [];
+        if (v.stock < (purchasedQty.get(v.id) ?? 0) + r.qty) return [];
+        return [{ variant: v, qty: r.qty }];
+      });
+    }
+  }
+  // Goodies ride in the parcel and the courier weighs the lot, so they count
+  // toward shipping weight.
+  const parcelKg =
+    shippingKg +
+    totalKg(
+      freebies.map((f) => ({
+        label: f.variant.label,
+        qty: f.qty,
+        weightGrams: f.variant.weightGrams,
+      }))
+    );
+
   const shippingConfig = await getShippingConfig();
   // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg.
   const shippingFee = computeShipping({
     state: params.state,
-    weightKg: shippingKg,
+    weightKg: parcelKg,
     subtotal: subtotal - discount,
     config: shippingConfig,
   });
@@ -213,10 +262,23 @@ export async function priceOrderLines(params: {
     basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
     gstRate: l.variant.product.gstRate ?? defaultGstRate,
   }));
+  // Freebie lines: ₹0, flagged, GST-free (a zero gross has no output GST). A
+  // goodie may duplicate a purchased variant — that's simply a second row.
+  const freebieData = freebies.map((f) => ({
+    variantId: f.variant.id,
+    productName: f.variant.product.name,
+    variantLabel: f.variant.label,
+    image: f.variant.product.images[0]?.url ?? null,
+    price: 0,
+    qty: f.qty,
+    basePackGrams: basePacketGrams(f.variant.product.variants.map((v) => v.label)),
+    gstRate: 0,
+    isFreebie: true,
+  }));
 
   return {
     lines,
-    itemData,
+    itemData: [...itemData, ...freebieData],
     subtotal,
     discount,
     couponId,
@@ -224,7 +286,7 @@ export async function priceOrderLines(params: {
     shippingFee,
     total,
     packingCost,
-    weightKg: shippingKg,
+    weightKg: parcelKg,
   };
 }
 
@@ -384,6 +446,9 @@ export async function markOrderPaid(params: {
       data: { status: "PAID" },
       include: { items: true },
     });
+    // Freebie (goodie) lines carry a real variantId, so they decrement stock
+    // and get a SALE movement like any sold pack — availability was checked
+    // when the order was priced.
     for (const item of order.items) {
       if (!item.variantId) continue;
       const before = await tx.productVariant.findUnique({

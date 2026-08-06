@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
-import { SETTINGS } from "@/lib/constants";
+import { DISCOUNT_TYPES, SETTINGS, type DiscountType } from "@/lib/constants";
+import { parseGoodieTiers } from "@/lib/box";
 import { rupeesToPaise } from "@/lib/money";
 
 export async function saveSettings(formData: FormData) {
@@ -31,6 +32,40 @@ export async function saveSettings(formData: FormData) {
     return { error: "Discount tiers must look like 1:10,2:15,3:20 (kg:percent, or be empty)." };
   }
 
+  const discountType = String(formData.get("discountType") ?? "percent");
+  if (!DISCOUNT_TYPES.includes(discountType as DiscountType)) {
+    return { error: "Pick a valid discount type." };
+  }
+  // The editor only serializes complete rows, so anything the parser drops was
+  // hand-crafted or corrupt — reject rather than silently losing config.
+  const goodieTiersRaw = String(formData.get("goodieTiers") ?? "[]");
+  const goodieTiers = parseGoodieTiers(goodieTiersRaw);
+  let rawCount = 0;
+  try {
+    const raw = JSON.parse(goodieTiersRaw);
+    rawCount = Array.isArray(raw) ? raw.length : -1;
+  } catch {
+    rawCount = -1;
+  }
+  if (rawCount === -1 || goodieTiers.length !== rawCount) {
+    return { error: "Goodie rows must each have a weight, an item and a quantity." };
+  }
+  if (goodieTiers.length > 30) {
+    return { error: "Keep goodie tiers to 30 rows or fewer." };
+  }
+  if (discountType === "goodies" && goodieTiers.length === 0) {
+    return { error: "Add at least one goodie row (or switch back to percent tiers)." };
+  }
+  const goodieVariantIds = [...new Set(goodieTiers.map((g) => g.variantId))];
+  if (goodieVariantIds.length) {
+    const found = await prisma.productVariant.count({
+      where: { id: { in: goodieVariantIds } },
+    });
+    if (found !== goodieVariantIds.length) {
+      return { error: "One of the goodie items no longer exists — pick it again." };
+    }
+  }
+
   const gstRate = parseFloat(String(formData.get("defaultGstRate") ?? "0"));
   if (!Number.isFinite(gstRate) || gstRate < 0 || gstRate > 100) {
     return { error: "Default GST rate must be between 0 and 100." };
@@ -54,6 +89,8 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.OUTSIDE_TN_PER_KG]: String(outsideTnPerKg),
     [SETTINGS.LOW_STOCK_THRESHOLD]: String(lowStock),
     [SETTINGS.BOX_TIERS]: boxTiers,
+    [SETTINGS.DISCOUNT_TYPE]: discountType,
+    [SETTINGS.GOODIE_TIERS]: JSON.stringify(goodieTiers),
     [SETTINGS.PACKING_COST]: String(packingCost),
     [SETTINGS.ROUND_TO_FIVE]: formData.get("roundToFive") ? "1" : "0",
     [SETTINGS.INSTAGRAM_HANDLE]: String(formData.get("instagramHandle") ?? "")

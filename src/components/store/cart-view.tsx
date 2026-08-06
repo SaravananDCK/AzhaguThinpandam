@@ -14,18 +14,26 @@ import {
   boxDiscount,
   cartWeights,
   formatKg,
+  goodiesForKg,
+  nextGoodieKg,
   nextTier,
   type BoxTier,
 } from "@/lib/box";
+import type { DiscountType } from "@/lib/constants";
+import type { GoodieInfo } from "@/lib/queries";
 
 export function CartView({
   shippingFee,
   freeShippingAbove,
   tiers,
+  discountType,
+  goodieTiers,
 }: {
   shippingFee: number;
   freeShippingAbove: number;
   tiers: BoxTier[];
+  discountType: DiscountType;
+  goodieTiers: GoodieInfo[];
 }) {
   const { items, setQty, removeItem } = useCart();
   const mounted = useMounted();
@@ -49,9 +57,15 @@ export function CartView({
 
   const subtotal = cartSubtotal(items);
   const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
-  const tier = activeTier(tiers, foodKg);
-  const next = nextTier(tiers, foodKg);
-  const discount = boxDiscount(tiers, foodKg, foodSubtotal);
+  const percentMode = discountType === "percent";
+  const tier = percentMode ? activeTier(tiers, foodKg) : null;
+  const next = percentMode ? nextTier(tiers, foodKg) : null;
+  const discount = percentMode ? boxDiscount(tiers, foodKg, foodSubtotal) : 0;
+  // Goodies mode: free items from the highest reached tier (display only — the
+  // server re-derives this at checkout; a coupon there replaces the goodies)
+  const availableGoodies = goodieTiers.filter((g) => g.available);
+  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, foodKg);
+  const nextGoodie = percentMode ? null : nextGoodieKg(availableGoodies, foodKg);
   // Shipping threshold applies to the discounted amount (matches the server)
   const discounted = subtotal - discount;
   const freeShipping = discounted >= freeShippingAbove;
@@ -156,6 +170,28 @@ export function CartView({
                 <Gift className="size-3.5 shrink-0" />
                 Add {formatKg(next.count - foodKg)} more to{" "}
                 {tier ? `bump your discount to ${next.percent}%` : `unlock ${next.percent}% off`}
+              </p>
+            )}
+            {activeGoodies.length > 0 && (
+              <div className="space-y-1 rounded-md bg-green-100 px-2.5 py-2 dark:bg-green-950/60">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-green-800 dark:text-green-300">
+                  <Gift className="size-3.5 shrink-0" /> Free goodies unlocked!
+                </p>
+                {activeGoodies.map((g) => (
+                  <p
+                    key={`${g.variantId}-${g.kg}`}
+                    className="text-xs text-green-800 dark:text-green-300"
+                  >
+                    FREE — {g.productName} ({g.variantLabel}){g.qty > 1 ? ` × ${g.qty}` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+            {nextGoodie !== null && (
+              <p className="flex items-center gap-1.5 rounded-md bg-primary-50 px-2.5 py-2 text-xs font-medium text-primary-800 dark:bg-primary-950/60 dark:text-primary-300">
+                <Gift className="size-3.5 shrink-0" />
+                Add {formatKg(nextGoodie - foodKg)} more to unlock{" "}
+                {activeGoodies.length > 0 ? "even more free goodies" : "free goodies"}!
               </p>
             )}
             <div className="flex justify-between text-sm">

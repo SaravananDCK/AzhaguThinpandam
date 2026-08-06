@@ -133,8 +133,8 @@ export function EditOrderItems({
 
       <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
         Saving reprices the whole order with the same rules as the website —
-        current prices, bundle discount for the new weight, and shipping for the
-        delivery state. The total will change.
+        current prices, bundle discount or free goodies for the new weight, and
+        shipping for the delivery state. The total will change.
         {couponCode && ` Coupon ${couponCode} is re-checked against the new subtotal.`}
       </p>
 

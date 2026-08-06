@@ -137,8 +137,12 @@ export default async function OrderPrintPage({ params }: Props) {
                     </span>
                   </td>
                   <td className="py-2 text-center">{item.qty}</td>
-                  <td className="py-2 text-right">{formatINR(item.price)}</td>
-                  <td className="py-2 text-right">{formatINR(item.price * item.qty)}</td>
+                  <td className="py-2 text-right">
+                    {item.isFreebie ? "FREE" : formatINR(item.price)}
+                  </td>
+                  <td className="py-2 text-right">
+                    {item.isFreebie ? "FREE" : formatINR(item.price * item.qty)}
+                  </td>
                 </tr>
               );
             })}

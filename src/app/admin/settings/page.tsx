@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Download } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
+import { parseGoodieTiers } from "@/lib/box";
 import { paiseToRupees } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +12,19 @@ import { SettingsForm } from "./settings-form";
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
-  const settings = await getSettings();
+  const [settings, variants] = await Promise.all([
+    getSettings(),
+    prisma.productVariant.findMany({
+      where: { isActive: true, product: { isActive: true } },
+      include: { product: { select: { name: true } } },
+      orderBy: [{ product: { name: "asc" } }, { sortOrder: "asc" }],
+    }),
+  ]);
+  const variantOptions = variants.map((v) => ({
+    id: v.id,
+    label: `${v.product.name} — ${v.label}`,
+    stock: v.stock,
+  }));
 
   return (
     <div className="space-y-5">
@@ -32,6 +46,9 @@ export default async function AdminSettingsPage() {
           ),
           lowStockThreshold: settings[SETTINGS.LOW_STOCK_THRESHOLD],
           boxTiers: settings[SETTINGS.BOX_TIERS],
+          discountType:
+            settings[SETTINGS.DISCOUNT_TYPE] === "goodies" ? ("goodies" as const) : ("percent" as const),
+          goodieTiers: parseGoodieTiers(settings[SETTINGS.GOODIE_TIERS]),
           packingCostRupees: paiseToRupees(
             parseInt(settings[SETTINGS.PACKING_COST], 10) || 0
           ),
@@ -43,6 +60,7 @@ export default async function AdminSettingsPage() {
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
           upiId: settings[SETTINGS.UPI_ID] ?? "",
         }}
+        variantOptions={variantOptions}
       />
 
       <Card className="max-w-xl">

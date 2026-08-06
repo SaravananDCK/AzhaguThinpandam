@@ -61,7 +61,10 @@ function orderItemsTable(items: OrderItem[], order: Order) {
   const rows = items
     .map((i) => {
       const note = packNote(i.variantLabel, i.basePackGrams ?? undefined);
-      return `<tr><td style="padding:6px 12px 6px 0">${i.productName} (${i.variantLabel}${note ? `, ${note}` : ""}) × ${i.qty}</td><td style="padding:6px 0;text-align:right">${formatINR(i.price * i.qty)}</td></tr>`;
+      const amount = i.isFreebie
+        ? `<span style="color:#15803d;font-weight:bold">FREE</span>`
+        : formatINR(i.price * i.qty);
+      return `<tr><td style="padding:6px 12px 6px 0">${i.isFreebie ? "🎁 " : ""}${i.productName} (${i.variantLabel}${note ? `, ${note}` : ""}) × ${i.qty}</td><td style="padding:6px 0;text-align:right">${amount}</td></tr>`;
     })
     .join("");
   const discountRow =

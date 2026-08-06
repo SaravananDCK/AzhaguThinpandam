@@ -10,7 +10,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
-import { activeTier, boxDiscount, formatKg, nextTier, totalKg, type BoxTier } from "@/lib/box";
+import {
+  activeGoodieKg,
+  activeTier,
+  boxDiscount,
+  formatKg,
+  goodiesForKg,
+  nextGoodieKg,
+  nextTier,
+  totalKg,
+  type BoxTier,
+} from "@/lib/box";
+import type { DiscountType } from "@/lib/constants";
+import type { GoodieInfo } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export type BoxItem = {
@@ -25,7 +37,17 @@ export type BoxItem = {
   image: string | null;
 };
 
-export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[] }) {
+export function BoxBuilder({
+  items,
+  tiers,
+  discountType,
+  goodieTiers,
+}: {
+  items: BoxItem[];
+  tiers: BoxTier[];
+  discountType: DiscountType;
+  goodieTiers: GoodieInfo[];
+}) {
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
   const [qty, setQtyMap] = useState<Record<string, number>>({});
@@ -65,10 +87,23 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
     return { weightKg, subtotal, itemCount };
   }, [items, qty]);
 
-  const tier = activeTier(tiers, weightKg);
-  const next = nextTier(tiers, weightKg);
-  const discount = boxDiscount(tiers, weightKg, subtotal);
-  const maxTierCount = tiers.length ? tiers[tiers.length - 1].count : 0;
+  const percentMode = discountType === "percent";
+  const tier = percentMode ? activeTier(tiers, weightKg) : null;
+  const next = percentMode ? nextTier(tiers, weightKg) : null;
+  const discount = percentMode ? boxDiscount(tiers, weightKg, subtotal) : 0;
+  // Goodies mode: same progress mechanics, but tiers unlock free items
+  const availableGoodies = goodieTiers.filter((g) => g.available);
+  const goodieKgs = [...new Set(availableGoodies.map((g) => g.kg))].sort((a, b) => a - b);
+  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, weightKg);
+  const activeKg = percentMode ? null : activeGoodieKg(availableGoodies, weightKg);
+  const nextKg = percentMode ? null : nextGoodieKg(availableGoodies, weightKg);
+  const maxTierCount = percentMode
+    ? tiers.length
+      ? tiers[tiers.length - 1].count
+      : 0
+    : goodieKgs.length
+      ? goodieKgs[goodieKgs.length - 1]
+      : 0;
 
   function addBoxToCart() {
     let added = 0;
@@ -93,7 +128,9 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
     toast.success(
       tier
         ? `Box with ${added} packs added — ${tier.percent}% discount applies at checkout!`
-        : `${added} packs added to your cart.`
+        : activeGoodies.length > 0
+          ? `Box with ${added} packs added — free goodies will be added at checkout!`
+          : `${added} packs added to your cart.`
     );
     router.push("/cart");
   }
@@ -105,15 +142,32 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
         <CardContent className="space-y-3">
           <p className="flex items-center gap-2 text-sm font-semibold">
             <Gift className="size-4 text-gold-600 dark:text-gold-400" />
-            {tier
-              ? `${tier.percent}% off unlocked!`
-              : next
-                ? `Add ${formatKg(next.count - weightKg)} more to unlock ${next.percent}% off`
-                : "Pick your packs"}
-            {tier && next && (
-              <span className="font-normal text-muted-foreground">
-                — {formatKg(next.count - weightKg)} more for {next.percent}%
-              </span>
+            {percentMode ? (
+              <>
+                {tier
+                  ? `${tier.percent}% off unlocked!`
+                  : next
+                    ? `Add ${formatKg(next.count - weightKg)} more to unlock ${next.percent}% off`
+                    : "Pick your packs"}
+                {tier && next && (
+                  <span className="font-normal text-muted-foreground">
+                    — {formatKg(next.count - weightKg)} more for {next.percent}%
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                {activeKg !== null
+                  ? "Free goodies unlocked!"
+                  : nextKg !== null
+                    ? `Add ${formatKg(nextKg - weightKg)} more to unlock free goodies`
+                    : "Pick your packs"}
+                {activeKg !== null && nextKg !== null && (
+                  <span className="font-normal text-muted-foreground">
+                    — {formatKg(nextKg - weightKg)} more for the next tier
+                  </span>
+                )}
+              </>
             )}
           </p>
           <div className="relative h-2 overflow-hidden rounded-full bg-muted">
@@ -125,18 +179,42 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
             />
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
-            {tiers.map((t) => (
-              <span
-                key={t.count}
-                className={cn(
-                  "font-medium",
-                  weightKg >= t.count && "text-gold-700 dark:text-gold-400"
-                )}
-              >
-                {formatKg(t.count)} · {t.percent}% off
-              </span>
-            ))}
+            {percentMode
+              ? tiers.map((t) => (
+                  <span
+                    key={t.count}
+                    className={cn(
+                      "font-medium",
+                      weightKg >= t.count && "text-gold-700 dark:text-gold-400"
+                    )}
+                  >
+                    {formatKg(t.count)} · {t.percent}% off
+                  </span>
+                ))
+              : goodieKgs.map((kg) => (
+                  <span
+                    key={kg}
+                    className={cn(
+                      "font-medium",
+                      weightKg >= kg && "text-gold-700 dark:text-gold-400"
+                    )}
+                  >
+                    {formatKg(kg)} · free goodies
+                  </span>
+                ))}
           </div>
+          {activeGoodies.length > 0 && (
+            <div className="space-y-0.5">
+              {activeGoodies.map((g) => (
+                <p
+                  key={`${g.variantId}-${g.kg}`}
+                  className="text-xs font-medium text-green-700 dark:text-green-400"
+                >
+                  FREE — {g.productName} ({g.variantLabel}){g.qty > 1 ? ` × ${g.qty}` : ""}
+                </p>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -263,6 +341,11 @@ export function BoxBuilder({ items, tiers }: { items: BoxItem[]; tiers: BoxTier[
             {discount > 0 && tier && (
               <p className="text-xs font-medium text-green-600 dark:text-green-400">
                 You save {formatINR(discount)} ({tier.percent}% off)
+              </p>
+            )}
+            {activeGoodies.length > 0 && (
+              <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                Free goodies unlocked!
               </p>
             )}
           </div>
