@@ -358,7 +358,17 @@ export function PurchasesGrid({
       </DataGrid>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+          onInteractOutside={(e) => {
+            // The item SelectBox's dropdown renders in a DevExtreme overlay on
+            // document.body — outside this dialog's DOM. Without this, Radix
+            // reads a click on the list as "outside" and closes the dialog.
+            if ((e.target as HTMLElement | null)?.closest?.(".dx-overlay-wrapper")) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit purchase" : "Record purchase"}</DialogTitle>
           </DialogHeader>
