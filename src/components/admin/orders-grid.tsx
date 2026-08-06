@@ -33,23 +33,44 @@ const STATUS_LOOKUP = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) =
   label,
 }));
 
+// Orders still in flight — everything except the terminal statuses
+const INACTIVE_STATUSES: OrderStatus[] = ["DELIVERED", "CANCELLED"];
+const isActive = (r: OrderRow) => !INACTIVE_STATUSES.includes(r.status as OrderStatus);
+
+type StatusFilter = OrderStatus | "ACTIVE" | "ALL";
+
 export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ACTIVE");
 
   const countByStatus = rows.reduce<Record<string, number>>((acc, r) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1;
     return acc;
   }, {});
 
+  const filteredRows =
+    statusFilter === "ALL"
+      ? rows
+      : statusFilter === "ACTIVE"
+        ? rows.filter(isActive)
+        : rows.filter((r) => r.status === statusFilter);
+
   return (
     <div className="space-y-4">
       {/* Quick status filters */}
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setStatusFilter(null)}>
+        <button type="button" onClick={() => setStatusFilter("ACTIVE")}>
           <Badge
-            variant={!statusFilter ? "default" : "outline"}
-            className={cn("px-3 py-1.5", statusFilter && "hover:bg-accent")}
+            variant={statusFilter === "ACTIVE" ? "default" : "outline"}
+            className={cn("px-3 py-1.5", statusFilter !== "ACTIVE" && "hover:bg-accent")}
+          >
+            Active ({rows.filter(isActive).length})
+          </Badge>
+        </button>
+        <button type="button" onClick={() => setStatusFilter("ALL")}>
+          <Badge
+            variant={statusFilter === "ALL" ? "default" : "outline"}
+            className={cn("px-3 py-1.5", statusFilter !== "ALL" && "hover:bg-accent")}
           >
             All ({rows.length})
           </Badge>
@@ -58,7 +79,7 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
           <button
             key={s}
             type="button"
-            onClick={() => setStatusFilter((cur) => (cur === s ? null : s))}
+            onClick={() => setStatusFilter((cur) => (cur === s ? "ACTIVE" : s))}
           >
             <Badge
               variant={statusFilter === s ? "default" : "outline"}
@@ -71,7 +92,7 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       </div>
 
     <DataGrid
-      dataSource={statusFilter ? rows.filter((r) => r.status === statusFilter) : rows}
+      dataSource={filteredRows}
       keyExpr="id"
       showBorders
       columnAutoWidth
