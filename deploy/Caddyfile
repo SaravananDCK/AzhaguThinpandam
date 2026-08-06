@@ -22,6 +22,9 @@ www.{$DOMAIN} {
 			roll_size 10MiB
 			roll_keep 10
 			roll_keep_for 720h
+			# World-readable: the app container's non-root user reads these for
+			# /admin/traffic. Applies to new files only — chmod any existing ones.
+			mode 644
 		}
 		format json
 	}

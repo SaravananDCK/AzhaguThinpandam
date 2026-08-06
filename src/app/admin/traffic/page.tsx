@@ -103,11 +103,35 @@ export default async function AdminTrafficPage({
       ) : summary.totalRequests === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No requests logged for {label}.
+            {summary.unreadableFiles > 0 ? (
+              <>
+                <p className="font-medium text-destructive">
+                  {summary.unreadableFiles} log file
+                  {summary.unreadableFiles === 1 ? " is" : "s are"} unreadable —
+                  likely a permissions problem.
+                </p>
+                <p className="mx-auto mt-2 max-w-lg">
+                  Caddy writes logs as root with mode 600 unless the Caddyfile
+                  sets <code>mode 644</code>. On the server, run{" "}
+                  <code>chmod 644 logs/caddy/access*</code> once to fix existing
+                  files.
+                </p>
+              </>
+            ) : (
+              <>No requests logged for {label}.</>
+            )}
           </CardContent>
         </Card>
       ) : (
         <>
+          {summary.unreadableFiles > 0 && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-2.5 text-sm text-destructive">
+              {summary.unreadableFiles} log file
+              {summary.unreadableFiles === 1 ? " was" : "s were"} skipped
+              (unreadable) — numbers below are incomplete. Run{" "}
+              <code>chmod 644 logs/caddy/access*</code> on the server.
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {

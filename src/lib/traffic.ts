@@ -27,6 +27,8 @@ type AccessEntry = {
 };
 
 export type TrafficSummary = {
+  /** Log files present but unreadable (usually a permissions problem) */
+  unreadableFiles: number;
   totalRequests: number;
   pageViews: number;
   uniqueVisitors: number;
@@ -59,9 +61,10 @@ function stripQuery(uri: string): string {
 }
 
 /** null = the log directory doesn't exist (not deployed / dev machine). */
-function readEntries(): AccessEntry[] | null {
+function readEntries(): { entries: AccessEntry[]; unreadable: number } | null {
   if (!existsSync(LOG_DIR)) return null;
   const chunks: string[] = [];
+  let unreadable = 0;
   for (const name of readdirSync(LOG_DIR)) {
     if (!name.startsWith("access")) continue;
     const file = path.join(LOG_DIR, name);
@@ -72,7 +75,9 @@ function readEntries(): AccessEntry[] | null {
           : readFileSync(file, "utf8")
       );
     } catch {
-      // A file mid-roll can vanish or be torn; skip it rather than fail the page.
+      // Usually EACCES (Caddy writes 0600 unless the Caddyfile sets mode 644);
+      // can also be a file vanishing mid-roll. Count it so the page can say so.
+      unreadable++;
     }
   }
   const entries: AccessEntry[] = [];
@@ -87,7 +92,7 @@ function readEntries(): AccessEntry[] | null {
       }
     }
   }
-  return entries;
+  return { entries, unreadable };
 }
 
 function top<T>(counts: Map<string, T>, cmp: (a: T, b: T) => number, n: number): [string, T][] {
@@ -96,9 +101,10 @@ function top<T>(counts: Map<string, T>, cmp: (a: T, b: T) => number, n: number):
 
 /** @param day an IST day ("2026-08-05") or "all" for every log on disk */
 export function summarizeTraffic(day: string): TrafficSummary | null {
-  const all = readEntries();
-  if (all === null) return null;
-  const entries = day === "all" ? all : all.filter((e) => istDayOf(e.ts) === day);
+  const read = readEntries();
+  if (read === null) return null;
+  const entries =
+    day === "all" ? read.entries : read.entries.filter((e) => istDayOf(e.ts) === day);
 
   const pages = entries.filter((e) => !ASSET_RE.test(e.request.uri));
 
@@ -126,6 +132,7 @@ export function summarizeTraffic(day: string): TrafficSummary | null {
   }
 
   return {
+    unreadableFiles: read.unreadable,
     totalRequests: entries.length,
     pageViews: pages.length,
     uniqueVisitors: new Set(entries.map((e) => e.request.remote_ip)).size,
