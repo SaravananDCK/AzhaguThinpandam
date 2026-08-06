@@ -56,34 +56,33 @@ export default async function AdminTrafficPage({
           </p>
         </div>
         <div className="flex items-center gap-1">
-          {day !== "all" && (
-            <>
-              <Button asChild variant="ghost" size="icon" aria-label="Previous day">
-                <Link href={`/admin/traffic?day=${shiftDay(day, -1)}`}>
-                  <ChevronLeft className="size-4" />
-                </Link>
-              </Button>
-              <span className="min-w-28 text-center text-sm font-semibold">{dayLabel(day)}</span>
-              <Button
-                asChild={day < today}
-                variant="ghost"
-                size="icon"
-                aria-label="Next day"
-                disabled={day >= today}
-              >
-                {day < today ? (
-                  <Link href={`/admin/traffic?day=${shiftDay(day, 1)}`}>
-                    <ChevronRight className="size-4" />
-                  </Link>
-                ) : (
-                  <ChevronRight className="size-4" />
-                )}
-              </Button>
-            </>
-          )}
+          {/* From the All-time view the left arrow steps back into day mode (at today). */}
+          <Button asChild variant="ghost" size="icon" aria-label="Previous day">
+            <Link href={`/admin/traffic?day=${day === "all" ? today : shiftDay(day, -1)}`}>
+              <ChevronLeft className="size-4" />
+            </Link>
+          </Button>
+          <span className="min-w-28 text-center text-sm font-semibold">
+            {day === "all" ? "All time" : dayLabel(day)}
+          </span>
+          <Button
+            asChild={day !== "all" && day < today}
+            variant="ghost"
+            size="icon"
+            aria-label="Next day"
+            disabled={day === "all" || day >= today}
+          >
+            {day !== "all" && day < today ? (
+              <Link href={`/admin/traffic?day=${shiftDay(day, 1)}`}>
+                <ChevronRight className="size-4" />
+              </Link>
+            ) : (
+              <ChevronRight className="size-4" />
+            )}
+          </Button>
           <Button asChild variant={day === "all" ? "secondary" : "outline"} size="sm">
             <Link href={day === "all" ? "/admin/traffic" : "/admin/traffic?day=all"}>
-              {day === "all" ? "Back to today" : "All time"}
+              All time
             </Link>
           </Button>
         </div>
