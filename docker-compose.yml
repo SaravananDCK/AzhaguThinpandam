@@ -16,9 +16,12 @@ services:
       # concurrent writes queue instead of deadlocking.
       DATABASE_URL: "file:/app/data/store.db?connection_limit=1"
       UPLOADS_DIR: "/app/uploads"
+      CADDY_LOG_DIR: "/app/logs/caddy"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+      # Caddy's access logs, read-only — the admin Traffic page parses them.
+      - ./logs/caddy:/app/logs/caddy:ro
     expose:
       - "3000"
 
@@ -33,6 +36,9 @@ services:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Access logs land on the host so they can be read/grepped without
+      # exec'ing into the container, and survive a container rebuild.
+      - ./logs/caddy:/var/log/caddy
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

@@ -12,6 +12,20 @@ www.{$DOMAIN} {
 {$DOMAIN} {
 	encode gzip
 
+	# Access log — one JSON object per request with the client IP, path, status,
+	# duration and user agent. Caddy is the edge here (nothing in front of it),
+	# so remote_ip is the real visitor, not a proxy.
+	# Rolls at 10MB, keeps 10 files / 30 days. Readable on the host at
+	# ./logs/caddy/access.log — run deploy/traffic.sh for the summaries.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+
 	# Long cache for build assets (they're content-hashed)
 	@static path /_next/static/*
 	header @static Cache-Control "public, max-age=31536000, immutable"

@@ -41,6 +41,7 @@ yarn-error.log*
 # runtime data on the server (docker volumes)
 /data
 /backups
+/logs
 
 # deploy package (regenerate with scripts/make-publish.ps1)
 azhagu-publish.zip
