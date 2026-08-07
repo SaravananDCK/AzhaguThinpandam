@@ -86,6 +86,7 @@ export const SETTINGS = {
   ROUND_TO_FIVE: "round_prices_to_five",
   INSTAGRAM_HANDLE: "instagram_handle",
   INSTAGRAM_REELS: "instagram_reels",
+  GA_MEASUREMENT_ID: "ga_measurement_id",
   PRE_LAUNCH_NOTICE: "pre_launch_notice",
   DEFAULT_GST_RATE: "default_gst_rate",
   // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
@@ -131,6 +132,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.INSTAGRAM_HANDLE]: "azhagintamilmozhi05",
   // Reel/post URLs to feature on the homepage — one per line (or comma-separated)
   [SETTINGS.INSTAGRAM_REELS]: "",
+  // Google Analytics 4 measurement id ("G-…"). Loaded on customer-facing pages
+  // only (never admin), and only in production. Empty disables the tag.
+  [SETTINGS.GA_MEASUREMENT_ID]: "G-2DJHGX2CKR",
   // Shown as a banner on the cart/checkout while manual UPI payment is on.
   // Orders are still placed — only the gateway step is replaced.
   [SETTINGS.PRE_LAUNCH_NOTICE]:

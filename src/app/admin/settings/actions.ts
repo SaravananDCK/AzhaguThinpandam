@@ -71,6 +71,11 @@ export async function saveSettings(formData: FormData) {
     return { error: "Default GST rate must be between 0 and 100." };
   }
 
+  const gaMeasurementId = String(formData.get("gaMeasurementId") ?? "").trim();
+  if (gaMeasurementId && !/^G-[A-Z0-9]{4,20}$/i.test(gaMeasurementId)) {
+    return { error: "Google Analytics ID should look like G-XXXXXXXXXX (or be empty)." };
+  }
+
   const upiId = String(formData.get("upiId") ?? "").trim();
   if (upiId && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upiId)) {
     return { error: "UPI ID should look like yourname@bank." };
@@ -97,6 +102,7 @@ export async function saveSettings(formData: FormData) {
       .trim()
       .replace(/^@/, ""),
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
+    [SETTINGS.GA_MEASUREMENT_ID]: gaMeasurementId,
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,

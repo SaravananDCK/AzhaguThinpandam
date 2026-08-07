@@ -55,6 +55,7 @@ export default async function AdminSettingsPage() {
           roundToFive: settings[SETTINGS.ROUND_TO_FIVE] !== "0",
           instagramHandle: settings[SETTINGS.INSTAGRAM_HANDLE] ?? "",
           instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
+          gaMeasurementId: settings[SETTINGS.GA_MEASUREMENT_ID] ?? "",
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",

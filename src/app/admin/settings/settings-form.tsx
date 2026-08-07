@@ -30,6 +30,7 @@ type Props = {
     roundToFive: boolean;
     instagramHandle: string;
     instagramReels: string;
+    gaMeasurementId: string;
     preLaunchNotice: string;
     defaultGstRate: string;
     manualUpiPayment: boolean;
@@ -82,6 +83,19 @@ export function SettingsForm({ values, variantOptions }: Props) {
               rows={2}
               defaultValue={values.storeAddress}
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-ga">Google Analytics ID</Label>
+            <Input
+              id="s-ga"
+              name="gaMeasurementId"
+              defaultValue={values.gaMeasurementId}
+              placeholder="G-XXXXXXXXXX"
+            />
+            <p className="text-xs text-muted-foreground">
+              GA4 measurement ID. The tag loads on customer-facing pages only
+              (never the admin panel). Leave empty to disable tracking.
+            </p>
           </div>
         </CardContent>
       </Card>
