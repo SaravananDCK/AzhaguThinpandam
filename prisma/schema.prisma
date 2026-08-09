@@ -123,13 +123,15 @@ model ProductVariant {
 }
 
 // Customer product reviews. Only verified purchasers can post (enforced in the
-// API), and reviews stay PENDING until an admin approves them.
+// API), and reviews stay PENDING until an admin approves them. Admins can also
+// enter reviews on a customer's behalf (WhatsApp feedback) — those have no
+// user link (userId null) and are created APPROVED.
 model Review {
   id         String   @id @default(cuid())
   productId  String
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   rating     Int // 1..5
   title      String?
   body       String?

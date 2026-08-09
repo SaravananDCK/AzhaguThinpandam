@@ -1,7 +1,7 @@
 "use client";
 
 import "@/components/admin/dx-setup";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import DataGrid, {
   Column,
   FilterRow,
@@ -10,9 +10,20 @@ import DataGrid, {
   Pager,
 } from "devextreme-react/data-grid";
 import type { DataGridRef } from "devextreme-react/data-grid";
+import SelectBox from "devextreme-react/select-box";
 import CustomStore from "devextreme/data/custom_store";
-import { Check, Star, Trash2, X } from "lucide-react";
+import { Check, Loader2, Plus, Star, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type ReviewRow = {
   id: string;
@@ -32,8 +43,62 @@ const STATUS_STYLE: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
 };
 
-export function ReviewsGrid() {
+export type ProductOption = { id: string; name: string };
+
+export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[] }) {
   const gridRef = useRef<DataGridRef>(null);
+  // "Add review" dialog — admin records feedback a customer sent on WhatsApp
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [productId, setProductId] = useState("");
+  const [authorName, setAuthorName] = useState("");
+  const [rating, setRating] = useState(0);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [date, setDate] = useState("");
+
+  function openNew() {
+    setProductId("");
+    setAuthorName("");
+    setRating(0);
+    setTitle("");
+    setBody("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setOpen(true);
+  }
+
+  async function save() {
+    if (!productId) {
+      toast.error("Pick a product.");
+      return;
+    }
+    if (!authorName.trim()) {
+      toast.error("Enter the customer's name.");
+      return;
+    }
+    if (rating < 1) {
+      toast.error("Pick a star rating.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, authorName, rating, title, body, date }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not save the review.");
+        return;
+      }
+      toast.success("Review added");
+      setOpen(false);
+      refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const store = useMemo(
     () =>
@@ -75,6 +140,13 @@ export function ReviewsGrid() {
   }
 
   return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={openNew}>
+          <Plus className="size-4" /> Add review
+        </Button>
+      </div>
+
     <DataGrid ref={gridRef} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
       <FilterRow visible />
       <Paging defaultPageSize={15} />
@@ -198,5 +270,110 @@ export function ReviewsGrid() {
         )}
       />
     </DataGrid>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-md"
+          onInteractOutside={(e) => {
+            // The product SelectBox's dropdown renders in a DevExtreme overlay
+            // on document.body — outside this dialog's DOM. Without this, Radix
+            // reads a click on the list as "outside" and closes the dialog.
+            if ((e.target as HTMLElement | null)?.closest?.(".dx-overlay-wrapper")) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Add review</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            For feedback a customer sent over WhatsApp or in person. Goes live
+            immediately (no moderation step) and counts toward the product&apos;s
+            star rating.
+          </p>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Product</Label>
+              <SelectBox
+                dataSource={productOptions}
+                valueExpr="id"
+                displayExpr="name"
+                value={productId || null}
+                searchEnabled
+                searchExpr="name"
+                searchMode="contains"
+                minSearchLength={0}
+                placeholder="Search product…"
+                onValueChanged={(e) => setProductId(e.value ?? "")}
+                aria-label="Product"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rv-name">Customer name</Label>
+              <Input
+                id="rv-name"
+                value={authorName}
+                onChange={(e) => setAuthorName(e.target.value)}
+                placeholder="As it should appear on the site"
+                maxLength={80}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Rating</Label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setRating(n)}
+                    aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                    className="text-gold-500"
+                  >
+                    <Star
+                      className={`size-6 ${n <= rating ? "fill-current" : "text-muted-foreground/30"}`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rv-title">Title (optional)</Label>
+              <Input
+                id="rv-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={120}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rv-body">Review (optional)</Label>
+              <Textarea
+                id="rv-body"
+                rows={3}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                maxLength={2000}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="rv-date">Date</Label>
+              <Input
+                id="rv-date"
+                type="date"
+                value={date}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setDate(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Backdate it to when the customer actually sent the feedback.
+              </p>
+            </div>
+            <Button onClick={save} disabled={saving}>
+              {saving && <Loader2 className="size-4 animate-spin" />} Add review
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
