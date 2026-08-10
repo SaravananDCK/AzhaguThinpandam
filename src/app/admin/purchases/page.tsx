@@ -1,107 +1,49 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { labelToGrams } from "@/lib/pack";
+import { consolidateOrders } from "@/lib/requirements";
 import { PurchasesGrid, type PurchaseDraft } from "@/components/admin/purchases-grid";
 
 export const metadata: Metadata = { title: "Purchases" };
 
 /**
- * Consolidates the items of the given orders into a pre-filled purchase draft:
- * packs summed per variant, kg + ₹/kg defaults from the wholesale settings.
- * Nothing is recorded until the admin saves the dialog. Freebie (goodie) lines
- * are included — they're free for the customer, not for the store.
+ * Maps a consolidation of the given orders (packs per variant, kg + ₹/kg
+ * wholesale defaults) into a pre-filled purchase draft. Nothing is recorded
+ * until the admin saves the dialog.
  */
 async function buildDraftFromOrders(fromOrders: string): Promise<PurchaseDraft | null> {
-  const ids = [...new Set(fromOrders.split(",").filter(Boolean))].slice(0, 100);
-  if (!ids.length) return null;
-  const orders = await prisma.order.findMany({
-    // Cancelled orders need no goods bought — makes a careless select-all safe
-    where: { id: { in: ids }, status: { not: "CANCELLED" } },
-    orderBy: { createdAt: "asc" },
-    select: {
-      orderNumber: true,
-      items: {
-        select: {
-          productName: true,
-          variantLabel: true,
-          qty: true,
-          variant: {
-            select: {
-              id: true,
-              label: true,
-              weightGrams: true,
-              unitCost: true,
-              product: { select: { name: true, purchasePricePerKg: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  type Linked = {
-    packs: number;
-    variant: NonNullable<(typeof orders)[number]["items"][number]["variant"]>;
-  };
-  const byVariant = new Map<string, Linked>();
-  // Lines whose variant was since deleted — only the name/label snapshot is left
-  const legacy = new Map<string, { packs: number; description: string; label: string }>();
-  for (const o of orders) {
-    for (const it of o.items) {
-      if (it.variant) {
-        const e = byVariant.get(it.variant.id) ?? { packs: 0, variant: it.variant };
-        e.packs += it.qty;
-        byVariant.set(it.variant.id, e);
-      } else {
-        const key = `${it.productName}|${it.variantLabel}`;
-        const e = legacy.get(key) ?? {
-          packs: 0,
-          description: `${it.productName} (${it.variantLabel})`,
-          label: it.variantLabel,
-        };
-        e.packs += it.qty;
-        legacy.set(key, e);
-      }
-    }
-  }
-
-  const items = [
-    ...[...byVariant.values()].map(({ packs, variant: v }) => {
-      const description = `${v.product.name} (${v.label})`;
-      // Per-unit wholesale cost wins for merchandise (order-cost.ts precedence)
-      if (v.unitCost != null && v.unitCost > 0) {
+  const { orders, lines } = await consolidateOrders(fromOrders.split(","));
+  const items = lines
+    .map((l) => {
+      if (!l.variantId) {
+        // Deleted variant: description-only row, no stock link; blank cost on
+        // purpose — the admin must price it before saving.
         return {
-          description,
-          variantId: v.id,
-          packs: String(packs),
-          qty: String(packs),
-          unitCostRupees: String(v.unitCost / 100),
+          description: l.description,
+          variantId: "",
+          packs: "",
+          qty: l.kg != null ? String(l.kg) : String(l.packs),
+          unitCostRupees: "",
         };
       }
-      const grams = v.weightGrams ?? labelToGrams(v.label);
+      // Per-unit wholesale cost wins for merchandise (order-cost.ts precedence)
+      if (l.unitCost != null && l.unitCost > 0) {
+        return {
+          description: l.description,
+          variantId: l.variantId,
+          packs: String(l.packs),
+          qty: String(l.packs),
+          unitCostRupees: String(l.unitCost / 100),
+        };
+      }
       return {
-        description,
-        variantId: v.id,
-        packs: String(packs),
-        qty: grams ? String((packs * grams) / 1000) : "",
-        unitCostRupees: v.product.purchasePricePerKg
-          ? String(v.product.purchasePricePerKg / 100)
-          : "",
+        description: l.description,
+        variantId: l.variantId,
+        packs: String(l.packs),
+        qty: l.kg != null ? String(l.kg) : "",
+        unitCostRupees: l.pricePerKgPaise ? String(l.pricePerKgPaise / 100) : "",
       };
-    }),
-    // Blank cost on purpose: the admin must price these lines before saving
-    ...[...legacy.values()].map(({ packs, description, label }) => {
-      const grams = labelToGrams(label);
-      return {
-        description,
-        variantId: "",
-        packs: "",
-        qty: grams ? String((packs * grams) / 1000) : String(packs),
-        unitCostRupees: "",
-      };
-    }),
-  ]
-    .sort((a, b) => a.description.localeCompare(b.description))
+    })
     .slice(0, 100); // purchaseSchema caps items at 100
 
   if (!items.length) return null;

@@ -13,7 +13,7 @@ import DataGrid, {
   SearchPanel,
   Selection,
 } from "devextreme-react/data-grid";
-import { PackagePlus } from "lucide-react";
+import { FileText, PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
@@ -98,14 +98,25 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
         ))}
       </div>
       {selectedIds.length > 0 && (
-        <Button
-          size="sm"
-          onClick={() =>
-            router.push(`/admin/purchases?fromOrders=${selectedIds.join(",")}`)
-          }
-        >
-          <PackagePlus className="size-4" /> Create purchase order ({selectedIds.length})
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              router.push(`/admin/orders/requirements?ids=${selectedIds.join(",")}`)
+            }
+          >
+            <FileText className="size-4" /> Requirements report ({selectedIds.length})
+          </Button>
+          <Button
+            size="sm"
+            onClick={() =>
+              router.push(`/admin/purchases?fromOrders=${selectedIds.join(",")}`)
+            }
+          >
+            <PackagePlus className="size-4" /> Create purchase order ({selectedIds.length})
+          </Button>
+        </div>
       )}
       </div>
 
