@@ -1,7 +1,7 @@
 "use client";
 
 import "@/components/admin/dx-setup";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DataGrid, {
   Column,
   MasterDetail,
@@ -63,6 +63,10 @@ export type VariantOption = {
 };
 export type SupplierOption = { id: string; name: string; gstRate: number | null };
 
+/** A pre-filled draft (consolidated from selected orders) that opens the
+    Record-purchase dialog on mount. Nothing is saved until the admin does. */
+export type PurchaseDraft = { note: string; items: ItemRow[] };
+
 const EMPTY_ITEM: ItemRow = { description: "", qty: "", unitCostRupees: "", variantId: "", packs: "" };
 
 /** GST component of a GST-inclusive rupee amount at the given rate (%). */
@@ -74,9 +78,11 @@ function gstOf(inclusiveRupees: number, rate: number): number {
 export function PurchasesGrid({
   variantOptions,
   supplierOptions,
+  draft,
 }: {
   variantOptions: VariantOption[];
   supplierOptions: SupplierOption[];
+  draft?: PurchaseDraft;
 }) {
   const gridRef = useRef<DataGridRef>(null);
   // Index of a newly-added item row whose Item field should grab focus on mount
@@ -122,6 +128,26 @@ export function PurchasesGrid({
     setItems([{ ...EMPTY_ITEM }]);
     setOpen(true);
   }, [supplierOptions]);
+
+  // A consolidated draft from selected orders opens the dialog pre-filled, once.
+  const seeded = useRef(false); // also guards StrictMode's double effect run
+  useEffect(() => {
+    if (!draft || seeded.current) return;
+    seeded.current = true;
+    setEditingId(null);
+    setDate(new Date().toISOString().slice(0, 10));
+    const first = supplierOptions[0];
+    setSupplierId(first?.id ?? "");
+    setLegacySupplier("");
+    setGstRate(first?.gstRate != null ? String(first.gstRate) : "0");
+    setInvoiceNo("");
+    setNotes(draft.note);
+    setItems(draft.items.length ? draft.items.map((i) => ({ ...i })) : [{ ...EMPTY_ITEM }]);
+    setOpen(true);
+    // Strip ?fromOrders without an RSC round-trip (Next shallow routing), so a
+    // refresh or back-press doesn't re-open a stale draft.
+    window.history.replaceState(null, "", "/admin/purchases");
+  }, [draft, supplierOptions]);
 
   const openEdit = useCallback((row: PurchaseRow) => {
     setEditingId(row.id);

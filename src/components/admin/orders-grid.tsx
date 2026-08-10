@@ -11,8 +11,11 @@ import DataGrid, {
   Pager,
   Paging,
   SearchPanel,
+  Selection,
 } from "devextreme-react/data-grid";
+import { PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,9 @@ type StatusFilter = OrderStatus | "ACTIVE" | "ALL";
 export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ACTIVE");
+  // Selected order ids — kept across status-chip changes so the admin can
+  // gather orders from several views into one purchase order.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const countByStatus = rows.reduce<Record<string, number>>((acc, r) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1;
@@ -57,6 +63,7 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
       {/* Quick status filters */}
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => setStatusFilter("ACTIVE")}>
@@ -90,6 +97,17 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
           </button>
         ))}
       </div>
+      {selectedIds.length > 0 && (
+        <Button
+          size="sm"
+          onClick={() =>
+            router.push(`/admin/purchases?fromOrders=${selectedIds.join(",")}`)
+          }
+        >
+          <PackagePlus className="size-4" /> Create purchase order ({selectedIds.length})
+        </Button>
+      )}
+      </div>
 
     <DataGrid
       dataSource={filteredRows}
@@ -98,8 +116,15 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       columnAutoWidth
       rowAlternationEnabled
       hoverStateEnabled
-      onRowClick={(e) => router.push(`/admin/orders/${e.data.id}`)}
+      selectedRowKeys={selectedIds}
+      onSelectionChanged={(e) => setSelectedIds(e.selectedRowKeys as string[])}
+      onRowClick={(e) => {
+        // Clicking the selection checkbox also fires rowClick — don't navigate
+        if ((e.event?.target as HTMLElement | null)?.closest?.(".dx-command-select")) return;
+        router.push(`/admin/orders/${e.data.id}`);
+      }}
     >
+      <Selection mode="multiple" showCheckBoxesMode="always" allowSelectAll />
       <FilterRow visible />
       <HeaderFilter visible />
       <SearchPanel visible width={240} placeholder="Search orders…" />
