@@ -34,6 +34,10 @@ services:
     environment:
       # Set DOMAIN in .env (e.g. DOMAIN=azhaguthinpandam.com)
       DOMAIN: ${DOMAIN:-localhost}
+      # Hostname for the MyTodo app, which runs from its own compose file and
+      # joins this stack's network. The default matches deploy/Caddyfile, so no
+      # .env entry is needed unless the app moves to a different hostname.
+      MYTODO_DOMAIN: ${MYTODO_DOMAIN:-todo.tekspear.com}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       # Access logs land on the host so they can be read/grepped without

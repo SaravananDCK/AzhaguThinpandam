@@ -35,3 +35,19 @@ www.{$DOMAIN} {
 
 	reverse_proxy app:3000
 }
+
+# MyTodo — separate app, separate repo (/opt/mytodo), separate compose file. It
+# joins this stack's network so Caddy can reach the container by name; nothing
+# about it is coupled to the shop beyond this block.
+#
+# The hostname is baked in as the default so this works without any .env entry;
+# MYTODO_DOMAIN in .env next to docker-compose.yml overrides it if it ever moves.
+# A default also matters for safety: an empty site address is a config error
+# that would take this whole file — and the shop with it — down.
+{$MYTODO_DOMAIN:todo.tekspear.com} {
+	encode gzip
+
+	# The PWA's service worker needs a secure context, which the automatic
+	# Let's Encrypt cert on this block provides.
+	reverse_proxy mytodo:8080
+}
