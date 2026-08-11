@@ -6,7 +6,7 @@ import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, SETTINGS, type OrderStatus } from "@/lib/constants";
 import { getSettings } from "@/lib/queries";
 
-function isSmtpConfigured() {
+export function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
 }
 
@@ -54,6 +54,25 @@ async function sendMail(to: string, subject: string, html: string) {
     to,
     subject,
     html,
+  });
+}
+
+/**
+ * Login OTP email — the email twin of the WhatsApp code. Sends directly (not
+ * via sendMail, which silently no-ops without SMTP) and throws on transport
+ * failure so /api/otp/request can answer 502 instead of pretending it sent.
+ */
+export async function sendOtpEmail(email: string, code: string): Promise<void> {
+  const { from, replyTo } = await fromAddress();
+  await getTransport().sendMail({
+    from,
+    ...(replyTo ? { replyTo } : {}),
+    to: email,
+    subject: "Your Azhagu Thinpandam login code",
+    html: wrap(`
+      <p>Your one-time login code is:</p>
+      <p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:16px 0">${code}</p>
+      <p style="font-size:13px;color:#78716c">It expires in 5 minutes. If you didn't request this, you can ignore this email.</p>`),
   });
 }
 

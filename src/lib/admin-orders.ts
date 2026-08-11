@@ -140,7 +140,11 @@ export async function createOrderForCustomer(input: unknown): Promise<AdminOrder
       user = await prisma.user.update({ where: { id: user.id }, data: { name } });
     }
 
-    const order = await createOrderFromCart({ ...data, email }, user.id, user.phone ?? undefined);
+    const order = await createOrderFromCart(
+      { ...data, email },
+      user.id,
+      user.phone ?? user.email ?? undefined
+    );
 
     // Address book, so a later self-service checkout is prefilled
     const a = data.address;

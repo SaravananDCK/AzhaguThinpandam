@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2, Mail, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,10 +12,14 @@ import { Label } from "@/components/ui/label";
 
 const RESEND_COOLDOWN_MS = 30_000;
 
-function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
+function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
   const router = useRouter();
   const [step, setStep] = useState<"phone" | "code" | "profile">("phone");
+  // Login channel: WhatsApp code to an Indian mobile, or an email code for
+  // customers abroad. The identifier step renders whichever input applies.
+  const [channel, setChannel] = useState<"phone" | "email">("phone");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -27,13 +31,19 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
   }, []);
   const resendWait = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
 
+  function switchChannel(next: "phone" | "email") {
+    setChannel(next);
+    setStep("phone");
+    setDevCode(null);
+  }
+
   async function sendOtp() {
     setBusy(true);
     try {
       const res = await fetch("/api/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify(channel === "phone" ? { phone } : { email }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -59,8 +69,8 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setBusy(true);
-    const res = await signIn("phone-otp", {
-      phone,
+    const res = await signIn(channel === "phone" ? "phone-otp" : "email-otp", {
+      ...(channel === "phone" ? { phone } : { email }),
       code: form.get("code") as string,
       redirect: false,
     });
@@ -94,7 +104,9 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.get("name"),
-          email: form.get("email") || "",
+          // Email-channel users logged in WITH their email — never overwrite it
+          // here ("" means don't touch).
+          email: channel === "email" ? "" : form.get("email") || "",
         }),
       });
       const data = await res.json();
@@ -117,32 +129,73 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
     router.refresh();
   }
 
-  // Distinct keys: the controlled phone input and uncontrolled code input must
-  // not be reconciled into the same DOM node when the step switches
+  // Distinct keys: the controlled identifier inputs and the uncontrolled code
+  // input must never be reconciled into the same DOM node across step or
+  // channel switches.
   if (step === "phone") {
     return (
-      <form key="phone-step" onSubmit={handlePhoneSubmit} className="space-y-4">
-        <div className="grid gap-2">
-          <Label htmlFor="phone">Mobile number</Label>
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="numeric"
-            placeholder="10-digit mobile number"
-            required
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            We&apos;ll WhatsApp you a one-time code. No password needed — your
-            account is created automatically on first login.
-          </p>
-        </div>
+      <form
+        key={channel === "phone" ? "phone-step" : "email-step"}
+        onSubmit={handlePhoneSubmit}
+        className="space-y-4"
+      >
+        {channel === "phone" ? (
+          <div className="grid gap-2">
+            <Label htmlFor="phone">Mobile number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              placeholder="10-digit mobile number"
+              required
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              We&apos;ll WhatsApp you a one-time code. No password needed — your
+              account is created automatically on first login.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <Label htmlFor="login-email">Email address</Label>
+            <Input
+              id="login-email"
+              type="email"
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              We&apos;ll email you a one-time code. No password needed — your
+              account is created automatically on first login.
+            </p>
+          </div>
+        )}
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
-          Send code on WhatsApp
+          {busy ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : channel === "phone" ? (
+            <MessageCircle className="size-4" />
+          ) : (
+            <Mail className="size-4" />
+          )}
+          {channel === "phone" ? "Send code on WhatsApp" : "Email me a code"}
         </Button>
+        <p className="text-center text-xs">
+          <button
+            type="button"
+            className="text-muted-foreground hover:underline"
+            onClick={() => switchChannel(channel === "phone" ? "email" : "phone")}
+          >
+            {channel === "phone"
+              ? "Outside India? Log in with email instead"
+              : "← Log in with mobile number instead"}
+          </button>
+        </p>
       </form>
     );
   }
@@ -160,13 +213,15 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
           <Label htmlFor="p-name">Your name</Label>
           <Input id="p-name" name="name" required minLength={2} autoComplete="name" autoFocus />
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="p-email">Email (optional)</Label>
-          <Input id="p-email" name="email" type="email" autoComplete="email" />
-          <p className="text-xs text-muted-foreground">
-            We&apos;ll send order confirmations here.
-          </p>
-        </div>
+        {channel === "phone" && (
+          <div className="grid gap-2">
+            <Label htmlFor="p-email">Email (optional)</Label>
+            <Input id="p-email" name="email" type="email" autoComplete="email" />
+            <p className="text-xs text-muted-foreground">
+              We&apos;ll send order confirmations here.
+            </p>
+          </div>
+        )}
         <Button type="submit" className="w-full" disabled={busy}>
           {busy && <Loader2 className="size-4 animate-spin" />} Save &amp; continue
         </Button>
@@ -199,7 +254,17 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
           className="text-center text-lg tracking-[0.5em]"
         />
         <p className="text-xs text-muted-foreground">
-          Sent via WhatsApp to <span className="font-medium">{phone}</span>.{" "}
+          {channel === "phone" ? (
+            <>
+              Sent via WhatsApp to <span className="font-medium">{phone}</span>
+            </>
+          ) : (
+            <>
+              Sent to <span className="font-medium">{email}</span> — check spam
+              if you don&apos;t see it
+            </>
+          )}
+          .{" "}
           <button
             type="button"
             className="text-primary hover:underline"
@@ -208,13 +273,13 @@ function PhoneOtpForm({ callbackUrl }: { callbackUrl: string }) {
               setDevCode(null);
             }}
           >
-            Change number
+            {channel === "phone" ? "Change number" : "Change email"}
           </button>
         </p>
         {devCode && (
           <p className="rounded-md bg-amber-100 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-            Dev mode (WhatsApp not configured) — your code is{" "}
-            <span className="font-mono font-bold">{devCode}</span>
+            Dev mode ({channel === "phone" ? "WhatsApp" : "SMTP"} not configured)
+            — your code is <span className="font-mono font-bold">{devCode}</span>
           </p>
         )}
       </div>
@@ -290,7 +355,7 @@ function LoginFormInner() {
     <Card>
       <CardContent className="space-y-4">
         {mode === "otp" ? (
-          <PhoneOtpForm callbackUrl={callbackUrl} />
+          <CustomerOtpForm callbackUrl={callbackUrl} />
         ) : (
           <AdminEmailForm callbackUrl={callbackUrl} />
         )}

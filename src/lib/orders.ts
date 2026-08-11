@@ -82,9 +82,10 @@ export function manualPaymentRef(orderNumber: string): string {
  * Validates cart items against the database (existence, active flags, stock,
  * current prices) and creates a PENDING order with snapshot items.
  *
- * `verifiedPhone` is the OTP-verified phone on the session. Coupon limits are
- * keyed to it — never to the delivery phone, which the customer types freely
- * (and would otherwise let them mint a fresh "one per customer" every order).
+ * `verifiedIdentity` is the OTP-verified phone — or, for phone-less accounts
+ * that logged in by email, the verified email. Coupon limits are keyed to it —
+ * never to the delivery phone, which the customer types freely (and would
+ * otherwise let them mint a fresh "one per customer" every order).
  */
 /**
  * Prices a set of cart lines against the database: validates availability and
@@ -98,8 +99,9 @@ export async function priceOrderLines(params: {
   items: { variantId: string; qty: number }[];
   state: string;
   couponCode?: string;
-  /** Coupon limits key to the verified phone, never a client-supplied one. */
-  couponPhone: string;
+  /** OTP-verified identity (phone, or email for phone-less accounts). Coupon
+      limits key to it, never to a client-supplied value. */
+  couponIdentity: string;
 }) {
   const variantIds = params.items.map((i) => i.variantId);
   if (new Set(variantIds).size !== variantIds.length) {
@@ -181,7 +183,7 @@ export async function priceOrderLines(params: {
     const result = await validateCoupon({
       code: params.couponCode,
       subtotal,
-      phone: params.couponPhone,
+      phone: params.couponIdentity,
     });
     if (!result.ok) throw new CheckoutError(result.error);
     if (result.discount > boxDiscountAmt) {
@@ -294,22 +296,23 @@ export async function priceOrderLines(params: {
  * Validates cart items against the database (existence, active flags, stock,
  * current prices) and creates a PENDING order with snapshot items.
  *
- * `verifiedPhone` is the OTP-verified phone on the session. Coupon limits are
- * keyed to it — never to the delivery phone, which the customer types freely
- * (and would otherwise let them mint a fresh "one per customer" every order).
+ * `verifiedIdentity` is the OTP-verified phone on the session — or the verified
+ * email for phone-less accounts (customers abroad). Coupon limits are keyed to
+ * it — never to the delivery phone, which the customer types freely (and would
+ * otherwise let them mint a fresh "one per customer" every order).
  */
 export async function createOrderFromCart(
   input: Omit<CheckoutInput, "email"> & { email?: string },
   userId?: string,
-  verifiedPhone?: string
+  verifiedIdentity?: string
 ) {
   const priced = await priceOrderLines({
     items: input.items,
     state: input.address.state,
     couponCode: input.couponCode || undefined,
-    // Verified phone only. Falls back to the delivery phone for accounts
-    // without one (admins who log in by email).
-    couponPhone: verifiedPhone || input.address.phone,
+    // Verified identity only; the delivery-phone fallback is a last resort for
+    // sessions with neither a phone nor an email.
+    couponIdentity: verifiedIdentity || input.address.phone,
   });
   const { subtotal, discount, couponId, couponCode, shippingFee, total, packingCost } = priced;
 
@@ -360,7 +363,7 @@ export async function repriceOrderItems(params: {
 }) {
   const order = await prisma.order.findUnique({
     where: { id: params.orderId },
-    include: { payment: true },
+    include: { payment: true, user: { select: { phone: true, email: true } } },
   });
   if (!order) throw new CheckoutError("Order not found.");
   if (order.status !== "PENDING") {
@@ -373,8 +376,9 @@ export async function repriceOrderItems(params: {
     items: params.items,
     state: order.shipState,
     couponCode: params.couponCode || undefined,
-    // The account phone if the order has one, else the delivery number
-    couponPhone: order.shipPhone,
+    // The account's verified identity, else the delivery number — must match
+    // the key the redemption would be recorded under in markOrderPaid.
+    couponIdentity: order.user?.phone ?? order.user?.email ?? order.shipPhone,
   });
 
   return prisma.$transaction(async (tx) => {
@@ -420,16 +424,19 @@ export async function markOrderPaid(params: {
   const payment = await prisma.payment.findUnique({
     where: { razorpayOrderId: params.razorpayOrderId },
     include: {
-      order: { include: { items: true, user: { select: { phone: true } } } },
+      order: { include: { items: true, user: { select: { phone: true, email: true } } } },
     },
   });
   if (!payment) throw new CheckoutError("Payment record not found.");
 
   if (payment.status === PAYMENT_STATUSES.CAPTURED) return payment.order; // already processed
 
-  // Redemptions are keyed to the verified account phone (see createOrderFromCart),
-  // so the per-customer limit survives orders shipped to someone else's number.
-  const redemptionPhone = payment.order.user?.phone ?? payment.order.shipPhone;
+  // Redemptions are keyed to the verified account identity — phone, or email
+  // for phone-less accounts (see createOrderFromCart) — so the per-customer
+  // limit survives orders shipped to someone else's number. The
+  // CouponRedemption.phone column stores whichever identity applied.
+  const redemptionIdentity =
+    payment.order.user?.phone ?? payment.order.user?.email ?? payment.order.shipPhone;
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.payment.update({
@@ -478,7 +485,7 @@ export async function markOrderPaid(params: {
       await tx.couponRedemption.upsert({
         where: { orderId: order.id },
         update: {},
-        create: { couponId: order.couponId, phone: redemptionPhone, orderId: order.id },
+        create: { couponId: order.couponId, phone: redemptionIdentity, orderId: order.id },
       });
     }
     return order;

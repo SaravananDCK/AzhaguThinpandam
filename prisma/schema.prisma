@@ -28,7 +28,9 @@ model User {
   updatedAt    DateTime  @updatedAt
 }
 
-// One-time login codes delivered over WhatsApp (stored hashed, short-lived)
+// One-time login codes delivered over WhatsApp or email (stored hashed,
+// short-lived). `phone` holds the identifier: a 10-digit mobile OR a
+// lowercased email — the namespaces are disjoint.
 model OtpCode {
   id        String   @id @default(cuid())
   phone     String

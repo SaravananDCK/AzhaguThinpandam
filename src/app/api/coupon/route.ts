@@ -17,14 +17,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ valid: false, error: "Enter a valid coupon code." }, { status: 400 });
   }
 
-  // Per-customer limits key off the OTP-verified session phone, never a number
-  // supplied by the client. Guests get the discount preview without the limit
-  // check; it is enforced for real once they verify and the order is created.
+  // Per-customer limits key off the OTP-verified session identity (phone, or
+  // email for phone-less accounts), never a value supplied by the client.
+  // Guests get the discount preview without the limit check; it is enforced
+  // for real once they verify and the order is created.
   const session = await auth();
   const result = await validateCoupon({
     code: parsed.data.code,
     subtotal: parsed.data.subtotal,
-    phone: session?.user?.phone ?? "",
+    phone: session?.user?.phone ?? session?.user?.email ?? "",
   });
 
   if (!result.ok) {

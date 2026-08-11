@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
-import { Check, Loader2, Lock, MessageCircle, PartyPopper, Tag, X } from "lucide-react";
+import { Check, Loader2, Lock, Mail, MessageCircle, PartyPopper, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -100,13 +100,16 @@ export function CheckoutForm({
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
-  // Inline OTP gate — guests verify their mobile in a dialog on submit, then
-  // the held payload continues straight to /api/checkout. Never a redirect to
-  // /login: that would throw away everything they just typed.
+  // Inline OTP gate — guests verify their mobile (or email, for customers
+  // abroad without an Indian number) in a dialog on submit, then the held
+  // payload continues straight to /api/checkout. Never a redirect to /login:
+  // that would throw away everything they just typed.
   const [authed, setAuthed] = useState(loggedIn);
   const [otpOpen, setOtpOpen] = useState(false);
   const [otpStep, setOtpStep] = useState<"phone" | "code">("phone");
+  const [otpChannel, setOtpChannel] = useState<"phone" | "email">("phone");
   const [otpPhone, setOtpPhone] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpBusy, setOtpBusy] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -236,25 +239,28 @@ export function CheckoutForm({
     if (!authed) {
       pendingRef.current = payload;
       setOtpPhone(payload.address.phone);
+      setOtpEmail(payload.email);
       setOtpCode("");
       setOtpStep("phone");
       setDevCode(null);
       setOtpOpen(true);
-      await sendOtp(payload.address.phone);
+      await sendOtp(otpChannel === "phone" ? payload.address.phone : payload.email);
       return;
     }
 
     await placeOrder(payload);
   }
 
-  /** Requests a code; stays on the phone step so they can retry if it fails. */
-  async function sendOtp(phone: string) {
+  /** Requests a code; stays on the identifier step so they can retry if it fails. */
+  async function sendOtp(identifier: string) {
     setOtpBusy(true);
     try {
       const res = await fetch("/api/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify(
+          otpChannel === "phone" ? { phone: identifier } : { email: identifier }
+        ),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -302,8 +308,8 @@ export function CheckoutForm({
   async function handleOtpVerify(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setOtpBusy(true);
-    const res = await signIn("phone-otp", {
-      phone: otpPhone,
+    const res = await signIn(otpChannel === "phone" ? "phone-otp" : "email-otp", {
+      ...(otpChannel === "phone" ? { phone: otpPhone } : { email: otpEmail }),
       code: otpCode,
       redirect: false,
     });
@@ -321,14 +327,19 @@ export function CheckoutForm({
     if (!payload) return;
 
     // First-ever login: the checkout form already has their name and email, so
-    // fill the profile from it instead of asking again.
+    // fill the profile from it instead of asking again. On the email channel
+    // never post the contact email — the login email is OTP-verified and the
+    // contact field is free-typed; "" tells the profile route to leave it.
     try {
       const session = await fetch("/api/auth/session").then((r) => r.json());
       if (!session?.user?.name) {
         await fetch("/api/profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: payload.address.name, email: payload.email }),
+          body: JSON.stringify({
+            name: payload.address.name,
+            email: otpChannel === "email" ? "" : payload.email,
+          }),
         });
       }
     } catch {
@@ -355,17 +366,19 @@ export function CheckoutForm({
       });
       const data = await res.json();
       if (!res.ok) {
-        // Session expired between verifying and paying — verify again.
+        // Session expired between verifying and paying — verify again. The
+        // channel the customer chose persists across the re-open.
         if (res.status === 401 && data.needsAuth) {
           setAuthed(false);
           pendingRef.current = payload;
           setOtpPhone(payload.address.phone);
+          setOtpEmail(payload.email);
           setOtpCode("");
           setOtpStep("phone");
           setDevCode(null);
           setSubmitting(false);
           setOtpOpen(true);
-          await sendOtp(payload.address.phone);
+          await sendOtp(otpChannel === "phone" ? payload.address.phone : payload.email);
           return;
         }
         toast.error(data.error ?? "Could not place the order.");
@@ -740,45 +753,87 @@ export function CheckoutForm({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader className="items-center text-center">
             <span className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <MessageCircle className="size-6" />
+              {otpChannel === "phone" ? (
+                <MessageCircle className="size-6" />
+              ) : (
+                <Mail className="size-6" />
+              )}
             </span>
             <DialogTitle className="font-heading text-lg">
-              {otpStep === "phone" ? "Confirm your mobile number" : "Enter the code"}
+              {otpStep !== "phone"
+                ? "Enter the code"
+                : otpChannel === "phone"
+                  ? "Confirm your mobile number"
+                  : "Confirm your email"}
             </DialogTitle>
           </DialogHeader>
 
           {otpStep === "phone" ? (
             <form
-              key="otp-phone"
+              key={otpChannel === "phone" ? "otp-phone" : "otp-email"}
               onSubmit={(e) => {
                 e.preventDefault();
-                sendOtp(otpPhone);
+                sendOtp(otpChannel === "phone" ? otpPhone : otpEmail);
               }}
               className="space-y-4"
             >
-              <div className="grid gap-2">
-                <Label htmlFor="otp-phone">Mobile number</Label>
-                <Input
-                  id="otp-phone"
-                  type="tel"
-                  inputMode="numeric"
-                  required
-                  autoComplete="tel"
-                  value={otpPhone}
-                  onChange={(e) => setOtpPhone(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  We&apos;ll send a one-time code here to confirm your order.
-                </p>
-              </div>
+              {otpChannel === "phone" ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="otp-phone">Mobile number</Label>
+                  <Input
+                    id="otp-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    required
+                    autoComplete="tel"
+                    value={otpPhone}
+                    onChange={(e) => setOtpPhone(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    We&apos;ll send a one-time code here to confirm your order.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <Label htmlFor="otp-email">Email address</Label>
+                  <Input
+                    id="otp-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={otpEmail}
+                    onChange={(e) => setOtpEmail(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    We&apos;ll email a one-time code to confirm your order.
+                  </p>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={otpBusy}>
                 {otpBusy ? (
                   <Loader2 className="size-4 animate-spin" />
-                ) : (
+                ) : otpChannel === "phone" ? (
                   <MessageCircle className="size-4" />
+                ) : (
+                  <Mail className="size-4" />
                 )}
-                Send code on WhatsApp
+                {otpChannel === "phone" ? "Send code on WhatsApp" : "Email me a code"}
               </Button>
+              <p className="text-center text-xs">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:underline"
+                  onClick={() => {
+                    setOtpChannel((c) => (c === "phone" ? "email" : "phone"));
+                    setOtpCode("");
+                    setDevCode(null);
+                  }}
+                >
+                  {otpChannel === "phone"
+                    ? "Can't receive WhatsApp codes? Use your email instead"
+                    : "← Use mobile number instead"}
+                </button>
+              </p>
             </form>
           ) : (
             <form key="otp-code" onSubmit={handleOtpVerify} className="space-y-4">
@@ -797,7 +852,17 @@ export function CheckoutForm({
                   onChange={(e) => setOtpCode(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Sent via WhatsApp to <span className="font-medium">{otpPhone}</span>.{" "}
+                  {otpChannel === "phone" ? (
+                    <>
+                      Sent via WhatsApp to <span className="font-medium">{otpPhone}</span>
+                    </>
+                  ) : (
+                    <>
+                      Sent to <span className="font-medium">{otpEmail}</span> —
+                      check spam if you don&apos;t see it
+                    </>
+                  )}
+                  .{" "}
                   <button
                     type="button"
                     className="text-primary hover:underline"
@@ -807,12 +872,13 @@ export function CheckoutForm({
                       setDevCode(null);
                     }}
                   >
-                    Change number
+                    {otpChannel === "phone" ? "Change number" : "Change email"}
                   </button>
                 </p>
                 {devCode && (
                   <p className="rounded-md bg-amber-100 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    Dev mode (WhatsApp not configured) — your code is{" "}
+                    Dev mode ({otpChannel === "phone" ? "WhatsApp" : "SMTP"} not
+                    configured) — your code is{" "}
                     <span className="font-mono font-bold">{devCode}</span>
                   </p>
                 )}
@@ -827,7 +893,7 @@ export function CheckoutForm({
                   type="button"
                   className="text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={otpBusy || resendWait > 0}
-                  onClick={() => sendOtp(otpPhone)}
+                  onClick={() => sendOtp(otpChannel === "phone" ? otpPhone : otpEmail)}
                 >
                   {resendWait > 0 ? `Resend in ${resendWait}s` : "Resend code"}
                 </button>

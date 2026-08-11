@@ -30,12 +30,14 @@ export type CouponResult =
 
 /**
  * Server-authoritative coupon check. Verifies the code exists, is active, is
- * within its date window, meets the minimum order, and that this phone number
+ * within its date window, meets the minimum order, and that this customer
  * hasn't already hit the per-customer limit. Returns the discount in paise.
  */
 export async function validateCoupon(params: {
   code: string;
   subtotal: number; // paise
+  /** OTP-verified identity the limit keys to: phone, or email for phone-less
+      accounts. Empty string skips the limit check (guest preview). */
   phone: string;
 }): Promise<CouponResult> {
   const code = normalizeCouponCode(params.code);

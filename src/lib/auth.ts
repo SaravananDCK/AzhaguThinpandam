@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { normalizePhone, verifyOtp } from "@/lib/otp";
+import { normalizeEmail, normalizePhone, verifyOtp } from "@/lib/otp";
 
 export const { handlers, auth, signIn, signOut, unstable_update: updateSession } = NextAuth({
   // 180-day rolling sessions: every visit renews the window, so regular
@@ -30,6 +30,47 @@ export const { handlers, auth, signIn, signOut, unstable_update: updateSession }
           where: { phone },
           update: {},
           create: { phone },
+        });
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          role: user.role,
+        };
+      },
+    }),
+    // Customers abroad: email + one-time code sent over SMTP. Same passwordless
+    // model as phone-otp — first successful login creates the account.
+    Credentials({
+      id: "email-otp",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        code: { label: "Code", type: "text" },
+      },
+      async authorize(credentials) {
+        const email = normalizeEmail((credentials?.email as string | undefined) ?? "");
+        const code = ((credentials?.code as string | undefined) ?? "").trim();
+        if (!email || !/^\d{6}$/.test(code)) return null;
+
+        // Admins must use their password — an OTP to the mailbox alone must
+        // not mint an ADMIN session. Checked before verifyOtp so a rejected
+        // attempt doesn't consume the codes.
+        const existing = await prisma.user.findUnique({ where: { email } });
+        if (existing && (existing.role === "ADMIN" || existing.passwordHash)) return null;
+
+        const valid = await verifyOtp(email, code);
+        if (!valid) return null;
+
+        // Policy (accepted risk): the code proves mailbox control NOW, and
+        // login lands on whichever account currently carries this email —
+        // /api/profile lets users attach unverified emails, so a pre-claimed
+        // address routes here. Accepted for this store; same trust model as
+        // the phone flow. Don't "fix" without a product decision.
+        const user = await prisma.user.upsert({
+          where: { email },
+          update: {},
+          create: { email },
         });
         return {
           id: user.id,

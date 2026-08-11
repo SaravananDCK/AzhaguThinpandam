@@ -148,7 +148,7 @@ export default async function AdminTrafficPage({
               {
                 label: "OTP requests",
                 value: summary.otpRequests,
-                sub: "login attempts via WhatsApp",
+                sub: "OTP login attempts",
                 icon: Globe,
               },
               {

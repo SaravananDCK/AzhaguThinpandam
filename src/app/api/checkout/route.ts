@@ -36,7 +36,8 @@ export async function POST(req: Request) {
     const order = await createOrderFromCart(
       parsed.data,
       session.user.id,
-      session.user.phone ?? undefined
+      // Verified identity: phone, or email for accounts that logged in by email
+      session.user.phone ?? session.user.email ?? undefined
     );
 
     // Save the address to the user's address book for next time

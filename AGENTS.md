@@ -27,10 +27,13 @@ upgrade it as part of routine dependency bumps.
   `DEFAULT_SETTINGS`), not in new env vars.
 - Without Razorpay keys in `.env`, checkout runs in a simulated dev mode
   (blocked in production).
-- Auth: customers use phone + WhatsApp OTP (provider id `phone-otp`; first
-  login creates the user — there is no register page). Admins use email +
-  password (provider id `credentials`). `User.email`/`passwordHash`/`name`
-  are all nullable. OTP delivery (src/lib/whatsapp.ts) supports two drivers:
+- Auth: customers use phone + WhatsApp OTP (provider id `phone-otp`) or, for
+  customers abroad, email + emailed OTP over SMTP (provider id `email-otp`);
+  first login creates the user — there is no register page. Admins use email +
+  password (provider id `credentials`; email OTP is rejected for admin
+  accounts). `User.email`/`passwordHash`/`name` are all nullable. Coupon
+  per-customer limits key to the verified identity: phone, or email for
+  phone-less accounts. OTP delivery (src/lib/whatsapp.ts) supports two drivers:
   Twilio (TWILIO_*) or Meta Cloud API (WHATSAPP_*) — Twilio wins if both set.
   Without either, `/api/otp/request` returns the code as `devCode` in dev
   (503 in production).
