@@ -69,6 +69,9 @@ export async function sendOtpEmail(email: string, code: string): Promise<void> {
     ...(replyTo ? { replyTo } : {}),
     to: email,
     subject: "Your Azhagu Thinpandam login code",
+    // Plain-text alternative alongside the HTML — multipart mail scores
+    // better with spam filters (matters most for a young sender domain).
+    text: `${code} is your Azhagu Thinpandam login code. It expires in 5 minutes. If you didn't request this, you can ignore this email.`,
     html: wrap(`
       <p>Your one-time login code is:</p>
       <p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:16px 0">${code}</p>
