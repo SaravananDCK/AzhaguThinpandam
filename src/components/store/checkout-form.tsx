@@ -889,6 +889,11 @@ export function CheckoutForm({
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Didn&apos;t get it?{" "}
+                {otpChannel === "email" && (
+                  <>
+                    Check your <strong>junk/spam</strong> folder, or{" "}
+                  </>
+                )}
                 <button
                   type="button"
                   className="text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"

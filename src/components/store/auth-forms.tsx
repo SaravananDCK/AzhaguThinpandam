@@ -288,6 +288,11 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Didn&apos;t get it?{" "}
+        {channel === "email" && (
+          <>
+            Check your <strong>junk/spam</strong> folder, or{" "}
+          </>
+        )}
         <button
           type="button"
           className="text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
