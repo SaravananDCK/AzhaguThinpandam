@@ -13,7 +13,7 @@ import DataGrid, {
 import type { DataGridRef } from "devextreme-react/data-grid";
 import SelectBox from "devextreme-react/select-box";
 import CustomStore from "devextreme/data/custom_store";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { HandCoins, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatINR } from "@/lib/money";
+import { formatINR, rupeesToPaise } from "@/lib/money";
+import {
+  PURCHASE_STATUS_LABELS,
+  SUPPLIER_PAYMENT_METHODS,
+  type PurchaseStatus,
+} from "@/lib/constants";
 
 type ItemRow = {
   description: string;
@@ -43,6 +48,7 @@ type PurchaseRow = {
   invoiceNo: string | null;
   notes: string | null;
   total: number;
+  status: string;
   items: {
     id: string;
     description: string;
@@ -68,6 +74,11 @@ export type SupplierOption = { id: string; name: string; gstRate: number | null 
 export type PurchaseDraft = { note: string; items: ItemRow[] };
 
 const EMPTY_ITEM: ItemRow = { description: "", qty: "", unitCostRupees: "", variantId: "", packs: "" };
+
+const STATUS_STYLE: Record<string, string> = {
+  UNPAID: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  PAID: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+};
 
 /** GST component of a GST-inclusive rupee amount at the given rate (%). */
 function gstOf(inclusiveRupees: number, rate: number): number {
@@ -148,6 +159,62 @@ export function PurchasesGrid({
     // refresh or back-press doesn't re-open a stale draft.
     window.history.replaceState(null, "", "/admin/purchases");
   }, [draft, supplierOptions]);
+
+  // "Mark as paid" dialog — flips the invoice and optionally logs the matching
+  // supplier payment so the payables ledger keeps agreeing with the statuses.
+  const [payRow, setPayRow] = useState<PurchaseRow | null>(null);
+  const [payLogging, setPayLogging] = useState(true);
+  const [payDate, setPayDate] = useState("");
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState<string>("UPI");
+  const [payReference, setPayReference] = useState("");
+  const [payBusy, setPayBusy] = useState(false);
+
+  function openPay(row: PurchaseRow) {
+    setPayRow(row);
+    setPayLogging(Boolean(row.supplierId));
+    setPayDate(new Date().toISOString().slice(0, 10));
+    setPayAmount(String(row.total / 100));
+    setPayMethod("UPI");
+    setPayReference("");
+  }
+
+  async function setStatus(row: PurchaseRow, status: PurchaseStatus, withPayment: boolean) {
+    setPayBusy(true);
+    try {
+      const amount = rupeesToPaise(payAmount);
+      if (withPayment && (amount === null || amount < 1)) {
+        toast.error("Enter a valid payment amount.");
+        return;
+      }
+      const res = await fetch(`/api/admin/purchases/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          ...(withPayment
+            ? { payment: { date: payDate, amount, method: payMethod, reference: payReference } }
+            : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not update the purchase.");
+        return;
+      }
+      toast.success(
+        status === "PAID"
+          ? withPayment
+            ? "Marked paid — payment recorded against the supplier"
+            : "Marked paid"
+          : "Marked unpaid"
+      );
+      setPayRow(null);
+      gridRef.current?.instance().refresh();
+    } finally {
+      setPayBusy(false);
+    }
+  }
 
   const openEdit = useCallback((row: PurchaseRow) => {
     setEditingId(row.id);
@@ -315,10 +382,43 @@ export function PurchasesGrid({
           format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
         />
         <Column
+          dataField="status"
+          caption="Payment"
+          width={100}
+          cellRender={({ data }: { data: PurchaseRow }) => (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[data.status] ?? ""}`}
+            >
+              {PURCHASE_STATUS_LABELS[data.status as PurchaseStatus] ?? data.status}
+            </span>
+          )}
+        />
+        <Column
           caption=""
-          width={110}
+          width={140}
           cellRender={({ data }: { data: PurchaseRow }) => (
             <span className="flex gap-1">
+              {data.status === "PAID" ? (
+                <button
+                  type="button"
+                  className="rounded p-1.5 hover:bg-muted"
+                  onClick={() => setStatus(data, "UNPAID", false)}
+                  aria-label="Mark unpaid"
+                  title="Mark unpaid"
+                >
+                  <Undo2 className="size-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded p-1.5 text-green-700 hover:bg-muted dark:text-green-400"
+                  onClick={() => openPay(data)}
+                  aria-label="Mark as paid"
+                  title="Mark as paid"
+                >
+                  <HandCoins className="size-4" />
+                </button>
+              )}
               <button
                 type="button"
                 className="rounded p-1.5 hover:bg-muted"
@@ -581,6 +681,108 @@ export function PurchasesGrid({
           <Button onClick={save} disabled={saving}>
             {saving ? "Saving…" : editingId ? "Update purchase" : "Save purchase"}
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as paid */}
+      <Dialog open={payRow !== null} onOpenChange={(o) => !o && setPayRow(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark as paid</DialogTitle>
+          </DialogHeader>
+          {payRow && (
+            <div className="grid gap-4">
+              <p className="text-sm text-muted-foreground">
+                {payRow.supplier} · <span className="font-semibold">{formatINR(payRow.total)}</span>
+                {payRow.invoiceNo ? ` · invoice ${payRow.invoiceNo}` : ""}
+              </p>
+
+              {payRow.supplierId ? (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={payLogging}
+                    onChange={(e) => setPayLogging(e.target.checked)}
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                  <span>
+                    Also record a payment to {payRow.supplier}
+                    <span className="block text-xs text-muted-foreground">
+                      Keeps &ldquo;Owed to suppliers&rdquo; right. Untick if you already
+                      logged this in Suppliers (e.g. as part of a lump sum).
+                    </span>
+                  </span>
+                </label>
+              ) : (
+                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  This purchase isn&apos;t linked to a supplier, so only the status
+                  changes — nothing is added to the payables ledger.
+                </p>
+              )}
+
+              {payRow.supplierId && payLogging && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="pay-amount">Amount ₹</Label>
+                      <Input
+                        id="pay-amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pay-date">Date</Label>
+                      <Input
+                        id="pay-date"
+                        type="date"
+                        value={payDate}
+                        onChange={(e) => setPayDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="pay-method">Method</Label>
+                      <select
+                        id="pay-method"
+                        className="h-9 rounded-md border bg-background px-2 text-sm"
+                        value={payMethod}
+                        onChange={(e) => setPayMethod(e.target.value)}
+                      >
+                        {SUPPLIER_PAYMENT_METHODS.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pay-ref">Reference</Label>
+                      <Input
+                        id="pay-ref"
+                        placeholder="Txn / cheque no."
+                        value={payReference}
+                        onChange={(e) => setPayReference(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Button
+                onClick={() =>
+                  setStatus(payRow, "PAID", Boolean(payRow.supplierId) && payLogging)
+                }
+                disabled={payBusy}
+              >
+                {payBusy ? "Saving…" : "Mark as paid"}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

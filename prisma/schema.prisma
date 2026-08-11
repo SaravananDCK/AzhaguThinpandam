@@ -325,6 +325,10 @@ model Purchase {
   notes       String?
   gstRate     Float          @default(0) // GST% included in `total` (input GST)
   total       Int // paise (sum of item amounts, GST-inclusive)
+  // UNPAID | PAID (PURCHASE_STATUSES) — a per-invoice marker. The authoritative
+  // supplier balance stays Σ(purchases) − Σ(SupplierPayment); marking an invoice
+  // paid offers to record that payment so the two agree.
+  status      String         @default("UNPAID")
   items       PurchaseItem[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

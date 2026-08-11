@@ -104,6 +104,15 @@ export const SUPPLIER_PAYMENT_METHODS = [
   "Other",
 ] as const;
 
+// Whether a wholesale purchase (supplier invoice) has been settled. A marker on
+// the invoice — the supplier balance itself is derived from SupplierPayment rows.
+export const PURCHASE_STATUSES = ["UNPAID", "PAID"] as const;
+export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
+export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
+  UNPAID: "Unpaid",
+  PAID: "Paid",
+};
+
 export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.STORE_NAME]: "Azhagu Thinpandam",
   [SETTINGS.STORE_PHONE]: "93440 22162",
