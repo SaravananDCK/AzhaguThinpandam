@@ -451,9 +451,20 @@ export function PurchasesGrid({
               (12 × 250 g = 3 kg) and adds those packets to stock. You can still edit the
               kg directly for loose/bulk buys.
             </p>
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_60px_64px_72px_76px_28px] items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span>Item</span>
+              <span>Packets</span>
+              <span>kg</span>
+              <span>₹/kg</span>
+              <span className="text-right">Amount</span>
+              <span />
+            </div>
             {items.map((item, idx) => (
-              <div key={idx} className="space-y-1.5 rounded-lg border p-2.5">
-                <div className="grid grid-cols-[1fr_64px_72px_88px_32px] items-center gap-2">
+                <div
+                  key={idx}
+                  className="grid grid-cols-[1fr_60px_64px_72px_76px_28px] items-center gap-1.5"
+                >
                   <SelectBox
                     dataSource={
                       // Keep a since-deleted/legacy linked item selectable when editing
@@ -513,9 +524,18 @@ export function PurchasesGrid({
                       )
                     }
                   />
+                  {/* Read-only line amount = kg × ₹/kg */}
+                  <span className="text-right text-sm tabular-nums text-muted-foreground">
+                    {(() => {
+                      const amount = parseFloat(item.qty) * parseFloat(item.unitCostRupees);
+                      return Number.isFinite(amount)
+                        ? `₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+                        : "—";
+                    })()}
+                  </span>
                   <button
                     type="button"
-                    className="rounded p-1.5 text-muted-foreground hover:text-destructive"
+                    className="rounded p-1 text-muted-foreground hover:text-destructive"
                     onClick={() => setItems((rows) => rows.filter((_, i) => i !== idx))}
                     disabled={items.length === 1}
                     aria-label="Remove item"
@@ -523,7 +543,6 @@ export function PurchasesGrid({
                     <Trash2 className="size-4" />
                   </button>
                 </div>
-              </div>
             ))}
             <div className="flex items-center justify-between">
               <Button
