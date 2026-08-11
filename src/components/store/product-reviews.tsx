@@ -47,16 +47,20 @@ export function ProductReviews({
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No reviews yet — be the first to review this after your purchase.
+            No reviews yet — be the first to review this one.
           </p>
         )}
       </div>
 
-      {/* Write-a-review area, gated to verified purchasers */}
+      {/* Write-a-review area: open to any signed-in customer. Buying isn't
+          required (most orders come over WhatsApp and aren't linked to the
+          account) — it's what earns the Verified purchase badge below. */}
       <div className="mt-6 max-w-xl">
-        {!loggedIn ? (
+        {loggedIn ? (
+          <ReviewForm productId={productId} existing={existing} purchased={purchased} />
+        ) : (
           <div className="rounded-xl border bg-secondary/30 p-4 text-sm">
-            Bought this product?{" "}
+            Tried this one?{" "}
             <Link
               href={`/login?callbackUrl=/product/${productSlug}`}
               className="font-semibold text-primary underline-offset-2 hover:underline"
@@ -65,12 +69,6 @@ export function ProductReviews({
             </Link>{" "}
             to write a review.
           </div>
-        ) : purchased ? (
-          <ReviewForm productId={productId} existing={existing} />
-        ) : (
-          <p className="rounded-xl border bg-secondary/30 p-4 text-sm text-muted-foreground">
-            Only customers who have purchased this product can review it.
-          </p>
         )}
       </div>
 
@@ -81,9 +79,11 @@ export function ProductReviews({
             <li key={r.id} className="border-t pt-6 first:border-t-0 first:pt-0">
               <div className="flex items-center gap-2">
                 <Stars value={r.rating} size={15} />
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
-                  <BadgeCheck className="size-3.5" /> Verified purchase
-                </span>
+                {r.verifiedPurchase && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+                    <BadgeCheck className="size-3.5" /> Verified purchase
+                  </span>
+                )}
               </div>
               {r.title && <p className="mt-2 font-semibold">{r.title}</p>}
               {r.body && (

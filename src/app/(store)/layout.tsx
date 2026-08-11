@@ -1,6 +1,7 @@
 import Script from "next/script";
 import { Navbar } from "@/components/store/navbar";
 import { Footer } from "@/components/store/footer";
+import { ReviewsTab } from "@/components/store/reviews-tab";
 import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
 
@@ -32,6 +33,7 @@ gtag('config', ${JSON.stringify(gaId)});`}
       )}
       <Navbar />
       <main className="flex-1">{children}</main>
+      <ReviewsTab />
       <Footer />
     </>
   );

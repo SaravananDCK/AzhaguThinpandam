@@ -62,6 +62,9 @@ export async function POST(req: Request) {
         title: title || null,
         body: body || null,
         authorName,
+        // The admin only enters feedback from real customers, so these keep the
+        // Verified purchase badge (decision recorded when the feature was built).
+        verifiedPurchase: true,
         status: REVIEW_STATUSES.APPROVED,
         createdAt: date,
       },

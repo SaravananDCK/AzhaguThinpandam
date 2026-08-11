@@ -50,6 +50,7 @@ export type PublicReview = {
   title: string | null;
   body: string | null;
   authorName: string;
+  verifiedPurchase: boolean;
   createdAt: Date;
 };
 
@@ -58,7 +59,15 @@ export async function getApprovedReviews(productId: string): Promise<PublicRevie
   const reviews = await prisma.review.findMany({
     where: { productId, status: REVIEW_STATUSES.APPROVED },
     orderBy: { createdAt: "desc" },
-    select: { id: true, rating: true, title: true, body: true, authorName: true, createdAt: true },
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      body: true,
+      authorName: true,
+      verifiedPurchase: true,
+      createdAt: true,
+    },
   });
-  return reviews.map((r) => ({ ...r, authorName: r.authorName?.trim() || "Verified customer" }));
+  return reviews.map((r) => ({ ...r, authorName: r.authorName?.trim() || "Customer" }));
 }

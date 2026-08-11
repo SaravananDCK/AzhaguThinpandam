@@ -19,9 +19,12 @@ type ExistingReview = {
 export function ReviewForm({
   productId,
   existing,
+  purchased = false,
 }: {
   productId: string;
   existing: ExistingReview;
+  /** Drives the note about the Verified purchase badge — not a gate. */
+  purchased?: boolean;
 }) {
   const router = useRouter();
   const [rating, setRating] = useState(existing?.rating ?? 0);
@@ -87,6 +90,11 @@ export function ReviewForm({
   return (
     <div className="rounded-xl border p-4">
       <p className="font-semibold">{existing ? "Edit your review" : "Write a review"}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {purchased
+          ? "Your review will carry a Verified purchase badge. It appears once we've approved it."
+          : "Reviews appear once we've approved them. Orders placed with this account earn a Verified purchase badge."}
+      </p>
       <div className="mt-3 space-y-4">
         <div className="grid gap-1.5">
           <Label>Your rating</Label>

@@ -138,6 +138,10 @@ model Review {
   title      String?
   body       String?
   authorName String? // display-name snapshot at submit time
+  // Whether the author had actually bought this product when they wrote it —
+  // snapshotted here so the storefront's "Verified purchase" badge can't lie.
+  // Admin-entered reviews set it true (the admin vouches for the feedback).
+  verifiedPurchase Boolean @default(false)
   status     String   @default("PENDING") // PENDING | APPROVED | REJECTED
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

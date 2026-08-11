@@ -35,16 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
+  // Anyone signed in may review — many customers order over WhatsApp, so their
+  // purchase often isn't linked to the account. Buying isn't required, but it
+  // is what earns the "Verified purchase" badge, so snapshot it here. Every
+  // review still waits for admin approval before it shows.
   const purchased = await hasPurchasedProduct(
     { id: session.user.id, phone: session.user.phone },
     productId
   );
-  if (!purchased) {
-    return NextResponse.json(
-      { error: "Only customers who have bought this product can review it." },
-      { status: 403 }
-    );
-  }
 
   const authorName = session.user.name?.trim() || null;
 
@@ -58,6 +56,7 @@ export async function POST(req: NextRequest) {
       title: title || null,
       body: body || null,
       authorName,
+      verifiedPurchase: purchased,
       status: REVIEW_STATUSES.PENDING,
     },
     update: {
@@ -65,6 +64,7 @@ export async function POST(req: NextRequest) {
       title: title || null,
       body: body || null,
       authorName,
+      verifiedPurchase: purchased,
       status: REVIEW_STATUSES.PENDING,
     },
   });
