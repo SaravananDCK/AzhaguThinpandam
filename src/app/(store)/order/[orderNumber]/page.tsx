@@ -13,7 +13,14 @@ import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
-export const metadata: Metadata = { title: "Order Details" };
+// The order number is the only thing guarding this page (it's deliberately
+// viewable without login so WhatsApp/UPI customers can track and pay), so keep
+// it out of search engines — a link forwarded or pasted somewhere public must
+// never become indexable.
+export const metadata: Metadata = {
+  title: "Order Details",
+  robots: { index: false, follow: false },
+};
 
 type Props = {
   params: Promise<{ orderNumber: string }>;
