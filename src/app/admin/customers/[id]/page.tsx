@@ -61,6 +61,7 @@ export default async function AdminCustomerPage({ params }: Props) {
           city: a?.city ?? "",
           state: a?.state ?? "",
           pincode: a?.pincode ?? "",
+          isEmployee: customer.isEmployee,
         }}
       />
 

@@ -8,6 +8,8 @@ import {
   type ProductLine,
 } from "@/lib/constants";
 import { parseBoxTiers, parseGoodieTiers, type BoxTier, type GoodieTier } from "@/lib/box";
+import { staffUnitPrice } from "@/lib/staff-pricing";
+import { getViewerPricing } from "@/lib/viewer";
 
 const productInclude = {
   images: { orderBy: { sortOrder: "asc" as const } },
@@ -22,6 +24,25 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
   include: typeof productInclude;
 }>;
 
+/**
+ * Rewrites variant prices for a staff viewer. Applied here, where storefront
+ * product data is loaded, so every surface (cards, product page, related,
+ * build-your-box, magnets) is covered by construction rather than by each page
+ * remembering to opt in. Admin pages use their own Prisma calls and are
+ * unaffected — they keep showing retail.
+ *
+ * `mrp` is cleared alongside: a retail strike-through beside a staff price
+ * would advertise a discount that isn't the one being given.
+ */
+async function pricedForViewer<T extends ProductWithDetails>(products: T[]): Promise<T[]> {
+  const { isEmployee } = await getViewerPricing();
+  if (!isEmployee) return products;
+  return products.map((p) => ({
+    ...p,
+    variants: p.variants.map((v) => ({ ...v, price: staffUnitPrice(v, p), mrp: null })),
+  }));
+}
+
 /** Storefront categories — only those with at least one active product.
     (Admin pages query all categories directly.) */
 export function getCategories() {
@@ -31,13 +52,15 @@ export function getCategories() {
   });
 }
 
-export function getFeaturedProducts(take = 8) {
-  return prisma.product.findMany({
-    where: { isActive: true, isFeatured: true, line: "SNACKS" },
-    include: productInclude,
-    orderBy: [{ isFlagship: "desc" }, { createdAt: "asc" }],
-    take,
-  });
+export async function getFeaturedProducts(take = 8) {
+  return pricedForViewer(
+    await prisma.product.findMany({
+      where: { isActive: true, isFeatured: true, line: "SNACKS" },
+      include: productInclude,
+      orderBy: [{ isFlagship: "desc" }, { createdAt: "asc" }],
+      take,
+    })
+  );
 }
 
 function productsWhere(opts: {
@@ -65,14 +88,16 @@ function productsWhere(opts: {
 }
 
 /** Full unpaginated list — used by Build Your Box (client filters locally). */
-export function getProducts(
+export async function getProducts(
   opts: { categorySlug?: string; q?: string; line?: ProductLine } = {}
 ) {
-  return prisma.product.findMany({
-    where: productsWhere(opts),
-    include: productInclude,
-    orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
-  });
+  return pricedForViewer(
+    await prisma.product.findMany({
+      where: productsWhere(opts),
+      include: productInclude,
+      orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
+    })
+  );
 }
 
 export const PRODUCTS_PER_PAGE = 24;
@@ -92,29 +117,35 @@ export async function getProductsPage(
   const total = await prisma.product.count({ where });
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const page = Math.min(Math.max(1, opts.page ?? 1), pageCount);
-  const products = await prisma.product.findMany({
-    where,
-    include: productInclude,
-    orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
-    skip: (page - 1) * perPage,
-    take: perPage,
-  });
+  const products = await pricedForViewer(
+    await prisma.product.findMany({
+      where,
+      include: productInclude,
+      orderBy: [{ isFlagship: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * perPage,
+      take: perPage,
+    })
+  );
   return { products, total, page, perPage, pageCount };
 }
 
-export function getProductBySlug(slug: string) {
-  return prisma.product.findUnique({
+export async function getProductBySlug(slug: string) {
+  const product = await prisma.product.findUnique({
     where: { slug },
     include: productInclude,
   });
+  if (!product) return null;
+  return (await pricedForViewer([product]))[0];
 }
 
-export function getRelatedProducts(categoryId: string, excludeId: string, take = 4) {
-  return prisma.product.findMany({
-    where: { isActive: true, categoryId, id: { not: excludeId } },
-    include: productInclude,
-    take,
-  });
+export async function getRelatedProducts(categoryId: string, excludeId: string, take = 4) {
+  return pricedForViewer(
+    await prisma.product.findMany({
+      where: { isActive: true, categoryId, id: { not: excludeId } },
+      include: productInclude,
+      take,
+    })
+  );
 }
 
 /** All settings as a key→value map, with defaults filled in. */

@@ -107,6 +107,7 @@ export default async function AdminCustomersPage() {
           name: c.name,
           phone: c.phone,
           email: c.email,
+          isEmployee: c.isEmployee,
           joined: c.createdAt.toISOString(),
         },
         [...c.orders, ...extra]
@@ -120,6 +121,7 @@ export default async function AdminCustomersPage() {
           name: g.name,
           phone: g.phone,
           email: g.email,
+          isEmployee: false,
           joined: g.orders[g.orders.length - 1].createdAt.toISOString(),
         },
         g.orders

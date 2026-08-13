@@ -21,6 +21,11 @@ model User {
   name         String?
   phone        String?   @unique
   role         String    @default("CUSTOMER") // CUSTOMER | ADMIN
+  // Staff buy at wholesale cost + ₹5 per packet instead of retail. Deliberately
+  // not a role: `role` is pure access control (ADMIN vs everyone else), and a
+  // third value would break the admin customers list (filters role = CUSTOMER)
+  // and createCustomer (writes CUSTOMER). This is orthogonal to permissions.
+  isEmployee   Boolean   @default(false)
   addresses    Address[]
   orders       Order[]
   reviews      Review[]

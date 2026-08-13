@@ -66,6 +66,8 @@ type Props = {
   tiers: BoxTier[];
   discountType: DiscountType;
   goodieTiers: GoodieInfo[];
+  /** Staff pay cost + ₹5/packet: no discounts, no coupons, no delivery fee. */
+  isEmployee: boolean;
   defaults: Partial<
     Record<"email" | "name" | "phone" | "line1" | "line2" | "city" | "state" | "pincode", string>
   >;
@@ -84,6 +86,7 @@ export function CheckoutForm({
   tiers,
   discountType,
   goodieTiers,
+  isEmployee,
   defaults,
   loggedIn,
   manualPayment,
@@ -129,20 +132,23 @@ export function CheckoutForm({
   // Mirrors priceOrderLines: shipping weighs the whole parcel, the bundle
   // discount only looks at snacks.
   const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
-  const percentMode = discountType === "percent";
+  // Staff already buy at cost + ₹5/packet, so no reward stacks on top and the
+  // coupon box is hidden entirely — mirrors the server's isEmployee branch.
+  const percentMode = !isEmployee && discountType === "percent";
   const tier = percentMode ? activeTier(tiers, foodKg) : null;
   const boxDisc = percentMode ? boxDiscount(tiers, foodKg, foodSubtotal) : 0;
   // Whichever is larger — coupon or box discount, never both. In goodies mode
   // boxDisc is 0, so any valid coupon wins (and replaces the goodies).
-  const couponDisc = coupon?.discount ?? 0;
+  const couponDisc = isEmployee ? 0 : (coupon?.discount ?? 0);
   const couponWins = couponDisc > boxDisc;
   const discount = Math.max(boxDisc, couponDisc);
   const discounted = subtotal - discount;
   // Goodies mode mirror of priceOrderLines: free items from the highest
   // reached tier, suppressed by a winning coupon (one benefit per order).
-  const activeGoodies = percentMode
-    ? []
-    : goodiesForKg(goodieTiers.filter((g) => g.available), foodKg);
+  const activeGoodies =
+    isEmployee || percentMode
+      ? []
+      : goodiesForKg(goodieTiers.filter((g) => g.available), foodKg);
   const goodiesApply = activeGoodies.length > 0 && !couponWins;
   // Goodies ride in the parcel, so they count toward the shipping weight.
   const parcelKg =
@@ -158,15 +164,17 @@ export function CheckoutForm({
       : 0);
   // Mirrors createOrderFromCart: inside TN flat/free-above, outside TN weight × ₹/kg
   const stateChosen = state.trim().length > 0;
-  const outsideTn = stateChosen && !isTamilNadu(state);
-  const fee = stateChosen
-    ? computeShipping({
-        state,
-        weightKg: parcelKg,
-        subtotal: discounted,
-        config: { shippingFee, freeShippingAbove, outsideTnPerKg },
-      })
-    : 0;
+  const outsideTn = !isEmployee && stateChosen && !isTamilNadu(state);
+  // Staff collect at the shop — never a delivery charge.
+  const fee =
+    stateChosen && !isEmployee
+      ? computeShipping({
+          state,
+          weightKg: parcelKg,
+          subtotal: discounted,
+          config: { shippingFee, freeShippingAbove, outsideTnPerKg },
+        })
+      : 0;
   const total = discounted + fee;
 
   async function applyCoupon() {
@@ -230,8 +238,9 @@ export function CheckoutForm({
       },
       items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
       // Only send the coupon when it actually beats the box discount, so a
-      // non-winning (or stale) code never blocks checkout.
-      couponCode: couponWins ? coupon?.code : undefined,
+      // non-winning (or stale) code never blocks checkout. Staff never send one
+      // — the server ignores codes for them anyway.
+      couponCode: !isEmployee && couponWins ? coupon?.code : undefined,
     };
 
     // Guests verify first. The delivery number they just typed is the default,
@@ -590,8 +599,15 @@ export function CheckoutForm({
               <span className="font-medium">{formatINR(subtotal)}</span>
             </div>
 
-            {/* Coupon */}
-            {coupon ? (
+            {isEmployee && (
+              <p className="rounded-lg border border-gold-300 bg-gold-50 px-2.5 py-2 text-xs text-gold-900 dark:border-gold-800 dark:bg-gold-950/50 dark:text-gold-200">
+                <strong>Staff pricing</strong> — cost + ₹5 per packet. No bundle
+                discount, coupons or delivery charge; collect at the shop.
+              </p>
+            )}
+
+            {/* Coupon — staff prices already sit at cost, so no codes apply */}
+            {isEmployee ? null : coupon ? (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-sm dark:border-green-900 dark:bg-green-950/50">
                 <span className="flex items-center gap-1.5 font-medium text-green-700 dark:text-green-300">
                   <Check className="size-4 shrink-0" /> {coupon.code}
@@ -691,10 +707,14 @@ export function CheckoutForm({
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping</span>
               <span className="font-medium">
-                {!stateChosen ? "—" : fee === 0 ? "FREE" : formatINR(fee)}
+                {isEmployee ? "FREE" : !stateChosen ? "—" : fee === 0 ? "FREE" : formatINR(fee)}
               </span>
             </div>
-            {!stateChosen ? (
+            {isEmployee ? (
+              <p className="text-xs text-muted-foreground">
+                Staff order — no delivery charge; collect at the shop.
+              </p>
+            ) : !stateChosen ? (
               <p className="text-xs text-muted-foreground">
                 Select your delivery state to see the shipping charge.
               </p>

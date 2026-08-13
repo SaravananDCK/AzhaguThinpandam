@@ -21,6 +21,7 @@ export type CustomerFormValues = {
   city: string;
   state: string;
   pincode: string;
+  isEmployee: boolean;
 };
 
 /**
@@ -97,6 +98,21 @@ export function CustomerForm({
               Order confirmations go here. Blank means no emails are sent.
             </p>
           </div>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="isEmployee"
+              defaultChecked={values.isEmployee}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span className="text-sm">
+              Staff member
+              <span className="block text-xs text-muted-foreground">
+                Buys at wholesale cost + ₹5 per packet. No bundle discount,
+                goodies, coupons or delivery charge.
+              </span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 

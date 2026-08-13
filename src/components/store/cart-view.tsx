@@ -28,12 +28,15 @@ export function CartView({
   tiers,
   discountType,
   goodieTiers,
+  isEmployee = false,
 }: {
   shippingFee: number;
   freeShippingAbove: number;
   tiers: BoxTier[];
   discountType: DiscountType;
   goodieTiers: GoodieInfo[];
+  /** Staff pay cost + ₹5/packet: no rewards stack on top, and no delivery fee. */
+  isEmployee?: boolean;
 }) {
   const { items, setQty, removeItem } = useCart();
   const mounted = useMounted();
@@ -57,18 +60,21 @@ export function CartView({
 
   const subtotal = cartSubtotal(items);
   const { shippingKg: weightKg, foodKg, foodSubtotal } = cartWeights(items);
-  const percentMode = discountType === "percent";
+  // Staff prices already sit at cost + ₹5/packet, so no reward stacks on top
+  const percentMode = !isEmployee && discountType === "percent";
   const tier = percentMode ? activeTier(tiers, foodKg) : null;
   const next = percentMode ? nextTier(tiers, foodKg) : null;
   const discount = percentMode ? boxDiscount(tiers, foodKg, foodSubtotal) : 0;
   // Goodies mode: free items from the highest reached tier (display only — the
   // server re-derives this at checkout; a coupon there replaces the goodies)
   const availableGoodies = goodieTiers.filter((g) => g.available);
-  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, foodKg);
-  const nextGoodie = percentMode ? null : nextGoodieKg(availableGoodies, foodKg);
-  // Shipping threshold applies to the discounted amount (matches the server)
+  const goodiesMode = !isEmployee && !percentMode;
+  const activeGoodies = goodiesMode ? goodiesForKg(availableGoodies, foodKg) : [];
+  const nextGoodie = goodiesMode ? nextGoodieKg(availableGoodies, foodKg) : null;
+  // Shipping threshold applies to the discounted amount (matches the server).
+  // Staff collect at the shop, so they're never charged delivery.
   const discounted = subtotal - discount;
-  const freeShipping = discounted >= freeShippingAbove;
+  const freeShipping = isEmployee || discounted >= freeShippingAbove;
   const shipping = freeShipping ? 0 : shippingFee;
   const remaining = freeShippingAbove - discounted;
 
@@ -199,9 +205,11 @@ export function CartView({
               {freeShipping ? (
                 <span className="font-semibold text-green-600 dark:text-green-400">
                   FREE{" "}
-                  <span className="font-normal text-muted-foreground line-through">
-                    {formatINR(shippingFee)}
-                  </span>
+                  {!isEmployee && (
+                    <span className="font-normal text-muted-foreground line-through">
+                      {formatINR(shippingFee)}
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="font-medium">{formatINR(shipping)}</span>
@@ -209,7 +217,12 @@ export function CartView({
             </div>
 
             {/* Free-shipping status */}
-            {freeShipping ? (
+            {isEmployee ? (
+              <p className="flex items-center gap-1.5 rounded-md bg-green-100 px-2.5 py-2 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-300">
+                <Truck className="size-3.5 shrink-0" />
+                Staff order — no delivery charge; collect at the shop.
+              </p>
+            ) : freeShipping ? (
               <p className="flex items-center gap-1.5 rounded-md bg-green-100 px-2.5 py-2 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-300">
                 <Truck className="size-3.5 shrink-0" />
                 You&apos;ve unlocked FREE shipping!
@@ -231,10 +244,12 @@ export function CartView({
               </div>
             )}
 
-            <p className="text-[11px] text-muted-foreground">
-              Shipping shown is for Tamil Nadu. Deliveries outside TN are charged by
-              weight — your final shipping appears at checkout once you enter your state.
-            </p>
+            {!isEmployee && (
+              <p className="text-[11px] text-muted-foreground">
+                Shipping shown is for Tamil Nadu. Deliveries outside TN are charged by
+                weight — your final shipping appears at checkout once you enter your state.
+              </p>
+            )}
             <Separator />
             <div className="flex justify-between text-sm font-semibold">
               <span>Total</span>

@@ -24,10 +24,13 @@ export function CartSidebar({
   tiers,
   discountType,
   goodieTiers,
+  isEmployee = false,
 }: {
   tiers: BoxTier[];
   discountType: DiscountType;
   goodieTiers: GoodieInfo[];
+  /** Staff pay cost + ₹5/packet — no rewards stack on top. */
+  isEmployee?: boolean;
 }) {
   const items = useCart((s) => s.items);
   const removeItem = useCart((s) => s.removeItem);
@@ -38,13 +41,14 @@ export function CartSidebar({
   const count = mounted ? cartCount(items) : 0;
   const w = mounted ? cartWeights(items) : { shippingKg: 0, foodKg: 0, foodSubtotal: 0 };
   const weightKg = w.shippingKg;
-  const percentMode = discountType === "percent";
+  const percentMode = !isEmployee && discountType === "percent";
   const tier = percentMode ? activeTier(tiers, w.foodKg) : null;
   const next = percentMode ? nextTier(tiers, w.foodKg) : null;
   const discount = percentMode ? boxDiscount(tiers, w.foodKg, w.foodSubtotal) : 0;
   const availableGoodies = goodieTiers.filter((g) => g.available);
-  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, w.foodKg);
-  const nextGoodie = percentMode ? null : nextGoodieKg(availableGoodies, w.foodKg);
+  const goodiesMode = !isEmployee && !percentMode;
+  const activeGoodies = goodiesMode ? goodiesForKg(availableGoodies, w.foodKg) : [];
+  const nextGoodie = goodiesMode ? nextGoodieKg(availableGoodies, w.foodKg) : null;
 
   return (
     <div className="rounded-2xl border bg-card p-4 shadow-sm">
@@ -157,7 +161,11 @@ export function CartSidebar({
             </p>
           )}
 
-          <p className="mt-2 text-xs text-muted-foreground">Shipping calculated at checkout.</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {isEmployee
+              ? "Staff price — no delivery charge."
+              : "Shipping calculated at checkout."}
+          </p>
 
           <div className="mt-3 space-y-2">
             <Button asChild className="w-full">

@@ -18,6 +18,7 @@ const customerSchema = z.object({
   city: z.string().trim().max(100).optional().or(z.literal("")),
   state: z.string().trim().max(100).optional().or(z.literal("")),
   pincode: z.string().trim().optional().or(z.literal("")),
+  isEmployee: z.boolean(),
 });
 
 function parse(formData: FormData) {
@@ -25,6 +26,8 @@ function parse(formData: FormData) {
     phone: formData.get("phone") ?? "",
     name: formData.get("name") ?? "",
     email: formData.get("email") ?? "",
+    // An unchecked box is simply absent from FormData
+    isEmployee: formData.get("isEmployee") === "on",
     line1: formData.get("line1") ?? "",
     line2: formData.get("line2") ?? "",
     city: formData.get("city") ?? "",
@@ -71,6 +74,7 @@ export async function createCustomer(formData: FormData) {
         name: d.name,
         ...(d.email ? { email: d.email.toLowerCase() } : {}),
         role: ROLES.CUSTOMER,
+        isEmployee: d.isEmployee,
         ...(address ? { addresses: { create: { ...address, phone, isDefault: true } } } : {}),
       },
     });
@@ -110,7 +114,12 @@ export async function updateCustomer(id: string, formData: FormData) {
   try {
     await prisma.user.update({
       where: { id },
-      data: { phone, name: d.name, email: d.email ? d.email.toLowerCase() : null },
+      data: {
+        phone,
+        name: d.name,
+        email: d.email ? d.email.toLowerCase() : null,
+        isEmployee: d.isEmployee,
+      },
     });
 
     if (address) {

@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDiscountConfig, getManualPaymentConfig, getShippingConfig } from "@/lib/queries";
+import { getViewerPricing } from "@/lib/viewer";
 import { CheckoutForm } from "@/components/store/checkout-form";
 
 export const metadata: Metadata = { title: "Checkout" };
 
 export default async function CheckoutPage() {
-  const [session, shippingConfig, discount, manual] = await Promise.all([
+  const [session, shippingConfig, discount, manual, { isEmployee }] = await Promise.all([
     auth(),
     getShippingConfig(),
     getDiscountConfig(),
     getManualPaymentConfig(),
+    getViewerPricing(),
   ]);
 
   let defaults: {
@@ -52,6 +54,7 @@ export default async function CheckoutPage() {
         tiers={discount.tiers}
         discountType={discount.type}
         goodieTiers={discount.goodieTiers}
+        isEmployee={isEmployee}
         defaults={defaults}
         loggedIn={Boolean(session?.user)}
         manualPayment={manual.enabled}

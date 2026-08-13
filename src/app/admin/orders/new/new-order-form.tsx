@@ -324,7 +324,8 @@ export function NewOrderForm({
           <p className="text-xs text-muted-foreground">
             Bundle discount or free goodies, and shipping, are added when you
             save, using the same rules as the website — the final total appears
-            on the order.
+            on the order. Prices listed here are retail; a staff customer is
+            re-priced at cost + ₹5 per packet when the order is saved.
           </p>
         </CardContent>
       </Card>

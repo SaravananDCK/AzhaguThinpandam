@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/product-card";
 import { CartSidebar } from "@/components/store/cart-sidebar";
 import { getCategories, getDiscountConfig, getProductsPage } from "@/lib/queries";
+import { getViewerPricing } from "@/lib/viewer";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +65,14 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function ProductsPage({ searchParams }: Props) {
   const { q, category, page: pageParam } = await searchParams;
   const requestedPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
-  const [categories, { products, total, page, pageCount, perPage }, discount] = await Promise.all([
-    getCategories(),
-    // Snacks only — merchandise has its own section at /magnets
-    getProductsPage({ q, categorySlug: category, page: requestedPage, line: "SNACKS" }),
-    getDiscountConfig(),
-  ]);
+  const [categories, { products, total, page, pageCount, perPage }, discount, { isEmployee }] =
+    await Promise.all([
+      getCategories(),
+      // Snacks only — merchandise has its own section at /magnets
+      getProductsPage({ q, categorySlug: category, page: requestedPage, line: "SNACKS" }),
+      getDiscountConfig(),
+      getViewerPricing(),
+    ]);
   const activeCategory = categories.find((c) => c.slug === category);
 
   return (
@@ -220,6 +223,7 @@ export default async function ProductsPage({ searchParams }: Props) {
               tiers={discount.tiers}
               discountType={discount.type}
               goodieTiers={discount.goodieTiers}
+              isEmployee={isEmployee}
             />
           </div>
         </aside>

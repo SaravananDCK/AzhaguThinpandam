@@ -42,11 +42,14 @@ export function BoxBuilder({
   tiers,
   discountType,
   goodieTiers,
+  isEmployee = false,
 }: {
   items: BoxItem[];
   tiers: BoxTier[];
   discountType: DiscountType;
   goodieTiers: GoodieInfo[];
+  /** Staff pay cost + ₹5/packet — no tier rewards stack on top. */
+  isEmployee?: boolean;
 }) {
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
@@ -87,16 +90,17 @@ export function BoxBuilder({
     return { weightKg, subtotal, itemCount };
   }, [items, qty]);
 
-  const percentMode = discountType === "percent";
+  const percentMode = !isEmployee && discountType === "percent";
   const tier = percentMode ? activeTier(tiers, weightKg) : null;
   const next = percentMode ? nextTier(tiers, weightKg) : null;
   const discount = percentMode ? boxDiscount(tiers, weightKg, subtotal) : 0;
   // Goodies mode: same progress mechanics, but tiers unlock free items
   const availableGoodies = goodieTiers.filter((g) => g.available);
   const goodieKgs = [...new Set(availableGoodies.map((g) => g.kg))].sort((a, b) => a - b);
-  const activeGoodies = percentMode ? [] : goodiesForKg(availableGoodies, weightKg);
-  const activeKg = percentMode ? null : activeGoodieKg(availableGoodies, weightKg);
-  const nextKg = percentMode ? null : nextGoodieKg(availableGoodies, weightKg);
+  const goodiesMode = !isEmployee && !percentMode;
+  const activeGoodies = goodiesMode ? goodiesForKg(availableGoodies, weightKg) : [];
+  const activeKg = goodiesMode ? activeGoodieKg(availableGoodies, weightKg) : null;
+  const nextKg = goodiesMode ? nextGoodieKg(availableGoodies, weightKg) : null;
   const maxTierCount = percentMode
     ? tiers.length
       ? tiers[tiers.length - 1].count
@@ -137,8 +141,8 @@ export function BoxBuilder({
 
   return (
     <div className="mt-6 space-y-5 pb-28">
-      {/* Tier progress */}
-      <Card className="border-gold-300/60 dark:border-gold-800">
+      {/* Tier progress — hidden for staff, who don't earn tier rewards */}
+      <Card className={cn("border-gold-300/60 dark:border-gold-800", isEmployee && "hidden")}>
         <CardContent className="space-y-3">
           <p className="flex items-center gap-2 text-sm font-semibold">
             <Gift className="size-4 text-gold-600 dark:text-gold-400" />

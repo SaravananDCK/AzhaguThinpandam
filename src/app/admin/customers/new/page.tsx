@@ -36,6 +36,7 @@ export default async function AdminNewCustomerPage({ searchParams }: Props) {
           city: "",
           state: "",
           pincode: "",
+          isEmployee: false,
         }}
       />
     </div>

@@ -7,6 +7,7 @@ import { boxDiscount, goodiesForKg, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 import { basePacketGrams } from "@/lib/pack";
+import { staffUnitPrice } from "@/lib/staff-pricing";
 import {
   PAYMENT_STATUSES,
   SETTINGS,
@@ -102,6 +103,9 @@ export async function priceOrderLines(params: {
   /** OTP-verified identity (phone, or email for phone-less accounts). Coupon
       limits key to it, never to a client-supplied value. */
   couponIdentity: string;
+  /** Staff pricing: cost + ₹5 per packet, no discounts, no shipping. Resolved
+      from the user record by the caller — never from client input. */
+  isEmployee?: boolean;
 }) {
   const variantIds = params.items.map((i) => i.variantId);
   if (new Set(variantIds).size !== variantIds.length) {
@@ -137,7 +141,13 @@ export async function priceOrderLines(params: {
     return { variant, qty: item.qty };
   });
 
-  const subtotal = lines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
+  // Staff buy at wholesale cost + ₹5 per packet. The flag is resolved from the
+  // session's user record by the caller — never from anything client-supplied.
+  const isEmployee = params.isEmployee === true;
+  const unitPrice = (l: (typeof lines)[number]) =>
+    isEmployee ? staffUnitPrice(l.variant, l.variant.product) : l.variant.price;
+
+  const subtotal = lines.reduce((sum, l) => sum + unitPrice(l) * l.qty, 0);
 
   // Two different weights, and conflating them is a money bug:
   //   shippingKg — every pack in the parcel, since the courier weighs the lot
@@ -160,15 +170,17 @@ export async function priceOrderLines(params: {
       weightGrams: l.variant.weightGrams,
     }))
   );
-  const foodSubtotal = foodLines.reduce((sum, l) => sum + l.variant.price * l.qty, 0);
+  const foodSubtotal = foodLines.reduce((sum, l) => sum + unitPrice(l) * l.qty, 0);
 
   // Tiered weight reward: snack weight → % off the snacks (percent mode) or
   // free goodies (goodies mode). Merchandise in the same cart neither counts
   // toward the tier nor earns from it. Computed here, never trusted from the
   // client.
+  // Staff already buy at near cost, so none of the customer rewards stack on
+  // top — tiers, goodies and coupons are all skipped below.
   const discountConfig = await getDiscountConfig();
   const boxDiscountAmt =
-    discountConfig.type === "percent"
+    !isEmployee && discountConfig.type === "percent"
       ? boxDiscount(discountConfig.tiers, foodKg, foodSubtotal)
       : 0;
 
@@ -179,7 +191,9 @@ export async function priceOrderLines(params: {
   let discount = boxDiscountAmt;
   let couponId: string | null = null;
   let couponCode: string | null = null;
-  if (params.couponCode) {
+  // Staff: a code is ignored rather than rejected, so a stale one left in the
+  // browser can never block the order. No redemption is recorded either.
+  if (params.couponCode && !isEmployee) {
     const result = await validateCoupon({
       code: params.couponCode,
       subtotal,
@@ -198,7 +212,7 @@ export async function priceOrderLines(params: {
   // silently skipped when stock can't cover the customer's own purchase of
   // that variant plus the freebie (never blocks checkout over a free item).
   let freebies: { variant: (typeof lines)[number]["variant"]; qty: number }[] = [];
-  if (discountConfig.type === "goodies" && !params.couponCode) {
+  if (discountConfig.type === "goodies" && !params.couponCode && !isEmployee) {
     const rows = goodiesForKg(
       discountConfig.goodieTiers.filter((g) => g.available),
       foodKg
@@ -239,12 +253,15 @@ export async function priceOrderLines(params: {
 
   const shippingConfig = await getShippingConfig();
   // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg.
-  const shippingFee = computeShipping({
-    state: params.state,
-    weightKg: parcelKg,
-    subtotal: subtotal - discount,
-    config: shippingConfig,
-  });
+  // Staff collect at the shop, so they're never charged delivery.
+  const shippingFee = isEmployee
+    ? 0
+    : computeShipping({
+        state: params.state,
+        weightKg: parcelKg,
+        subtotal: subtotal - discount,
+        config: shippingConfig,
+      });
   const total = subtotal - discount + shippingFee;
 
   // Internal packing cost snapshot (P&L only — never charged to the customer)
@@ -259,7 +276,7 @@ export async function priceOrderLines(params: {
     productName: l.variant.product.name,
     variantLabel: l.variant.label,
     image: l.variant.product.images[0]?.url ?? null,
-    price: l.variant.price,
+    price: unitPrice(l),
     qty: l.qty,
     basePackGrams: basePacketGrams(l.variant.product.variants.map((v) => v.label)),
     gstRate: l.variant.product.gstRate ?? defaultGstRate,
@@ -306,6 +323,16 @@ export async function createOrderFromCart(
   userId?: string,
   verifiedIdentity?: string
 ) {
+  // Staff pricing is decided by the user record, never by the request body.
+  const isEmployee = userId
+    ? (
+        await prisma.user.findUnique({
+          where: { id: userId },
+          select: { isEmployee: true },
+        })
+      )?.isEmployee === true
+    : false;
+
   const priced = await priceOrderLines({
     items: input.items,
     state: input.address.state,
@@ -313,6 +340,7 @@ export async function createOrderFromCart(
     // Verified identity only; the delivery-phone fallback is a last resort for
     // sessions with neither a phone nor an email.
     couponIdentity: verifiedIdentity || input.address.phone,
+    isEmployee,
   });
   const { subtotal, discount, couponId, couponCode, shippingFee, total, packingCost } = priced;
 
@@ -363,7 +391,10 @@ export async function repriceOrderItems(params: {
 }) {
   const order = await prisma.order.findUnique({
     where: { id: params.orderId },
-    include: { payment: true, user: { select: { phone: true, email: true } } },
+    include: {
+      payment: true,
+      user: { select: { phone: true, email: true, isEmployee: true } },
+    },
   });
   if (!order) throw new CheckoutError("Order not found.");
   if (order.status !== "PENDING") {
@@ -379,6 +410,9 @@ export async function repriceOrderItems(params: {
     // The account's verified identity, else the delivery number — must match
     // the key the redemption would be recorded under in markOrderPaid.
     couponIdentity: order.user?.phone ?? order.user?.email ?? order.shipPhone,
+    // A reprice answers "what would we charge now", so an order re-priced after
+    // the staff flag was cleared correctly reverts to retail.
+    isEmployee: order.user?.isEmployee === true,
   });
 
   return prisma.$transaction(async (tx) => {

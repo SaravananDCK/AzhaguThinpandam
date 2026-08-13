@@ -21,6 +21,7 @@ export type CustomerRow = {
   name: string | null;
   phone: string | null;
   email: string | null;
+  isEmployee: boolean;
   joined: string;
   orderCount: number;
   totalSpentRupees: number;
@@ -58,12 +59,19 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
           // Guest rows are synthetic (grouped by phone), so there's no profile
           // to open — only registered accounts are editable.
           return data.type === "REGISTERED" ? (
-            <Link
-              href={`/admin/customers/${data.id}`}
-              className="font-medium text-primary hover:underline"
-            >
-              {label}
-            </Link>
+            <span className="flex items-center gap-1.5">
+              <Link
+                href={`/admin/customers/${data.id}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {label}
+              </Link>
+              {data.isEmployee && (
+                <Badge variant="secondary" className="text-[10px]">
+                  Staff
+                </Badge>
+              )}
+            </span>
           ) : (
             <span className="font-medium">{label}</span>
           );
