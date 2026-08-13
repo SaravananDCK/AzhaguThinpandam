@@ -93,6 +93,9 @@ export const SETTINGS = {
   // opening the payment gateway. For use until the gateway goes live.
   MANUAL_UPI_PAYMENT: "manual_upi_payment",
   UPI_ID: "upi_id",
+  // Reassurance on the order page while a UPI payment is pending — customers
+  // who expected a card option need telling their order is safe.
+  PAYMENT_PENDING_NOTE: "payment_pending_note",
 } as const;
 
 // Ways a supplier payment can be made (stored as a plain string)
@@ -154,6 +157,11 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // UPI ID (VPA) customers pay to, e.g. "azhagu@okicici". Empty falls back to
   // "we'll message you the payment details on WhatsApp".
   [SETTINGS.UPI_ID]: "",
+  // Shown at the top of the payment card on the order page. Answers the
+  // question customers actually have ("where's the card option — did my order
+  // go through?") before the UPI instructions. Empty hides it.
+  [SETTINGS.PAYMENT_PENDING_NOTE]:
+    "Card and netbanking payments aren't live yet — we're working with our payment provider to switch them on. Your order is already placed and reserved, so nothing is lost: pay by UPI below and send us the screenshot, or wait for our team to call and help you complete it.",
   // Default GST% (used for products with no per-product rate, and as the
   // starting value on the purchase form). Prices are treated as GST-inclusive.
   [SETTINGS.DEFAULT_GST_RATE]: "5",

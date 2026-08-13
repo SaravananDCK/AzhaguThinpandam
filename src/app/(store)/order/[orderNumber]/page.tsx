@@ -96,6 +96,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
               <IndianRupee className="size-4" /> Complete your payment
             </p>
 
+            {/* Answers "where's the card option — did my order go through?"
+                before the instructions. Store-configurable; empty hides it. */}
+            {manual.pendingNote && (
+              <p className="rounded-lg border border-amber-200 bg-white/70 p-3 text-sm leading-relaxed dark:border-amber-900 dark:bg-black/20">
+                {manual.pendingNote}
+              </p>
+            )}
+
             {qrSvg && (
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start sm:gap-5">
                 <div className="shrink-0 rounded-xl bg-white p-3 shadow-sm">

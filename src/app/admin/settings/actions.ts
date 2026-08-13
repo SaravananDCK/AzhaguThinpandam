@@ -107,6 +107,9 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,
     [SETTINGS.UPI_ID]: upiId,
+    [SETTINGS.PAYMENT_PENDING_NOTE]: String(
+      formData.get("paymentPendingNote") ?? ""
+    ).trim(),
   };
 
   await prisma.$transaction(

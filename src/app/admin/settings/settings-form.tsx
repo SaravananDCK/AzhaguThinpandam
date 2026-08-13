@@ -35,6 +35,7 @@ type Props = {
     defaultGstRate: string;
     manualUpiPayment: boolean;
     upiId: string;
+    paymentPendingNote: string;
   };
   variantOptions: GoodieVariantOption[];
 };
@@ -305,6 +306,21 @@ export function SettingsForm({ values, variantOptions }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               Shown at the top of checkout while UPI mode is on. Leave empty for no banner.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-pendingnote">Payment note on the order page</Label>
+            <Textarea
+              id="s-pendingnote"
+              name="paymentPendingNote"
+              rows={3}
+              defaultValue={values.paymentPendingNote}
+              placeholder="Card payments aren't live yet — your order is placed and reserved…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown above the UPI instructions after an order is placed —
+              reassures customers who expected a card option that their order
+              went through. Leave empty for no note.
             </p>
           </div>
         </CardContent>

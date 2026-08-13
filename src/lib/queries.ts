@@ -169,6 +169,7 @@ export async function getManualPaymentConfig() {
     payeeName: (settings[SETTINGS.STORE_NAME] ?? "").trim(),
     whatsappPhone: (settings[SETTINGS.STORE_PHONE] ?? "").trim(),
     notice: (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim(),
+    pendingNote: (settings[SETTINGS.PAYMENT_PENDING_NOTE] ?? "").trim(),
   };
 }
 

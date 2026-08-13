@@ -60,6 +60,7 @@ export default async function AdminSettingsPage() {
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
           upiId: settings[SETTINGS.UPI_ID] ?? "",
+          paymentPendingNote: settings[SETTINGS.PAYMENT_PENDING_NOTE] ?? "",
         }}
         variantOptions={variantOptions}
       />
