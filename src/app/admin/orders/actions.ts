@@ -99,6 +99,46 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
 }
 
 /**
+ * Removes an order permanently — for test orders, duplicates and junk.
+ *
+ * Restricted to PENDING and CANCELLED on purpose, and that restriction is what
+ * makes it safe to touch no stock at all: a PENDING order never had stock
+ * deducted (only markOrderPaid does that), and a CANCELLED one already had it
+ * restored by the branch above — restocking here would double-count. Neither
+ * status is in REVENUE_STATUSES either, so P&L, GST and the dashboard don't
+ * move. Deleting a paid order would instead erase its captured-payment record
+ * and silently rewrite an already-reported month; cancel it first.
+ *
+ * Prisma cascades take the items, the payment row and any coupon redemption.
+ * Freeing that redemption is intended — the purchase never completed. Stock
+ * movements survive, referencing an order number that no longer resolves; the
+ * ledger stays arithmetically correct, it just can't be clicked through.
+ */
+export async function deleteOrder(orderId: string) {
+  await assertAdmin();
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { status: true, orderNumber: true },
+  });
+  if (!order) return { error: "Order not found." };
+
+  // Re-checked server-side: the button is hidden for other statuses, but a
+  // hidden button is not a permission.
+  if (order.status !== "PENDING" && order.status !== "CANCELLED") {
+    return {
+      error: `Only payment-pending or cancelled orders can be deleted — this one is ${order.status.toLowerCase()}. Cancel it first (that restores the stock), then delete.`,
+    };
+  }
+
+  await prisma.order.delete({ where: { id: orderId } });
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/order/${order.orderNumber}`);
+  return { ok: true };
+}
+
+/**
  * Creates an order on a customer's behalf — for orders taken over WhatsApp.
  * Auth only; the work lives in createOrderForCustomer so it stays testable
  * outside a request context.

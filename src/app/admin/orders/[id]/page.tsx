@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { formatINR, paiseToRupees } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
+import { DeleteOrder } from "./delete-order";
 import { EditOrderDetails } from "./edit-details";
 import { EditOrderItems } from "./edit-items";
 import { CostPanel } from "./cost-panel";
@@ -76,6 +77,18 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         <CardContent>
           <p className="mb-3 font-semibold">Update status</p>
           <StatusButtons orderId={order.id} currentStatus={order.status as OrderStatus} />
+          {/* Only these two are safe to remove — no stock moved, no revenue
+              counted. Anything paid must be cancelled first. */}
+          {(order.status === "PENDING" || order.status === "CANCELLED") && (
+            <div className="mt-4 border-t pt-3">
+              <DeleteOrder
+                orderId={order.id}
+                orderNumber={order.orderNumber}
+                customer={order.shipName}
+                total={order.total}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
