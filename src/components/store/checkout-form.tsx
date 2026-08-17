@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
+import { useCartSync } from "@/hooks/use-cart-sync";
+import { CartAdjustmentsNotice } from "@/components/store/cart-adjustments-notice";
 import { formatINR } from "@/lib/money";
 import {
   activeTier,
@@ -95,6 +97,8 @@ export function CheckoutForm({
   const router = useRouter();
   const { items, clear } = useCart();
   const mounted = useMounted();
+  // Catch a stale cart here too — someone can land on checkout directly
+  const { adjustments, dismiss } = useCartSync(mounted);
   const [submitting, setSubmitting] = useState(false);
   // Controlled so shipping recalculates as the customer picks their state
   const [state, setState] = useState(defaults.state ?? "");
@@ -454,6 +458,10 @@ export function CheckoutForm({
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+
+      <div className="mt-6">
+        <CartAdjustmentsNotice adjustments={adjustments} onDismiss={dismiss} />
+      </div>
 
       {manualPayment && notice && (
         <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100">

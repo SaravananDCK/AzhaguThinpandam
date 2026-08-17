@@ -135,6 +135,9 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     if (err instanceof CheckoutError) {
+      // Logged so a rejected checkout is diagnosable afterwards — these are
+      // lost orders, and the 400 alone doesn't say which rule turned them away.
+      console.warn("[checkout] rejected:", err.message);
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
     console.error("Checkout error:", err);

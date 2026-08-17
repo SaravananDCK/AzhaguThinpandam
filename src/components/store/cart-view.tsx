@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
+import { useCartSync } from "@/hooks/use-cart-sync";
+import { CartAdjustmentsNotice } from "@/components/store/cart-adjustments-notice";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
 import {
@@ -40,20 +42,27 @@ export function CartView({
 }) {
   const { items, setQty, removeItem } = useCart();
   const mounted = useMounted();
+  // A persisted cart can be days old; re-check it before they reach checkout
+  const { adjustments, dismiss } = useCartSync(mounted);
 
   if (!mounted) return <div className="mx-auto max-w-4xl px-4 py-12" />;
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 py-20 text-center">
-        <ShoppingBag className="size-14 text-muted-foreground" />
-        <h1 className="font-heading text-2xl font-bold">Your cart is empty</h1>
-        <p className="text-sm text-muted-foreground">
-          Fill it with kadalai mittai, murukku and more.
-        </p>
-        <Button asChild className="mt-2">
-          <Link href="/products">Browse products</Link>
-        </Button>
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        {/* The re-check may be what emptied it — never let items disappear
+            without saying why. */}
+        <CartAdjustmentsNotice adjustments={adjustments} onDismiss={dismiss} />
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <ShoppingBag className="size-14 text-muted-foreground" />
+          <h1 className="font-heading text-2xl font-bold">Your cart is empty</h1>
+          <p className="text-sm text-muted-foreground">
+            Fill it with kadalai mittai, murukku and more.
+          </p>
+          <Button asChild className="mt-2">
+            <Link href="/products">Browse products</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -81,7 +90,10 @@ export function CartView({
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="font-heading text-2xl font-bold sm:text-3xl">Your Cart</h1>
-      <div className="mt-6 grid gap-6 md:grid-cols-[1fr_300px]">
+      <div className="mt-4">
+        <CartAdjustmentsNotice adjustments={adjustments} onDismiss={dismiss} />
+      </div>
+      <div className="mt-2 grid gap-6 md:grid-cols-[1fr_300px]">
         <div className="space-y-3">
           {items.map((item) => (
             <Card key={item.variantId} className="py-3">
