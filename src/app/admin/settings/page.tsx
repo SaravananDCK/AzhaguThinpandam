@@ -16,7 +16,7 @@ export default async function AdminSettingsPage() {
     getSettings(),
     prisma.productVariant.findMany({
       where: { isActive: true, product: { isActive: true } },
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true, madeToOrder: true } } },
       orderBy: [{ product: { name: "asc" } }, { sortOrder: "asc" }],
     }),
   ]);
@@ -24,6 +24,7 @@ export default async function AdminSettingsPage() {
     id: v.id,
     label: `${v.product.name} — ${v.label}`,
     stock: v.stock,
+    madeToOrder: v.product.madeToOrder,
   }));
 
   return (

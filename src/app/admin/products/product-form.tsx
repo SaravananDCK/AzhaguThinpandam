@@ -50,6 +50,7 @@ type ProductData = {
   isActive: boolean;
   isFeatured: boolean;
   isFlagship: boolean;
+  madeToOrder: boolean;
   line: string;
   purchasePricePerKg: number | null;
   profitMarginPct: number | null;
@@ -90,6 +91,7 @@ export function ProductForm({
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [isFlagship, setIsFlagship] = useState(product?.isFlagship ?? false);
+  const [madeToOrder, setMadeToOrder] = useState(product?.madeToOrder ?? false);
   const [line, setLine] = useState<string>(product?.line ?? "SNACKS");
   const [purchasePerKg, setPurchasePerKg] = useState(
     product?.purchasePricePerKg ? paiseToRupees(product.purchasePricePerKg) : ""
@@ -224,6 +226,7 @@ export function ProductForm({
         isActive,
         isFeatured,
         isFlagship,
+        madeToOrder,
         line,
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
         profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
@@ -550,6 +553,23 @@ export function ProductForm({
                 className="size-4 accent-primary"
               />
               Flagship — pinned first with a “Signature” badge
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={madeToOrder}
+                onChange={(e) => setMadeToOrder(e.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span>
+                Made to order — never shows as out of stock
+                <span className="block text-xs text-muted-foreground">
+                  For items cooked fresh per order. Customers can always buy it
+                  whatever the stock count says. Stock still counts down (and may
+                  go negative, meaning packs owed), and it stops appearing in the
+                  low-stock alert. Leave off for finished goods like magnets.
+                </span>
+              </span>
             </label>
 
             <div className="grid gap-1.5 border-t pt-3">

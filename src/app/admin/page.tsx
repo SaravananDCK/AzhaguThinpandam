@@ -34,7 +34,13 @@ export default async function AdminDashboard() {
       include: { items: true },
     }),
     prisma.productVariant.findMany({
-      where: { isActive: true, stock: { lte: lowStockThreshold }, product: { isActive: true } },
+      // Made-to-order items would sit here permanently at 0 or below and bury
+      // the merchandise warnings, which are the ones that actually need acting on.
+      where: {
+        isActive: true,
+        stock: { lte: lowStockThreshold },
+        product: { isActive: true, madeToOrder: false },
+      },
       include: { product: true },
       orderBy: { stock: "asc" },
       take: 10,

@@ -29,6 +29,7 @@ export default async function AdminProductsPage() {
       priceMinRupees: prices.length ? Math.min(...prices) / 100 : null,
       priceMaxRupees: prices.length ? Math.max(...prices) / 100 : null,
       stock: activeVariants.reduce((s, v) => s + v.stock, 0),
+      madeToOrder: p.madeToOrder,
       isActive: p.isActive,
       isFeatured: p.isFeatured,
       isFlagship: p.isFlagship,

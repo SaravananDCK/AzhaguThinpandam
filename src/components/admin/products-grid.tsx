@@ -23,6 +23,7 @@ export type ProductRow = {
   priceMinRupees: number | null;
   priceMaxRupees: number | null;
   stock: number;
+  madeToOrder: boolean;
   isActive: boolean;
   isFeatured: boolean;
   isFlagship: boolean;
@@ -111,9 +112,17 @@ export function ProductsGrid({ rows }: { rows: ProductRow[] }) {
         width={95}
         dataType="number"
         allowHeaderFiltering={false}
-        cellRender={({ value }: { value: number }) => (
-          <Badge variant={value === 0 ? "destructive" : "outline"}>{value}</Badge>
-        )}
+        cellRender={({ data }: { data: ProductRow }) =>
+          // A zero (or negative) count isn't a problem for something cooked to
+          // order, so don't flag it red as if it were.
+          data.madeToOrder ? (
+            <Badge variant="secondary" title={`${data.stock} on hand`}>
+              Made to order
+            </Badge>
+          ) : (
+            <Badge variant={data.stock === 0 ? "destructive" : "outline"}>{data.stock}</Badge>
+          )
+        }
       />
       <Column
         caption="Status"

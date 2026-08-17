@@ -133,7 +133,9 @@ export async function priceOrderLines(params: {
         "Some items in your cart are no longer available. Please review your cart."
       );
     }
-    if (variant.stock < item.qty) {
+    // Made-to-order items are cooked per order, so stock never gates them —
+    // this same check also runs for admin-entered and repriced orders.
+    if (!variant.product.madeToOrder && variant.stock < item.qty) {
       throw new CheckoutError(
         `Only ${variant.stock} left of ${variant.product.name} (${variant.label}). Please update your cart.`
       );
@@ -234,7 +236,12 @@ export async function priceOrderLines(params: {
       freebies = rows.flatMap((r) => {
         const v = gById.get(r.variantId);
         if (!v || !v.isActive || !v.product.isActive) return [];
-        if (v.stock < (purchasedQty.get(v.id) ?? 0) + r.qty) return [];
+        if (
+          !v.product.madeToOrder &&
+          v.stock < (purchasedQty.get(v.id) ?? 0) + r.qty
+        ) {
+          return [];
+        }
         return [{ variant: v, qty: r.qty }];
       });
     }
@@ -494,9 +501,27 @@ export async function markOrderPaid(params: {
       if (!item.variantId) continue;
       const before = await tx.productVariant.findUnique({
         where: { id: item.variantId },
-        select: { stock: true },
+        select: { stock: true, product: { select: { madeToOrder: true } } },
       });
-      // Guarded decrement; never lets stock go negative
+
+      if (before?.product.madeToOrder) {
+        // Made fresh per order: take the full quantity even if that pushes
+        // stock negative, which reads as "packs owed". Clamping here would
+        // record a zero delta and leave the sale out of the ledger entirely.
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.qty } },
+        });
+        await recordMovement(tx, {
+          variantId: item.variantId,
+          delta: -item.qty,
+          reason: STOCK_REASONS.SALE,
+          reference: order.orderNumber,
+        });
+        continue;
+      }
+
+      // Stocked goods: guarded decrement that never goes negative
       await tx.productVariant.updateMany({
         where: { id: item.variantId, stock: { gte: item.qty } },
         data: { stock: { decrement: item.qty } },

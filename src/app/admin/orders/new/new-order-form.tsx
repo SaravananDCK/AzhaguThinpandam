@@ -15,7 +15,13 @@ import { INDIAN_STATES } from "@/lib/india-states";
 import type { CustomerLookup } from "@/lib/admin-orders";
 import { createAdminOrder, findCustomerByPhone } from "../actions";
 
-type Variant = { id: string; label: string; price: number; stock: number };
+type Variant = {
+  id: string;
+  label: string;
+  price: number;
+  stock: number;
+  madeToOrder: boolean;
+};
 type Line = { variantId: string; qty: number };
 
 export function NewOrderForm({
@@ -276,7 +282,8 @@ export function NewOrderForm({
                       <option value="">Select an item…</option>
                       {variants.map((v) => (
                         <option key={v.id} value={v.id}>
-                          {v.label} — {formatINR(v.price)} ({v.stock} in stock)
+                          {v.label} — {formatINR(v.price)}{" "}
+                          {v.madeToOrder ? "(made to order)" : `(${v.stock} in stock)`}
                         </option>
                       ))}
                     </select>

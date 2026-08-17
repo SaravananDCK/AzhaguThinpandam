@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { MAX_LINE_QTY } from "@/lib/availability";
 
 export type CartItem = {
   variantId: string;
@@ -33,6 +34,8 @@ type CartState = {
 export type LiveAvailability = {
   variantId: string;
   available: boolean;
+  /** Made to order — stock never limits it (see lib/availability.ts). */
+  unlimited?: boolean;
   stock: number;
   price: number;
 };
@@ -100,16 +103,17 @@ export const useCart = create<CartState>()(
             productName: item.productName,
             variantLabel: item.variantLabel,
           };
-          if (!l.available || l.stock <= 0) {
+          if (!l.available || (!l.unlimited && l.stock <= 0)) {
             adjustments.push({ ...base, kind: "removed" });
             continue;
           }
-          const qty = Math.min(item.qty, l.stock);
+          const cap = l.unlimited ? MAX_LINE_QTY : l.stock;
+          const qty = Math.min(item.qty, cap);
           if (qty < item.qty) adjustments.push({ ...base, kind: "reduced", to: qty });
           if (l.price !== item.price) {
             adjustments.push({ ...base, kind: "repriced", to: l.price });
           }
-          next.push({ ...item, qty, price: l.price, maxStock: l.stock });
+          next.push({ ...item, qty, price: l.price, maxStock: cap });
         }
 
         if (adjustments.length) set({ items: next });

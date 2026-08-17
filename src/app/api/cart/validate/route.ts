@@ -38,6 +38,7 @@ export async function POST(req: Request) {
           select: {
             name: true,
             isActive: true,
+            madeToOrder: true,
             purchasePricePerKg: true,
             variants: { where: { isActive: true }, select: { label: true } },
           },
@@ -52,11 +53,21 @@ export async function POST(req: Request) {
     const v = byId.get(id);
     // Deleted, delisted, or its product was hidden — it can't be ordered.
     if (!v || !v.isActive || !v.product.isActive) {
-      return { variantId: id, available: false, stock: 0, price: 0, name: "", label: "" };
+      return {
+        variantId: id,
+        available: false,
+        unlimited: false,
+        stock: 0,
+        price: 0,
+        name: "",
+        label: "",
+      };
     }
     return {
       variantId: id,
       available: true,
+      // Made fresh per order: the cart must not drop or clamp it at stock 0.
+      unlimited: v.product.madeToOrder,
       stock: v.stock,
       // Same price the storefront would quote this viewer, staff included, so a
       // cart that predates a price change stops showing the old figure.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getDiscountConfig, getProducts } from "@/lib/queries";
 import { getViewerPricing } from "@/lib/viewer";
+import { isSellable, sellableQty } from "@/lib/availability";
 import { BoxBuilder } from "@/components/store/box-builder";
 
 export const metadata: Metadata = {
@@ -21,7 +22,8 @@ export default async function BuildBoxPage() {
   // One row per product: its base (smallest) in-stock pack is the box unit
   const items = products
     .map((p) => {
-      const variant = p.variants.find((v) => v.stock > 0) ?? p.variants[0];
+      const variant =
+        p.variants.find((v) => isSellable(v.stock, p.madeToOrder)) ?? p.variants[0];
       if (!variant) return null;
       return {
         variantId: variant.id,
@@ -31,7 +33,9 @@ export default async function BuildBoxPage() {
         category: p.category.name,
         label: variant.label,
         price: variant.price,
-        stock: variant.stock,
+        // The builder only needs to know how many it may take, so hand it the
+        // effective cap — made-to-order items are never "out of stock" here.
+        stock: sellableQty(variant.stock, p.madeToOrder),
         image: p.images[0]?.url ?? null,
       };
     })

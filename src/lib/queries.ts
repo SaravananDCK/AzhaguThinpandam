@@ -229,6 +229,7 @@ export async function getDiscountConfig(): Promise<DiscountConfig> {
         select: {
           name: true,
           isActive: true,
+          madeToOrder: true,
           images: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
       },
@@ -246,7 +247,10 @@ export async function getDiscountConfig(): Promise<DiscountConfig> {
         image: v.product.images[0]?.url ?? null,
         weightGrams: v.weightGrams,
         stock: v.stock,
-        available: v.isActive && v.product.isActive && v.stock >= g.qty,
+        available:
+          v.isActive &&
+          v.product.isActive &&
+          (v.product.madeToOrder || v.stock >= g.qty),
       },
     ];
   });

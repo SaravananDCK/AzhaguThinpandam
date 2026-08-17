@@ -18,7 +18,7 @@ export default async function AdminNewOrderPage({ searchParams }: Props) {
   // Everything sellable, so the picker matches what a customer could order
   const variants = await prisma.productVariant.findMany({
     where: { isActive: true, product: { isActive: true } },
-    include: { product: { select: { name: true } } },
+    include: { product: { select: { name: true, madeToOrder: true } } },
     orderBy: [{ product: { name: "asc" } }, { label: "asc" }],
   });
 
@@ -46,6 +46,7 @@ export default async function AdminNewOrderPage({ searchParams }: Props) {
           label: `${v.product.name} — ${v.label}`,
           price: v.price,
           stock: v.stock,
+          madeToOrder: v.product.madeToOrder,
         }))}
       />
     </div>

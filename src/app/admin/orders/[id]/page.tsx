@@ -32,7 +32,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     }),
     prisma.productVariant.findMany({
       where: { isActive: true, product: { isActive: true } },
-      include: { product: { select: { name: true } } },
+      include: { product: { select: { name: true, madeToOrder: true } } },
       orderBy: [{ product: { name: "asc" } }, { label: "asc" }],
     }),
   ]);
@@ -138,6 +138,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 label: `${v.product.name} — ${v.label}`,
                 price: v.price,
                 stock: v.stock,
+                madeToOrder: v.product.madeToOrder,
               }))}
             />
           )}

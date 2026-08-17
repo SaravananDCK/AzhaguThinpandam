@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { GoodieTier } from "@/lib/box";
 
-export type GoodieVariantOption = { id: string; label: string; stock: number };
+export type GoodieVariantOption = {
+  id: string;
+  label: string;
+  stock: number;
+  madeToOrder: boolean;
+};
 
 type Row = { kg: string; variantId: string; qty: string };
 
@@ -65,7 +70,8 @@ export function GoodieTiersEditor({
                 <option value="">Pick an item…</option>
                 {variants.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.label} ({v.stock} in stock)
+                    {v.label}{" "}
+                    {v.madeToOrder ? "(made to order)" : `(${v.stock} in stock)`}
                   </option>
                 ))}
               </select>
@@ -87,7 +93,7 @@ export function GoodieTiersEditor({
                 <Trash2 className="size-4" />
               </button>
             </div>
-            {chosen && chosen.stock <= 0 && (
+            {chosen && !chosen.madeToOrder && chosen.stock <= 0 && (
               <p className="text-xs text-destructive">
                 Out of stock — this goodie is skipped until restocked.
               </p>

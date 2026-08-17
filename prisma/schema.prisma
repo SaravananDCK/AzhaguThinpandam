@@ -70,6 +70,12 @@ model Product {
   isActive    Boolean          @default(true)
   isFeatured  Boolean          @default(false)
   isFlagship  Boolean          @default(false) // hero products pinned to the top of listings
+  // Made fresh in batches, so a stock count of 0 must never block a sale: the
+  // storefront always shows it as available and checkout skips the stock check.
+  // Stock still counts down (and may go negative — units owed) so the ledger
+  // and Purchases keep working. Merchandise leaves this off; it really does
+  // run out. See src/lib/availability.ts.
+  madeToOrder Boolean          @default(false)
   // Which product line this belongs to — see PRODUCT_LINES. Snacks are priced
   // and discounted by weight; merchandise (fridge magnets) is not, so the two
   // are listed separately on the storefront. SQLite has no enums.

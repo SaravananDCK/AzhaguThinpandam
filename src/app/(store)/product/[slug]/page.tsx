@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { getApprovedReviews, hasPurchasedProduct } from "@/lib/reviews";
 import { JsonLd, absoluteUrl, siteUrl } from "@/lib/seo";
 import { paiseToRupees } from "@/lib/money";
+import { isSellable } from "@/lib/availability";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -52,7 +53,7 @@ export default async function ProductPage({ params }: Props) {
   const related = await getRelatedProducts(product.categoryId, product.id);
 
   const prices = product.variants.map((v) => v.price);
-  const inStock = product.variants.some((v) => v.stock > 0);
+  const inStock = product.variants.some((v) => isSellable(v.stock, product.madeToOrder));
 
   // Reviews: approved list for everyone, plus this customer's eligibility to post
   const reviews = await getApprovedReviews(product.id);
@@ -165,6 +166,7 @@ export default async function ProductPage({ params }: Props) {
               tamilName={product.tamilName}
               image={product.images[0]?.url}
               line={product.line}
+              madeToOrder={product.madeToOrder}
               variants={product.variants.map((v) => ({
                 id: v.id,
                 label: v.label,

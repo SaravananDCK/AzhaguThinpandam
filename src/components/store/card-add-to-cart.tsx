@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { formatINR } from "@/lib/money";
 import { basePacketGrams } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
+import { isSellable, sellableQty } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
 type Variant = {
@@ -26,6 +27,8 @@ type Props = {
   variants: Variant[];
   /** PRODUCT_LINES — carried into the cart so only snacks earn the weight discount */
   line?: string;
+  /** Made fresh per order — stock never marks it unavailable */
+  madeToOrder?: boolean;
 };
 
 /** Compact price + size picker + add button, used inside product cards so
@@ -37,8 +40,10 @@ export function CardAddToCart({
   image,
   variants,
   line,
+  madeToOrder = false,
 }: Props) {
-  const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
+  const firstAvailable =
+    variants.find((v) => isSellable(v.stock, madeToOrder)) ?? variants[0];
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const addItem = useCart((s) => s.addItem);
   const packetGrams = basePacketGrams(variants.map((v) => v.label));
@@ -47,8 +52,8 @@ export function CardAddToCart({
     return <p className="text-xs text-muted-foreground">Currently unavailable.</p>;
   }
 
-  const anyStock = variants.some((v) => v.stock > 0);
-  const outOfStock = !selected || selected.stock <= 0;
+  const anyStock = variants.some((v) => isSellable(v.stock, madeToOrder));
+  const outOfStock = !selected || !isSellable(selected.stock, madeToOrder);
   const discount =
     selected?.mrp && selected.mrp > selected.price
       ? Math.round(((selected.mrp - selected.price) / selected.mrp) * 100)
@@ -64,7 +69,7 @@ export function CardAddToCart({
       variantLabel: selected.label,
       price: selected.price,
       image,
-      maxStock: selected.stock,
+      maxStock: sellableQty(selected.stock, madeToOrder),
       packetGrams,
       weightGrams: selected.weightGrams ?? null,
       line,
@@ -94,13 +99,14 @@ export function CardAddToCart({
             key={v.id}
             type="button"
             onClick={() => setSelected(v)}
-            disabled={v.stock <= 0 || variants.length === 1}
+            disabled={!isSellable(v.stock, madeToOrder) || variants.length === 1}
             className={cn(
               "rounded-lg border px-2 py-0.5 text-xs font-medium transition-colors",
               selected?.id === v.id
                 ? "border-primary-600 bg-primary-600 text-white"
                 : "hover:border-primary-500",
-              v.stock <= 0 && "cursor-not-allowed line-through opacity-40",
+              !isSellable(v.stock, madeToOrder) &&
+                "cursor-not-allowed line-through opacity-40",
               variants.length === 1 && "cursor-default"
             )}
           >

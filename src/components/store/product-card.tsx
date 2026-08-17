@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
 import { CardAddToCart } from "@/components/store/card-add-to-cart";
 import { Stars } from "@/components/store/stars";
+import { isSellable } from "@/lib/availability";
 import type { ProductWithDetails } from "@/lib/queries";
 
 export function ProductCard({ product }: { product: ProductWithDetails }) {
@@ -9,7 +10,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
   const prices = product.variants.map((v) => v.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const cheapest = product.variants.find((v) => v.price === minPrice);
-  const inStock = product.variants.some((v) => v.stock > 0);
+  const inStock = product.variants.some((v) => isSellable(v.stock, product.madeToOrder));
   const discount =
     cheapest?.mrp && cheapest.mrp > cheapest.price
       ? Math.round(((cheapest.mrp - cheapest.price) / cheapest.mrp) * 100)
@@ -94,6 +95,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           tamilName={product.tamilName}
           image={image}
           line={product.line}
+          madeToOrder={product.madeToOrder}
           variants={product.variants.map((v) => ({
             id: v.id,
             label: v.label,

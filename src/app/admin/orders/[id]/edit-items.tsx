@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { updateOrderItems } from "../actions";
 
-type Variant = { id: string; label: string; price: number; stock: number };
+type Variant = {
+  id: string;
+  label: string;
+  price: number;
+  stock: number;
+  madeToOrder: boolean;
+};
 type Line = { variantId: string; qty: number };
 
 export function EditOrderItems({
@@ -87,7 +93,8 @@ export function EditOrderItems({
               <option value="">Select an item…</option>
               {variants.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.label} — {formatINR(v.price)} ({v.stock} in stock)
+                  {v.label} — {formatINR(v.price)}{" "}
+                  {v.madeToOrder ? "(made to order)" : `(${v.stock} in stock)`}
                 </option>
               ))}
             </select>

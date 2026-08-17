@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/money";
 import { basePacketGrams, packNote } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
+import { isSellable, sellableQty } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
 type Variant = {
@@ -28,6 +29,8 @@ type Props = {
   variants: Variant[];
   /** PRODUCT_LINES — carried into the cart so only snacks earn the weight discount */
   line?: string;
+  /** Made fresh per order — stock never marks it unavailable */
+  madeToOrder?: boolean;
 };
 
 export function AddToCart({
@@ -37,8 +40,10 @@ export function AddToCart({
   image,
   variants,
   line,
+  madeToOrder = false,
 }: Props) {
-  const firstAvailable = variants.find((v) => v.stock > 0) ?? variants[0];
+  const firstAvailable =
+    variants.find((v) => isSellable(v.stock, madeToOrder)) ?? variants[0];
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const [qty, setQty] = useState(1);
   const addItem = useCart((s) => s.addItem);
@@ -48,7 +53,10 @@ export function AddToCart({
     return <p className="text-sm text-muted-foreground">Currently unavailable.</p>;
   }
 
-  const outOfStock = !selected || selected.stock <= 0;
+  const outOfStock = !selected || !isSellable(selected.stock, madeToOrder);
+  // How high the quantity stepper may go: the per-line cap for made-to-order
+  // items, otherwise what's actually on the shelf.
+  const maxQty = selected ? sellableQty(selected.stock, madeToOrder) : 1;
 
   return (
     <div className="space-y-5">
@@ -63,13 +71,14 @@ export function AddToCart({
                 setSelected(v);
                 setQty(1);
               }}
-              disabled={v.stock <= 0}
+              disabled={!isSellable(v.stock, madeToOrder)}
               className={cn(
                 "rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-300",
                 selected?.id === v.id
                   ? "border-primary-600 bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-[0_0_16px_rgba(207,68,68,0.35)]"
                   : "hover:scale-105 hover:border-primary-500",
-                v.stock <= 0 && "cursor-not-allowed opacity-50 line-through"
+                !isSellable(v.stock, madeToOrder) &&
+                  "cursor-not-allowed opacity-50 line-through"
               )}
             >
               {v.label}
@@ -103,7 +112,9 @@ export function AddToCart({
         </p>
       )}
 
-      {selected && selected.stock > 0 && selected.stock <= 5 && (
+      {/* Scarcity copy only makes sense for finite goods — never for something
+          cooked to order. */}
+      {selected && !madeToOrder && selected.stock > 0 && selected.stock <= 5 && (
         <p className="text-sm font-medium text-destructive">
           Only {selected.stock} left in stock
         </p>
@@ -126,8 +137,8 @@ export function AddToCart({
             variant="ghost"
             size="icon"
             className="size-10"
-            onClick={() => setQty((q) => Math.min(selected?.stock ?? 1, q + 1))}
-            disabled={outOfStock || qty >= (selected?.stock ?? 1)}
+            onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+            disabled={outOfStock || qty >= maxQty}
             aria-label="Increase quantity"
           >
             <Plus className="size-4" />
@@ -149,7 +160,7 @@ export function AddToCart({
                 variantLabel: selected.label,
                 price: selected.price,
                 image,
-                maxStock: selected.stock,
+                maxStock: maxQty,
                 packetGrams,
                 weightGrams: selected.weightGrams ?? null,
                 line,
