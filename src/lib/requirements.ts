@@ -19,7 +19,21 @@ export type ConsolidatedLine = {
   unitCost: number | null;
   /** Wholesale ₹/kg in paise, when set */
   pricePerKgPaise: number | null;
+  /**
+   * Which group this line belongs to, for filtering the printed report:
+   * a category slug for snacks, MERCH_GROUP for merchandise (magnets aren't
+   * made in the kitchen), UNGROUPED when the variant was deleted and only a
+   * name snapshot survives.
+   */
+  group: string;
+  /** Human label for `group`. */
+  groupName: string;
 };
+
+/** Non-snack lines (merchandise) share one group — they're bought, not made. */
+export const MERCH_GROUP = "__merch";
+/** Lines whose product is gone, so they can't be classified. */
+export const UNGROUPED = "__other";
 
 export type Consolidation = {
   orders: { id: string; orderNumber: string; shipName: string; createdAt: Date }[];
@@ -49,7 +63,14 @@ export async function consolidateOrders(orderIds: string[]): Promise<Consolidati
               label: true,
               weightGrams: true,
               unitCost: true,
-              product: { select: { name: true, purchasePricePerKg: true } },
+              product: {
+                select: {
+                  name: true,
+                  purchasePricePerKg: true,
+                  line: true,
+                  category: { select: { name: true, slug: true } },
+                },
+              },
             },
           },
         },
@@ -93,6 +114,10 @@ export async function consolidateOrders(orderIds: string[]): Promise<Consolidati
         kg: grams ? (packs * grams) / 1000 : null,
         unitCost: v.unitCost,
         pricePerKgPaise: v.product.purchasePricePerKg,
+        // Merchandise is bought in, not made, so it groups on its own rather
+        // than under whichever category it happens to sit in.
+        group: v.product.line === "SNACKS" ? v.product.category.slug : MERCH_GROUP,
+        groupName: v.product.line === "SNACKS" ? v.product.category.name : "Merchandise",
       };
     }),
     ...[...legacy.values()].map(({ packs, description, label }) => {
@@ -105,6 +130,8 @@ export async function consolidateOrders(orderIds: string[]): Promise<Consolidati
         kg: grams ? (packs * grams) / 1000 : null,
         unitCost: null,
         pricePerKgPaise: null,
+        group: UNGROUPED,
+        groupName: "Uncategorised",
       };
     }),
   ].sort((a, b) => a.description.localeCompare(b.description));
