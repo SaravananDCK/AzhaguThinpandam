@@ -284,27 +284,35 @@ export async function updateShippingCost(orderId: string, formData: FormData): P
 }
 
 /**
- * Sets an ad-hoc discount on an unpaid order — the "₹50 off for a regular"
- * agreed over WhatsApp, which no coupon covers.
+ * Adjusts the money on an unpaid order: an ad-hoc discount (the WhatsApp
+ * "fifty off for a regular" that no coupon covers) and/or a hand-set delivery
+ * charge. Both in one action so the total is computed in exactly one place —
+ * two separate writers would eventually disagree.
  *
- * Unpaid only: reducing a total after the customer has paid would leave them
- * out of pocket against what the order now says, and would rewrite revenue for
+ * Unpaid only: changing what is owed after the customer has paid would leave
+ * them out of pocket against what the order says, and would rewrite revenue for
  * a period that may already have been reported.
  *
- * Stored in `manualDiscount` rather than folded into `discount`, because
- * priceOrderLines recomputes `discount` from scratch on every reprice and would
- * silently erase it the next time the items were edited.
+ * Both are stored apart from the computed figures (,
+ * ) because priceOrderLines recalculates discount and
+ * shipping from scratch on every reprice and would otherwise erase them the
+ * next time the items were edited.
  */
-export async function setOrderDiscount(
+export async function adjustOrderTotals(
   orderId: string,
-  amountRupees: string,
-  note: string
+  discountRupees: string,
+  note: string,
+  shippingRupees: string
 ) {
   await assertAdmin();
 
-  const amount = rupeesToPaise(amountRupees);
-  if (amount === null || amount < 0) {
+  const discountAmount = rupeesToPaise(discountRupees);
+  const shippingAmount = rupeesToPaise(shippingRupees);
+  if (discountAmount === null || discountAmount < 0) {
     return { error: "Enter a valid discount amount." };
+  }
+  if (shippingAmount === null || shippingAmount < 0) {
+    return { error: "Enter a valid shipping amount." };
   }
 
   const order = await prisma.order.findUnique({
@@ -314,22 +322,28 @@ export async function setOrderDiscount(
   if (!order) return { error: "Order not found." };
   if (order.status !== "PENDING") {
     return {
-      error: `Only unpaid orders can be discounted — this one is ${order.status.toLowerCase()}.`,
+      error: `Only unpaid orders can be adjusted — this one is ${order.status.toLowerCase()}.`,
     };
   }
 
   // Never let an order owe less than nothing.
   const maxDiscount = Math.max(0, order.subtotal - order.discount);
-  if (amount > maxDiscount) {
-    return { error: `That's more than the order is worth (max ${formatINR(maxDiscount)}).` };
+  if (discountAmount > maxDiscount) {
+    return { error: `That discount is more than the order is worth (max ${formatINR(maxDiscount)}).` };
   }
 
-  const total = order.subtotal - order.discount - amount + order.shippingFee;
+  const total = order.subtotal - order.discount - discountAmount + shippingAmount;
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },
-      data: { manualDiscount: amount, discountNote: note.trim() || null, total },
+      data: {
+        manualDiscount: discountAmount,
+        discountNote: note.trim() || null,
+        shippingFee: shippingAmount,
+        shippingFeeOverride: shippingAmount,
+        total,
+      },
     });
     // Keep the pending payment (and the UPI QR built from it) in step.
     if (order.payment && order.payment.status !== PAYMENT_STATUSES.CAPTURED) {

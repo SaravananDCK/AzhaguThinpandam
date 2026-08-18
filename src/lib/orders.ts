@@ -429,7 +429,10 @@ export async function repriceOrderItems(params: {
     order.manualDiscount,
     Math.max(0, priced.subtotal - priced.discount)
   );
-  const total = priced.total - manualDiscount;
+  // An admin-set delivery charge is a decision too — recomputing it here would
+  // quietly undo it the next time the items changed.
+  const shippingFee = order.shippingFeeOverride ?? priced.shippingFee;
+  const total = priced.subtotal - priced.discount - manualDiscount + shippingFee;
 
   return prisma.$transaction(async (tx) => {
     await tx.orderItem.deleteMany({ where: { orderId: order.id } });
@@ -439,7 +442,7 @@ export async function repriceOrderItems(params: {
         subtotal: priced.subtotal,
         discount: priced.discount,
         manualDiscount,
-        shippingFee: priced.shippingFee,
+        shippingFee,
         total,
         packingCost: priced.packingCost,
         couponId: priced.couponId,

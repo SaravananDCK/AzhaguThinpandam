@@ -16,7 +16,7 @@ import { StatusButtons } from "./status-buttons";
 import { DeleteOrder } from "./delete-order";
 import { EditOrderDetails } from "./edit-details";
 import { EditOrderItems } from "./edit-items";
-import { OrderDiscount } from "./order-discount";
+import { AdjustTotals } from "./adjust-totals";
 import { CostPanel } from "./cost-panel";
 import { updatePackingCost, updateShippingCost } from "../actions";
 
@@ -144,10 +144,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             />
           )}
           {order.status === "PENDING" && (
-            <OrderDiscount
+            <AdjustTotals
               orderId={order.id}
               manualDiscount={order.manualDiscount}
               discountNote={order.discountNote}
+              shippingFee={order.shippingFee}
               maxDiscount={Math.max(0, order.subtotal - order.discount)}
             />
           )}

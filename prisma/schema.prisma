@@ -201,6 +201,11 @@ model Order {
   // on every reprice and would otherwise wipe it.
   manualDiscount Int     @default(0) // paise
   discountNote   String? // why it was given, e.g. "regular customer"
+  // Admin-set delivery charge, overriding the computed one. Null means "use the
+  // shipping rules". Kept separate so repricing knows not to recompute it;
+  // `shippingFee` above always holds the effective amount charged, so every
+  // display and report reads it without knowing about this.
+  shippingFeeOverride Int?
   total       Int // paise (subtotal - discount - manualDiscount + shippingFee)
   packingCost Int         @default(0) // paise — internal cost (not charged to customer)
   // What the courier actually charged us, paise. `shippingFee` above is what
