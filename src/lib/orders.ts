@@ -422,6 +422,15 @@ export async function repriceOrderItems(params: {
     isEmployee: order.user?.isEmployee === true,
   });
 
+  // A manual discount is the admin's decision, not a computed one, so it
+  // survives repricing — but it cannot exceed the new amount owed, or the order
+  // would total less than nothing after the items shrank.
+  const manualDiscount = Math.min(
+    order.manualDiscount,
+    Math.max(0, priced.subtotal - priced.discount)
+  );
+  const total = priced.total - manualDiscount;
+
   return prisma.$transaction(async (tx) => {
     await tx.orderItem.deleteMany({ where: { orderId: order.id } });
     const updated = await tx.order.update({
@@ -429,8 +438,9 @@ export async function repriceOrderItems(params: {
       data: {
         subtotal: priced.subtotal,
         discount: priced.discount,
+        manualDiscount,
         shippingFee: priced.shippingFee,
-        total: priced.total,
+        total,
         packingCost: priced.packingCost,
         couponId: priced.couponId,
         couponCode: priced.couponCode,
@@ -444,7 +454,7 @@ export async function repriceOrderItems(params: {
     if (order.payment && order.payment.status !== PAYMENT_STATUSES.CAPTURED) {
       await tx.payment.update({
         where: { id: order.payment.id },
-        data: { amount: priced.total },
+        data: { amount: total },
       });
     }
 

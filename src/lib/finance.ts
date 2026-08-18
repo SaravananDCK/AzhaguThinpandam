@@ -29,6 +29,7 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
       select: {
         subtotal: true,
         discount: true,
+        manualDiscount: true,
         shippingFee: true,
         packingCost: true,
         shippingCost: true,
@@ -45,7 +46,10 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
     }),
   ]);
 
-  const revenue = orders.reduce((s, o) => s + o.subtotal - o.discount, 0);
+  const revenue = orders.reduce(
+    (s, o) => s + o.subtotal - o.discount - o.manualDiscount,
+    0
+  );
   const shippingIncome = orders.reduce((s, o) => s + o.shippingFee, 0);
   const packing = orders.reduce((s, o) => s + o.packingCost, 0);
   // What couriers actually charged, as recorded per order. Shown against

@@ -128,7 +128,7 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
   const shippingCostMissing = shippingCost === 0 && order.items.length > 0;
 
   const totalCost = goodsCost + order.packingCost + shippingCost;
-  const netRevenue = order.subtotal - order.discount;
+  const netRevenue = order.subtotal - order.discount - order.manualDiscount;
   const margin = netRevenue + shippingIncome - totalCost;
 
   return {

@@ -234,6 +234,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
                 </span>
               </div>
             )}
+            {order.manualDiscount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount</span>
+                <span className="font-medium text-green-600 dark:text-green-400">
+                  −{formatINR(order.manualDiscount)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Shipping</span>
               <span>{order.shippingFee === 0 ? "FREE" : formatINR(order.shippingFee)}</span>

@@ -196,7 +196,12 @@ model Order {
   subtotal    Int // paise
   discount    Int         @default(0) // paise — bundle/box tier discount
   shippingFee Int // paise
-  total       Int // paise (subtotal - discount + shippingFee)
+  // Ad-hoc reduction an admin agrees on an unpaid order (WhatsApp haggling).
+  // Kept apart from `discount`, which priceOrderLines recomputes from scratch
+  // on every reprice and would otherwise wipe it.
+  manualDiscount Int     @default(0) // paise
+  discountNote   String? // why it was given, e.g. "regular customer"
+  total       Int // paise (subtotal - discount - manualDiscount + shippingFee)
   packingCost Int         @default(0) // paise — internal cost (not charged to customer)
   // What the courier actually charged us, paise. `shippingFee` above is what
   // the customer was charged — the two differ (flat ₹60 collected on a 2 kg

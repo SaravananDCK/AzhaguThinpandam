@@ -16,6 +16,7 @@ import { StatusButtons } from "./status-buttons";
 import { DeleteOrder } from "./delete-order";
 import { EditOrderDetails } from "./edit-details";
 import { EditOrderItems } from "./edit-items";
+import { OrderDiscount } from "./order-discount";
 import { CostPanel } from "./cost-panel";
 import { updatePackingCost, updateShippingCost } from "../actions";
 
@@ -142,6 +143,14 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               }))}
             />
           )}
+          {order.status === "PENDING" && (
+            <OrderDiscount
+              orderId={order.id}
+              manualDiscount={order.manualDiscount}
+              discountNote={order.discountNote}
+              maxDiscount={Math.max(0, order.subtotal - order.discount)}
+            />
+          )}
           <Separator />
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
@@ -155,6 +164,16 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 </span>
                 <span className="font-medium text-green-600 dark:text-green-400">
                   −{formatINR(order.discount)}
+                </span>
+              </div>
+            )}
+            {order.manualDiscount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Discount{order.discountNote ? ` (${order.discountNote})` : ""}
+                </span>
+                <span className="font-medium text-green-600 dark:text-green-400">
+                  −{formatINR(order.manualDiscount)}
                 </span>
               </div>
             )}

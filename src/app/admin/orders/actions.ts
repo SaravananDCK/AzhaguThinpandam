@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
-import { NEXT_STATUSES, ORDER_STATUSES, type OrderStatus } from "@/lib/constants";
+import {
+  NEXT_STATUSES,
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  type OrderStatus,
+} from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
 import { createOrderForCustomer, lookupCustomerByPhone } from "@/lib/admin-orders";
 import {
@@ -13,7 +18,7 @@ import {
   markOrderPaid,
   repriceOrderItems,
 } from "@/lib/orders";
-import { rupeesToPaise } from "@/lib/money";
+import { formatINR, rupeesToPaise } from "@/lib/money";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
 
 export async function updateOrderStatus(orderId: string, newStatus: string) {
@@ -276,4 +281,64 @@ export async function updateShippingCost(orderId: string, formData: FormData): P
   await prisma.order.update({ where: { id: orderId }, data: { shippingCost } }).catch(() => {});
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/finance");
+}
+
+/**
+ * Sets an ad-hoc discount on an unpaid order — the "₹50 off for a regular"
+ * agreed over WhatsApp, which no coupon covers.
+ *
+ * Unpaid only: reducing a total after the customer has paid would leave them
+ * out of pocket against what the order now says, and would rewrite revenue for
+ * a period that may already have been reported.
+ *
+ * Stored in `manualDiscount` rather than folded into `discount`, because
+ * priceOrderLines recomputes `discount` from scratch on every reprice and would
+ * silently erase it the next time the items were edited.
+ */
+export async function setOrderDiscount(
+  orderId: string,
+  amountRupees: string,
+  note: string
+) {
+  await assertAdmin();
+
+  const amount = rupeesToPaise(amountRupees);
+  if (amount === null || amount < 0) {
+    return { error: "Enter a valid discount amount." };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payment: true },
+  });
+  if (!order) return { error: "Order not found." };
+  if (order.status !== "PENDING") {
+    return {
+      error: `Only unpaid orders can be discounted — this one is ${order.status.toLowerCase()}.`,
+    };
+  }
+
+  // Never let an order owe less than nothing.
+  const maxDiscount = Math.max(0, order.subtotal - order.discount);
+  if (amount > maxDiscount) {
+    return { error: `That's more than the order is worth (max ${formatINR(maxDiscount)}).` };
+  }
+
+  const total = order.subtotal - order.discount - amount + order.shippingFee;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: orderId },
+      data: { manualDiscount: amount, discountNote: note.trim() || null, total },
+    });
+    // Keep the pending payment (and the UPI QR built from it) in step.
+    if (order.payment && order.payment.status !== PAYMENT_STATUSES.CAPTURED) {
+      await tx.payment.update({ where: { id: order.payment.id }, data: { amount: total } });
+    }
+  });
+
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  return { ok: true, total };
 }
