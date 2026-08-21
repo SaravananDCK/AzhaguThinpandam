@@ -104,6 +104,87 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
 }
 
 /**
+ * Rewinds a paid order to payment-pending, undoing everything markOrderPaid
+ * did: stock goes back on the shelf, the SALE ledger rows are removed and any
+ * coupon redemption is released. For payments recorded in error, or refunded
+ * in the Razorpay dashboard and now needing the order to match.
+ *
+ * Nothing is refunded here — this only rewinds our records.
+ *
+ * PAID only, and deliberately not in NEXT_STATUSES: from CONFIRMED onward the
+ * goods are already in motion, and a correction that erases ledger rows should
+ * not sit in the workflow strip next to "Mark Confirmed".
+ *
+ * The SALE movements are the source for the restock quantities, not the order
+ * items — markOrderPaid clamps the decrement at zero for stocked goods, so an
+ * item's qty can overstate what actually left. Those rows are deleted rather
+ * than reversed with CANCEL_RESTOCK entries: the sale is being erased, not
+ * returned, and a compensating pair would leave two ghost movements behind for
+ * a payment the order no longer records.
+ */
+export async function revertOrderToPending(orderId: string) {
+  await assertAdmin();
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payment: true, redemption: true },
+  });
+  if (!order) return { error: "Order not found." };
+
+  // Re-checked server-side: the button only renders on paid orders, but a
+  // hidden button is not a permission.
+  if (order.status !== "PAID") {
+    return {
+      error: `Only paid orders can be moved back to payment-pending — this one is ${order.status.toLowerCase()}.`,
+    };
+  }
+
+  const sales = await prisma.stockMovement.findMany({
+    where: { reference: order.orderNumber, reason: STOCK_REASONS.SALE },
+    select: { id: true, variantId: true, delta: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    for (const movement of sales) {
+      await tx.productVariant.update({
+        where: { id: movement.variantId },
+        data: { stock: { increment: -movement.delta } },
+      });
+    }
+    await tx.stockMovement.deleteMany({ where: { id: { in: sales.map((m) => m.id) } } });
+
+    if (order.redemption) {
+      await tx.couponRedemption.delete({ where: { orderId: order.id } });
+    }
+
+    if (order.payment) {
+      // Back to CREATED, not just the order status: markOrderPaid early-returns
+      // on a CAPTURED payment, so leaving it captured would make the order
+      // impossible to mark paid again — the button would silently do nothing.
+      await tx.payment.update({
+        where: { id: order.payment.id },
+        data: {
+          status: PAYMENT_STATUSES.CREATED,
+          razorpayPaymentId: null,
+          razorpaySignature: null,
+          method: null,
+        },
+      });
+    }
+
+    await tx.order.update({ where: { id: orderId }, data: { status: "PENDING" } });
+  });
+
+  // No status email: sendOrderStatusEmail ignores PENDING, and the customer's
+  // confirmation already went out — whatever needs saying about a reversed
+  // payment, the admin is better placed to say directly.
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  return { ok: true };
+}
+
+/**
  * Removes an order permanently — for test orders, duplicates and junk.
  *
  * Restricted to PENDING and CANCELLED on purpose, and that restriction is what
