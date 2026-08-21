@@ -72,3 +72,6 @@ rzp*.csv
 
 # Local scratch: throwaway scripts and db dumps kept at the repo root
 /_*
+
+# Claude Code's local session settings
+/.claude
