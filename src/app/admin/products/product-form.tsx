@@ -404,9 +404,9 @@ export function ProductForm({
               {variants.map((v, i) => (
                 <div
                   key={v.id ?? `new-${i}`}
-                  className="grid grid-cols-2 items-end gap-2 rounded-lg border p-3 sm:grid-cols-[28px_1fr_100px_100px_80px_1fr_36px]"
+                  className="grid grid-cols-2 items-end gap-2 rounded-lg border p-3 2xl:grid-cols-[28px_1fr_90px_90px_70px_80px_80px_1fr_36px]"
                 >
-                  <div className="hidden flex-col sm:flex">
+                  <div className="hidden flex-col 2xl:flex">
                     <button
                       type="button"
                       className="flex h-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30"
