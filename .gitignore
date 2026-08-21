@@ -65,3 +65,10 @@ prisma/*.db*
 /PriceList*.png
 /WelcomeBanner.png
 /Backup_of_*
+
+# Razorpay key exports from the dashboard — these hold key_secret. Keep them
+# out of the repo entirely; the values belong in .env only.
+rzp*.csv
+
+# Local scratch: throwaway scripts and db dumps kept at the repo root
+/_*
