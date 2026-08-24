@@ -19,7 +19,15 @@ declare global {
  * live — the escape hatch for a payment that failed or a popup that was
  * closed, so the customer never has to rebuild their cart to pay.
  */
-export function PayNow({ orderNumber, total }: { orderNumber: string; total: number }) {
+export function PayNow({
+  orderNumber,
+  total,
+  size = "lg",
+}: {
+  orderNumber: string;
+  total: number;
+  size?: "sm" | "lg";
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -88,7 +96,7 @@ export function PayNow({ orderNumber, total }: { orderNumber: string; total: num
   return (
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
-      <Button size="lg" onClick={pay} disabled={busy}>
+      <Button size={size} onClick={pay} disabled={busy}>
         {busy ? <Loader2 className="size-4 animate-spin" /> : <IndianRupee className="size-4" />}
         Pay {formatINR(total)} now
       </Button>

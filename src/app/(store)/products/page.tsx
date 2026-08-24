@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/product-card";
 import { CartSidebar } from "@/components/store/cart-sidebar";
+import { UnpaidOrderNotice } from "@/components/store/unpaid-order-notice";
 import { getCategories, getDiscountConfig, getProductsPage } from "@/lib/queries";
 import { getViewerPricing } from "@/lib/viewer";
 import { prisma } from "@/lib/prisma";
@@ -219,6 +220,7 @@ export default async function ProductsPage({ searchParams }: Props) {
         {/* Live cart — desktop only */}
         <aside className="hidden lg:block">
           <div className="sticky top-24">
+            <UnpaidOrderNotice compact />
             <CartSidebar
               tiers={discount.tiers}
               discountType={discount.type}
