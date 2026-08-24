@@ -5,6 +5,9 @@ export const purchaseSchema = z.object({
   supplier: z.string().trim().min(1).max(200),
   supplierId: z.string().min(1).optional().or(z.literal("")),
   gstRate: z.number().min(0).max(100).default(0),
+  // Paise. Courier the supplier billed on top of the goods — see the Purchase
+  // model for why it stays out of `total`.
+  transportCharge: z.number().int().min(0).max(100_000_00).default(0),
   invoiceNo: z.string().trim().max(100).optional().or(z.literal("")),
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
   items: z

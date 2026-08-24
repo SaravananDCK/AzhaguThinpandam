@@ -371,6 +371,12 @@ model Purchase {
   notes       String?
   gstRate     Float          @default(0) // GST% included in `total` (input GST)
   total       Int // paise (sum of item amounts, GST-inclusive)
+  // Courier/lorry charges the supplier paid on our behalf and billed with the
+  // invoice — owed to them like the goods, but kept OUT of `total` so the
+  // input-GST math (rate backed out of `total`) never taxes freight, and out
+  // of Expenses so it isn't counted twice. Zero when we paid the transporter
+  // ourselves (that stays an Expense, as before).
+  transportCharge Int        @default(0) // paise
   // UNPAID | PAID (PURCHASE_STATUSES) — a per-invoice marker. The authoritative
   // supplier balance stays Σ(purchases) − Σ(SupplierPayment); marking an invoice
   // paid offers to record that payment so the two agree.

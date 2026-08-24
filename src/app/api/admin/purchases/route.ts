@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         supplier: parsed.data.supplier,
         supplierId: parsed.data.supplierId || null,
         gstRate: parsed.data.gstRate,
+        transportCharge: parsed.data.transportCharge,
         invoiceNo: parsed.data.invoiceNo || null,
         notes: parsed.data.notes || null,
         total: items.reduce((s, i) => s + i.amount, 0),

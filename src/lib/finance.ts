@@ -36,7 +36,7 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
       },
     }),
     prisma.purchase.aggregate({
-      _sum: { total: true },
+      _sum: { total: true, transportCharge: true },
       where: { date: { gte: from, lt: to } },
     }),
     prisma.expense.groupBy({
@@ -59,6 +59,13 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
   const expenses = expensesRaw
     .map((e) => ({ category: e.category, amount: e._sum.amount ?? 0 }))
     .sort((a, b) => b.amount - a.amount);
+  // Supplier-billed transport, shown as its own operating line. Directly-paid
+  // couriers stay in the Expense table under "Transport & Courier" — the two
+  // never overlap, so nothing is counted twice.
+  const supplierTransport = purchases._sum.transportCharge ?? 0;
+  if (supplierTransport > 0) {
+    expenses.push({ category: "Transport (supplier invoices)", amount: supplierTransport });
+  }
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
 
   return {
@@ -154,13 +161,17 @@ export async function computePayables(): Promise<{
     prisma.supplier.findMany({ orderBy: { name: "asc" } }),
     prisma.purchase.groupBy({
       by: ["supplierId"],
-      _sum: { total: true },
+      // Transport the supplier fronted is owed exactly like the goods — it
+      // lives outside `total` only for GST's sake (see the Purchase model).
+      _sum: { total: true, transportCharge: true },
       where: { supplierId: { not: null } },
     }),
     prisma.supplierPayment.groupBy({ by: ["supplierId"], _sum: { amount: true } }),
   ]);
 
-  const purchasedBy = new Map(purchaseSums.map((p) => [p.supplierId, p._sum.total ?? 0]));
+  const purchasedBy = new Map(
+    purchaseSums.map((p) => [p.supplierId, (p._sum.total ?? 0) + (p._sum.transportCharge ?? 0)])
+  );
   const paidBy = new Map(paymentSums.map((p) => [p.supplierId, p._sum.amount ?? 0]));
 
   const rows = suppliers.map((s) => {

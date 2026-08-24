@@ -48,6 +48,7 @@ type PurchaseRow = {
   invoiceNo: string | null;
   notes: string | null;
   total: number;
+  transportCharge: number;
   status: string;
   items: {
     id: string;
@@ -107,6 +108,7 @@ export function PurchasesGrid({
   const [legacySupplier, setLegacySupplier] = useState("");
   const [gstRate, setGstRate] = useState("0");
   const [invoiceNo, setInvoiceNo] = useState("");
+  const [transportRupees, setTransportRupees] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<ItemRow[]>([{ ...EMPTY_ITEM }]);
 
@@ -135,6 +137,7 @@ export function PurchasesGrid({
     setLegacySupplier("");
     setGstRate(first?.gstRate != null ? String(first.gstRate) : "0");
     setInvoiceNo("");
+    setTransportRupees("");
     setNotes("");
     setItems([{ ...EMPTY_ITEM }]);
     setOpen(true);
@@ -152,6 +155,7 @@ export function PurchasesGrid({
     setLegacySupplier("");
     setGstRate(first?.gstRate != null ? String(first.gstRate) : "0");
     setInvoiceNo("");
+    setTransportRupees("");
     setNotes(draft.note);
     setItems(draft.items.length ? draft.items.map((i) => ({ ...i })) : [{ ...EMPTY_ITEM }]);
     setOpen(true);
@@ -174,7 +178,8 @@ export function PurchasesGrid({
     setPayRow(row);
     setPayLogging(Boolean(row.supplierId));
     setPayDate(new Date().toISOString().slice(0, 10));
-    setPayAmount(String(row.total / 100));
+    // Goods + transport: what the supplier is actually owed for this invoice.
+    setPayAmount(String((row.total + (row.transportCharge ?? 0)) / 100));
     setPayMethod("UPI");
     setPayReference("");
   }
@@ -224,6 +229,7 @@ export function PurchasesGrid({
     setLegacySupplier(row.supplierId ? "" : row.supplier);
     setGstRate(String(row.gstRate ?? 0));
     setInvoiceNo(row.invoiceNo ?? "");
+    setTransportRupees(row.transportCharge ? String(row.transportCharge / 100) : "");
     setNotes(row.notes ?? "");
     setItems(
       row.items.map((i) => ({
@@ -328,6 +334,7 @@ export function PurchasesGrid({
             supplier: supplierName,
             supplierId,
             gstRate: rate,
+            transportCharge: Math.round((parseFloat(transportRupees) || 0) * 100),
             invoiceNo,
             notes,
             items: parsedItems,
@@ -378,6 +385,14 @@ export function PurchasesGrid({
           caption="Total"
           width={130}
           calculateCellValue={(row: PurchaseRow) => row.total / 100}
+          dataType="number"
+          format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
+        />
+        <Column
+          dataField="transportCharge"
+          caption="Transport"
+          width={110}
+          calculateCellValue={(row: PurchaseRow) => (row.transportCharge ?? 0) / 100}
           dataType="number"
           format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
         />
@@ -537,9 +552,26 @@ export function PurchasesGrid({
                 onChange={(e) => setGstRate(e.target.value)}
               />
             </div>
-            <div className="grid gap-2 sm:col-span-2">
+            <div className="grid gap-2">
               <Label htmlFor="pu-invoice">Supplier invoice # (optional)</Label>
               <Input id="pu-invoice" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pu-transport">Transport / courier (₹)</Label>
+              <Input
+                id="pu-transport"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                value={transportRupees}
+                onChange={(e) => setTransportRupees(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only what the <strong>supplier</strong> paid the courier and billed you —
+                it&apos;s added to what you owe them (not to the goods total, and no GST).
+                Couriers you paid directly stay in Expenses.
+              </p>
             </div>
           </div>
 
