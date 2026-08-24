@@ -1,5 +1,6 @@
 import Script from "next/script";
 import { Navbar } from "@/components/store/navbar";
+import { CartSyncBridge } from "@/components/store/cart-sync-bridge";
 import { Footer } from "@/components/store/footer";
 import { ReviewsTab } from "@/components/store/reviews-tab";
 import { getSettings } from "@/lib/queries";
@@ -32,6 +33,7 @@ gtag('config', ${JSON.stringify(gaId)});`}
           </Script>
         </>
       )}
+      <CartSyncBridge />
       <Navbar />
       {/* Staff see a different price list — say so, everywhere, unprompted */}
       {isEmployee && (

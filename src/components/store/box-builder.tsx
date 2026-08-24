@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
+import { useLoginGate } from "@/hooks/use-login-gate";
 import {
   activeGoodieKg,
   activeTier,
@@ -53,6 +54,7 @@ export function BoxBuilder({
 }) {
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
+  const { gate, dialog } = useLoginGate();
   const [qty, setQtyMap] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -110,6 +112,11 @@ export function BoxBuilder({
       : 0;
 
   function addBoxToCart() {
+    // Login first: carts belong to a verified customer (see useLoginGate)
+    gate(() => addBoxToCartNow());
+  }
+
+  function addBoxToCartNow() {
     let added = 0;
     for (const item of items) {
       const q = qty[item.variantId] ?? 0;
@@ -358,6 +365,7 @@ export function BoxBuilder({
           </Button>
         </div>
       </div>
+      {dialog}
     </div>
   );
 }

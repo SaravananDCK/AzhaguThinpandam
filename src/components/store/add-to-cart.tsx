@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/money";
 import { basePacketGrams, packNote } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
+import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ export function AddToCart({
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const [qty, setQty] = useState(1);
   const addItem = useCart((s) => s.addItem);
+  const { gate, dialog } = useLoginGate();
   const packetGrams = basePacketGrams(variants.map((v) => v.label));
 
   if (!variants.length) {
@@ -151,6 +153,8 @@ export function AddToCart({
           disabled={outOfStock}
           onClick={() => {
             if (!selected) return;
+            // Login first: carts belong to a verified customer (see useLoginGate)
+            gate(() => {
             addItem(
               {
                 variantId: selected.id,
@@ -168,12 +172,14 @@ export function AddToCart({
               qty
             );
             toast.success(`${productName} (${selected.label}) added to cart`);
+            });
           }}
         >
           <ShoppingBag className="size-4" />
           {outOfStock ? "Out of stock" : "Add to cart"}
         </Button>
       </div>
+      {dialog}
     </div>
   );
 }

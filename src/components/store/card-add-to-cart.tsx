@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { formatINR } from "@/lib/money";
 import { basePacketGrams } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
+import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ export function CardAddToCart({
     variants.find((v) => isSellable(v.stock, madeToOrder)) ?? variants[0];
   const [selected, setSelected] = useState<Variant | undefined>(firstAvailable);
   const addItem = useCart((s) => s.addItem);
+  const { gate, dialog } = useLoginGate();
   const packetGrams = basePacketGrams(variants.map((v) => v.label));
 
   if (!variants.length) {
@@ -61,6 +63,8 @@ export function CardAddToCart({
 
   function add() {
     if (!selected) return;
+    // Login first: carts belong to a verified customer (see useLoginGate)
+    gate(() => {
     addItem({
       variantId: selected.id,
       productSlug,
@@ -75,6 +79,7 @@ export function CardAddToCart({
       line,
     });
     toast.success(`${productName} (${selected.label}) added to cart`);
+    });
   }
 
   return (
@@ -124,6 +129,7 @@ export function CardAddToCart({
         <ShoppingCart className="size-4" />
         {anyStock ? "Add to cart" : "Out of stock"}
       </button>
+      {dialog}
     </div>
   );
 }

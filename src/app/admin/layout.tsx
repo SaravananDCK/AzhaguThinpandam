@@ -17,6 +17,7 @@ import {
   Ticket,
   Truck,
   Users,
+  ShoppingBasket,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/carts", label: "Carts", icon: ShoppingBasket },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/pricing", label: "Pricing", icon: Tags },

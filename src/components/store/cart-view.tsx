@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Gift, Minus, Package, Plus, ShoppingBag, Trash2, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppCartButton } from "@/components/store/whatsapp-cart-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
@@ -31,6 +32,7 @@ export function CartView({
   discountType,
   goodieTiers,
   isEmployee = false,
+  whatsappNumber = null,
 }: {
   shippingFee: number;
   freeShippingAbove: number;
@@ -39,6 +41,8 @@ export function CartView({
   goodieTiers: GoodieInfo[];
   /** Staff pay cost + ₹5/packet: no rewards stack on top, and no delivery fee. */
   isEmployee?: boolean;
+  /** Store WhatsApp number (wa.me digits) — set shows "Order on WhatsApp". */
+  whatsappNumber?: string | null;
 }) {
   const { items, setQty, removeItem } = useCart();
   const mounted = useMounted();
@@ -273,6 +277,7 @@ export function CartView({
             <Button asChild variant="ghost" className="w-full" size="sm">
               <Link href="/products">Continue shopping</Link>
             </Button>
+            {whatsappNumber && <WhatsAppCartButton waNumber={whatsappNumber} />}
           </CardContent>
         </Card>
       </div>
