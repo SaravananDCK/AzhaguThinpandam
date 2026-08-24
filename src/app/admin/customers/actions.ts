@@ -6,7 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import { ROLES } from "@/lib/constants";
-import { normalizePhone } from "@/lib/otp";
+import { createOtp, normalizePhone } from "@/lib/otp";
 
 const customerSchema = z.object({
   phone: z.string().trim().min(1, "Enter a mobile number"),
@@ -150,4 +150,41 @@ export async function updateCustomer(id: string, formData: FormData) {
     console.error("Customer update failed:", e);
     return { error: "Could not save the customer. Please try again." };
   }
+}
+
+/**
+ * Mints a one-time login code for a customer so an admin can sign in as them
+ * and see exactly what they see — a stuck payment, a coupon that won't apply.
+ *
+ * Deliberately NOT a master password: it's the normal OTP machinery, scoped to
+ * one customer, hashed at rest, expiring in 5 minutes, dead after 5 wrong
+ * tries. Nothing here is sent to the customer — the code is shown to the
+ * admin, who enters it on /login via "Already have a code?". Customer accounts
+ * only: admin accounts sign in with email + password, and a code minted for
+ * one would be a privilege-escalation path.
+ */
+export async function generateCustomerLoginCode(
+  customerId: string
+): Promise<{ code?: string; identifier?: string; channel?: string; error?: string }> {
+  await assertAdmin();
+
+  const customer = await prisma.user.findUnique({
+    where: { id: customerId },
+    select: { role: true, phone: true, email: true },
+  });
+  if (!customer) return { error: "Customer not found." };
+  if (customer.role !== ROLES.CUSTOMER) {
+    return { error: "Login codes can only be issued for customer accounts." };
+  }
+  const identifier = customer.phone ?? customer.email;
+  if (!identifier) return { error: "This account has no phone or email to log in with." };
+
+  const result = await createOtp(identifier);
+  if (!result.ok) {
+    return {
+      error:
+        "Code limit reached for this customer (3 per 10 minutes, shared with their own logins). Try again shortly.",
+    };
+  }
+  return { code: result.code, identifier, channel: customer.phone ? "phone" : "email" };
 }

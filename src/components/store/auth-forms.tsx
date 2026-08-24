@@ -65,6 +65,20 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
     await sendOtp();
   }
 
+  /**
+   * Straight to the code step without sending anything — for a code already in
+   * hand (an earlier send, or one an admin generated for support). Sending
+   * again would replace it: verification only checks the latest code.
+   */
+  function useExistingCode() {
+    if (channel === "phone" ? !phone.trim() : !email.trim()) {
+      toast.error(channel === "phone" ? "Enter the mobile number first." : "Enter the email first.");
+      return;
+    }
+    setDevCode(null);
+    setStep("code");
+  }
+
   async function handleCodeSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -185,6 +199,13 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
           )}
           {channel === "phone" ? "Send code on WhatsApp" : "Email me a code"}
         </Button>
+        <button
+          type="button"
+          className="w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+          onClick={useExistingCode}
+        >
+          Already have a code?
+        </button>
         <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
           or

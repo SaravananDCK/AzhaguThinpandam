@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CustomerForm } from "../customer-form";
+import { SupportLogin } from "./support-login";
 
 export const metadata: Metadata = { title: "Edit customer" };
 
@@ -64,6 +65,8 @@ export default async function AdminCustomerPage({ params }: Props) {
           isEmployee: customer.isEmployee,
         }}
       />
+
+      {customer.role !== "ADMIN" && <SupportLogin customerId={customer.id} />}
 
       <Card className="max-w-xl">
         <CardContent className="space-y-3">
