@@ -10,7 +10,8 @@ import {
   markOrderPaid,
   CheckoutError,
 } from "@/lib/orders";
-import { getRazorpay, isRazorpayConfigured } from "@/lib/razorpay";
+import { isRazorpayConfigured } from "@/lib/razorpay";
+import { ensurePayableRazorpayOrder } from "@/lib/razorpay-order";
 import { getManualPaymentConfig } from "@/lib/queries";
 
 export async function POST(req: Request) {
@@ -138,60 +139,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ simulated: true, orderNumber: order.orderNumber });
     }
 
-    // Taking over an abandoned attempt: its Razorpay order is still payable, so
-    // reuse it when it is still worth the right amount and hasn't been paid.
-    // The amount is read back from Razorpay rather than from `payment.amount`,
-    // because an admin reprice moves that column without touching the gateway —
-    // trusting it would open the popup for a stale figure.
-    let existingRzpOrderId: string | null = null;
-    if (reusedPayment) {
-      try {
-        const previous = await getRazorpay().orders.fetch(reusedPayment.razorpayOrderId);
-        if (Number(previous.amount) === order.total && previous.status !== "paid") {
-          existingRzpOrderId = reusedPayment.razorpayOrderId;
-        }
-      } catch (e) {
-        // Fetch failed (deleted in the dashboard, key rotated, gateway down) —
-        // fall through and create a fresh one rather than fail the checkout.
-        console.warn("[checkout] could not fetch previous Razorpay order:", e);
-      }
-    }
-
-    let razorpayOrderId = existingRzpOrderId;
-    if (!razorpayOrderId) {
-      const rzpOrder = await getRazorpay().orders.create({
-        amount: order.total, // paise
-        currency: "INR",
-        receipt: order.orderNumber,
-        notes: { orderNumber: order.orderNumber },
-      });
-      razorpayOrderId = rzpOrder.id;
-    }
-
-    if (reusedPayment) {
-      // Points the row at whichever attempt the customer is about to make. A
-      // superseded id is no longer in the database, which the webhook handles.
-      await prisma.payment.update({
-        where: { id: reusedPayment.id },
-        data: {
-          razorpayOrderId,
-          amount: order.total,
-          status: "CREATED",
-          razorpayPaymentId: null,
-          razorpaySignature: null,
-          method: null,
-        },
-      });
-    } else {
-      await prisma.payment.create({
-        data: {
-          orderId: order.id,
-          razorpayOrderId,
-          amount: order.total,
-          status: "CREATED",
-        },
-      });
-    }
+    // Reuse the abandoned attempt's still-payable Razorpay order, or mint a
+    // fresh one and repoint the payment row — see ensurePayableRazorpayOrder.
+    const razorpayOrderId = await ensurePayableRazorpayOrder({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      payment: reusedPayment,
+    });
 
     return NextResponse.json({
       orderNumber: order.orderNumber,

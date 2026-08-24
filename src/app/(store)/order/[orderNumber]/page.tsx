@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { formatINR, paiseToRupees } from "@/lib/money";
 import { getManualPaymentConfig } from "@/lib/queries";
+import { isRazorpayConfigured } from "@/lib/razorpay";
+import { PayNow } from "@/components/store/pay-now";
 import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
@@ -54,6 +56,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
 
   // Awaiting a manual UPI transfer: show how to pay and how to tell us.
   const awaitingUpi = manual.enabled && order.status === "PENDING";
+  // Awaiting a gateway payment (failed attempt or closed popup): offer to pay
+  // right here rather than making the customer rebuild a cart. SIMULATED refs
+  // are dev-only orders with no real gateway behind them.
+  const awaitingGateway =
+    !manual.enabled &&
+    order.status === "PENDING" &&
+    isRazorpayConfigured() &&
+    !order.payment?.razorpayOrderId.startsWith("SIMULATED");
   const upiLink = awaitingUpi
     ? upiPayLink({
         upiId: manual.upiId,
@@ -87,6 +97,21 @@ export default async function OrderPage({ params, searchParams }: Props) {
             </p>
           </div>
         </div>
+      )}
+
+      {awaitingGateway && (
+        <Card className="mb-6 border-amber-300 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/40">
+          <CardContent className="space-y-3">
+            <p className="flex items-center gap-2 font-semibold">
+              <IndianRupee className="size-4" /> Complete your payment
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Your order is saved but not yet paid. Pay now to confirm it — no
+              need to add everything to the cart again.
+            </p>
+            <PayNow orderNumber={order.orderNumber} total={order.total} />
+          </CardContent>
+        </Card>
       )}
 
       {awaitingUpi && (
