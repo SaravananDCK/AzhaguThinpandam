@@ -26,7 +26,13 @@ export function WhatsAppCartButton({ waNumber }: { waNumber: string }) {
   const href = `https://wa.me/${waNumber}?text=${encodeURIComponent(lines.join("\n"))}`;
 
   return (
-    <Button asChild variant="outline" className="w-full" size="sm">
+    // WhatsApp's own green, so the button reads as "WhatsApp" at a glance and
+    // doesn't blend into the outline buttons around it.
+    <Button
+      asChild
+      className="w-full bg-[#25D366] font-semibold text-white hover:bg-[#1DA851] dark:bg-[#25D366] dark:text-white dark:hover:bg-[#1DA851]"
+      size="sm"
+    >
       <a href={href} target="_blank" rel="noopener noreferrer">
         <MessageCircle className="size-4" /> Order on WhatsApp instead
       </a>
