@@ -33,6 +33,11 @@ export function PayNow({ orderNumber, total }: { orderNumber: string; total: num
         setBusy(false);
         return;
       }
+      // checkout.js loads afterInteractive — a click in the first second can
+      // beat it. Wait briefly instead of failing a payment over a race.
+      for (let waited = 0; !window.Razorpay && waited < 5000; waited += 250) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
       if (!window.Razorpay) {
         toast.error("Payment library failed to load. Check your connection and retry.");
         setBusy(false);
