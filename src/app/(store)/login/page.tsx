@@ -5,9 +5,16 @@ import { LoginForm } from "@/components/store/auth-forms";
 
 export const metadata: Metadata = { title: "Log in" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
   const session = await auth();
-  if (session?.user) redirect("/account");
+  const { callbackUrl } = await searchParams;
+  // Relative paths only — a full URL here would be an open redirect.
+  const target = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/account";
+  if (session?.user) redirect(target);
 
   return (
     <div className="mx-auto max-w-sm px-4 py-12">

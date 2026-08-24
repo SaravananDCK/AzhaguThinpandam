@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDiscountConfig, getManualPaymentConfig, getShippingConfig } from "@/lib/queries";
@@ -15,6 +16,12 @@ export default async function CheckoutPage() {
     getManualPaymentConfig(),
     getViewerPricing(),
   ]);
+
+  // Login before typing, not after: a returning customer gets their saved
+  // address prefilled instead of retyping it and only then being asked to
+  // verify. The form's own inline OTP stays as the fallback for a session
+  // that expires between here and "Verify & Pay".
+  if (!session?.user?.id) redirect("/login?callbackUrl=/checkout");
 
   let defaults: {
     email?: string;

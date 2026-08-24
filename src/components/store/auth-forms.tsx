@@ -384,7 +384,9 @@ function AdminEmailForm({ callbackUrl }: { callbackUrl: string }) {
 
 function LoginFormInner() {
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") ?? "/account";
+  const raw = params.get("callbackUrl");
+  // Relative paths only — a full URL here would be an open redirect.
+  const callbackUrl = raw?.startsWith("/") && !raw.startsWith("//") ? raw : "/account";
   const [mode, setMode] = useState<"otp" | "admin">("otp");
 
   return (
