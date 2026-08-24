@@ -443,7 +443,9 @@ export function CheckoutForm({
         },
         modal: {
           ondismiss: () => {
-            toast.info("Payment cancelled. Your order was not placed.");
+            // The order exists and is pending — checking out again picks it
+            // back up rather than starting a second one.
+            toast.info("Payment cancelled. Your cart is saved — you can try again.");
             setSubmitting(false);
           },
         },

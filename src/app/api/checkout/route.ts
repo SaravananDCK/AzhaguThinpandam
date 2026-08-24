@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   checkoutSchema,
   createOrderFromCart,
+  findReusableOrder,
+  reuseOrderForCart,
   manualPaymentRef,
   markOrderPaid,
   CheckoutError,
@@ -33,12 +35,41 @@ export async function POST(req: Request) {
       );
     }
 
-    const order = await createOrderFromCart(
+    // A failed or dismissed gateway payment leaves the order behind, pending.
+    // Retrying takes that order over instead of stacking up a second one — the
+    // customer keeps a single order number, and only one Razorpay order is ever
+    // live for it, so a late capture can't pay for a duplicate.
+    const reused = manual.enabled ? null : await findReusableOrder(session.user.id);
+
+    let order = null;
+    if (reused) {
+      try {
+        order = await reuseOrderForCart({ orderId: reused.id, input: parsed.data });
+      } catch (err) {
+        // A late webhook can capture the abandoned attempt in the gap between
+        // picking it up and repricing it. That order is genuinely paid now, so
+        // leave it alone and give this checkout a fresh one. Any other refusal
+        // — out of stock, a coupon that no longer applies — is the customer's
+        // to see, and would come back the same way from a new order anyway.
+        const current = await prisma.order.findUnique({
+          where: { id: reused.id },
+          select: { status: true },
+        });
+        if (!(err instanceof CheckoutError) || current?.status === "PENDING") throw err;
+      }
+    }
+    order ??= await createOrderFromCart(
       parsed.data,
       session.user.id,
       // Verified identity: phone, or email for accounts that logged in by email
       session.user.phone ?? session.user.email ?? undefined
     );
+
+    // Only when the takeover actually happened. On the fallback above `reused`
+    // still points at the order that got captured, and its payment row is a
+    // real captured one — writing this checkout's attempt over it would erase
+    // the record of money already taken.
+    const reusedPayment = reused && order.id === reused.id ? reused.payment : null;
 
     // Save the address to the user's address book for next time
     {
@@ -107,25 +138,64 @@ export async function POST(req: Request) {
       return NextResponse.json({ simulated: true, orderNumber: order.orderNumber });
     }
 
-    const rzpOrder = await getRazorpay().orders.create({
-      amount: order.total, // paise
-      currency: "INR",
-      receipt: order.orderNumber,
-      notes: { orderNumber: order.orderNumber },
-    });
+    // Taking over an abandoned attempt: its Razorpay order is still payable, so
+    // reuse it when it is still worth the right amount and hasn't been paid.
+    // The amount is read back from Razorpay rather than from `payment.amount`,
+    // because an admin reprice moves that column without touching the gateway —
+    // trusting it would open the popup for a stale figure.
+    let existingRzpOrderId: string | null = null;
+    if (reusedPayment) {
+      try {
+        const previous = await getRazorpay().orders.fetch(reusedPayment.razorpayOrderId);
+        if (Number(previous.amount) === order.total && previous.status !== "paid") {
+          existingRzpOrderId = reusedPayment.razorpayOrderId;
+        }
+      } catch (e) {
+        // Fetch failed (deleted in the dashboard, key rotated, gateway down) —
+        // fall through and create a fresh one rather than fail the checkout.
+        console.warn("[checkout] could not fetch previous Razorpay order:", e);
+      }
+    }
 
-    await prisma.payment.create({
-      data: {
-        orderId: order.id,
-        razorpayOrderId: rzpOrder.id,
-        amount: order.total,
-        status: "CREATED",
-      },
-    });
+    let razorpayOrderId = existingRzpOrderId;
+    if (!razorpayOrderId) {
+      const rzpOrder = await getRazorpay().orders.create({
+        amount: order.total, // paise
+        currency: "INR",
+        receipt: order.orderNumber,
+        notes: { orderNumber: order.orderNumber },
+      });
+      razorpayOrderId = rzpOrder.id;
+    }
+
+    if (reusedPayment) {
+      // Points the row at whichever attempt the customer is about to make. A
+      // superseded id is no longer in the database, which the webhook handles.
+      await prisma.payment.update({
+        where: { id: reusedPayment.id },
+        data: {
+          razorpayOrderId,
+          amount: order.total,
+          status: "CREATED",
+          razorpayPaymentId: null,
+          razorpaySignature: null,
+          method: null,
+        },
+      });
+    } else {
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          razorpayOrderId,
+          amount: order.total,
+          status: "CREATED",
+        },
+      });
+    }
 
     return NextResponse.json({
       orderNumber: order.orderNumber,
-      razorpayOrderId: rzpOrder.id,
+      razorpayOrderId,
       amount: order.total,
       currency: "INR",
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,

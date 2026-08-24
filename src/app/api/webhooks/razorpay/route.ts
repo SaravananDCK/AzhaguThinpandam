@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { markOrderPaid, markPaymentFailed } from "@/lib/orders";
+import { CheckoutError, markOrderPaid, markPaymentFailed } from "@/lib/orders";
+import { sendUnmatchedPaymentAlert } from "@/lib/email";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 
 // Razorpay webhook — source of truth for payment status when the browser
@@ -20,11 +21,27 @@ export async function POST(req: Request) {
     switch (event?.event) {
       case "payment.captured":
         if (payment?.order_id) {
-          await markOrderPaid({
-            razorpayOrderId: payment.order_id,
-            razorpayPaymentId: payment.id,
-            method: payment.method,
-          });
+          try {
+            await markOrderPaid({
+              razorpayOrderId: payment.order_id,
+              razorpayPaymentId: payment.id,
+              method: payment.method,
+            });
+          } catch (err) {
+            if (!(err instanceof CheckoutError)) throw err;
+            // No payment row for this Razorpay order — the customer paid an
+            // attempt that a later checkout superseded. Retrying can never
+            // resolve it, so acknowledge and get a human to refund it rather
+            // than let Razorpay redeliver for days.
+            console.error(
+              `[webhook] captured payment ${payment.id} has no matching order (${payment.order_id})`
+            );
+            await sendUnmatchedPaymentAlert({
+              razorpayOrderId: payment.order_id,
+              razorpayPaymentId: payment.id,
+              amount: payment.amount,
+            }).catch((e) => console.error("Unmatched payment alert failed:", e));
+          }
         }
         break;
       case "payment.failed":

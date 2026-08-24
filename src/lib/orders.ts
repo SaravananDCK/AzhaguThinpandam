@@ -466,6 +466,67 @@ export async function repriceOrderItems(params: {
 }
 
 /**
+ * A pending order left behind by an abandoned gateway attempt, which this
+ * checkout can take over instead of creating a second order.
+ *
+ * Scoped to gateway attempts by the `order_` prefix Razorpay puts on its order
+ * ids. Manual-UPI orders are excluded deliberately: the customer may already
+ * have transferred the money outside the system, so overwriting the amount
+ * they were told to pay would be worse than a duplicate. Admin-drafted and
+ * SIMULATED orders are excluded for the same reason — nothing about them says
+ * the customer abandoned a payment.
+ */
+export async function findReusableOrder(userId: string) {
+  return prisma.order.findFirst({
+    where: {
+      userId,
+      status: "PENDING",
+      payment: {
+        razorpayOrderId: { startsWith: "order_" },
+        status: { not: PAYMENT_STATUSES.CAPTURED },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: { payment: true },
+  });
+}
+
+/**
+ * Points an abandoned pending order at the current cart, keeping its order
+ * number so the customer ends up with one order rather than one per attempt.
+ *
+ * The address is written before repricing, not after: repriceOrderItems works
+ * out shipping from the order's own `shipState`, so a customer who changed
+ * their delivery state between attempts would otherwise be charged for the old
+ * one.
+ */
+export async function reuseOrderForCart(params: {
+  orderId: string;
+  input: Omit<CheckoutInput, "email"> & { email?: string };
+}) {
+  const a = params.input.address;
+  await prisma.order.update({
+    where: { id: params.orderId },
+    data: {
+      email: params.input.email?.trim().toLowerCase() ?? "",
+      shipName: a.name,
+      shipPhone: a.phone,
+      shipLine1: a.line1,
+      shipLine2: a.line2 || null,
+      shipCity: a.city,
+      shipState: a.state,
+      shipPincode: a.pincode,
+    },
+  });
+
+  return repriceOrderItems({
+    orderId: params.orderId,
+    items: params.input.items,
+    couponCode: params.input.couponCode || undefined,
+  });
+}
+
+/**
  * Marks an order as paid and decrements stock. Idempotent — safe to call from
  * both the checkout verify endpoint and the Razorpay webhook.
  */

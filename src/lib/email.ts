@@ -183,3 +183,34 @@ export async function sendOrderStatusEmail(orderNumber: string, status: OrderSta
     `)
   );
 }
+
+/**
+ * Alerts the store that Razorpay captured a payment we can't match to an order.
+ * Reachable when a customer pays a Razorpay order that a later checkout attempt
+ * superseded — the money is real, so someone has to refund it by hand.
+ */
+export async function sendUnmatchedPaymentAlert(params: {
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  amount?: number;
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  await sendMail(
+    adminEmail,
+    `Unmatched payment captured — ${params.razorpayPaymentId ?? params.razorpayOrderId}`,
+    wrap(`
+      <p><strong>Razorpay captured a payment that doesn't match any order.</strong></p>
+      <p>It most likely belongs to a checkout attempt the customer later replaced,
+      so no order is waiting on it — but the money has been taken.</p>
+      <p>
+        Razorpay order: ${params.razorpayOrderId}<br />
+        Payment id: ${params.razorpayPaymentId ?? "—"}<br />
+        Amount: ${params.amount != null ? formatINR(params.amount) : "—"}
+      </p>
+      <p>Find it in the Razorpay dashboard and refund it, or match it to the
+      customer's other order by hand.</p>
+    `)
+  );
+}
