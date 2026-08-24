@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin";
 import { supplierSchema } from "./schema";
+import { supplierBalanceSums } from "@/lib/finance";
 
 // Returns every supplier with its payment history and derived balances
 // (purchased / paid / owed), so the admin grid can render without extra calls.
@@ -9,21 +10,16 @@ export async function GET() {
   const { response } = await requireAdminApi();
   if (response) return response;
 
-  const [suppliers, purchaseSums, paymentSums] = await Promise.all([
+  const [suppliers, { purchasedBy, paidBy }] = await Promise.all([
     prisma.supplier.findMany({
       orderBy: { name: "asc" },
       include: { payments: { orderBy: { date: "desc" } } },
     }),
-    prisma.purchase.groupBy({
-      by: ["supplierId"],
-      _sum: { total: true },
-      where: { supplierId: { not: null } },
-    }),
-    prisma.supplierPayment.groupBy({ by: ["supplierId"], _sum: { amount: true } }),
+    // Shared with computePayables — one definition of the balance, so the
+    // suppliers grid and the finance report can never disagree (they did
+    // once: this route missed transportCharge and showed a stale owed).
+    supplierBalanceSums(),
   ]);
-
-  const purchasedBy = new Map(purchaseSums.map((p) => [p.supplierId, p._sum.total ?? 0]));
-  const paidBy = new Map(paymentSums.map((p) => [p.supplierId, p._sum.amount ?? 0]));
 
   const rows = suppliers.map((s) => {
     const purchased = purchasedBy.get(s.id) ?? 0;

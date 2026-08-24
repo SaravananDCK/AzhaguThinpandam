@@ -153,26 +153,41 @@ export type SupplierPayable = {
  * Only suppliers linked to purchases via `supplierId` are counted (free-text
  * legacy purchases with no link fall outside the ledger).
  */
-export async function computePayables(): Promise<{
-  suppliers: SupplierPayable[];
-  totalOwed: number;
+/**
+ * Per-supplier "bought" and "paid" sums — THE definition of the balance, used
+ * by both the payables report and the suppliers API so the two can never
+ * disagree. "Bought" is goods + transportCharge: transport the supplier
+ * fronted is owed exactly like the goods — it lives outside `total` only for
+ * GST's sake (see the Purchase model).
+ */
+export async function supplierBalanceSums(): Promise<{
+  purchasedBy: Map<string | null, number>;
+  paidBy: Map<string | null, number>;
 }> {
-  const [suppliers, purchaseSums, paymentSums] = await Promise.all([
-    prisma.supplier.findMany({ orderBy: { name: "asc" } }),
+  const [purchaseSums, paymentSums] = await Promise.all([
     prisma.purchase.groupBy({
       by: ["supplierId"],
-      // Transport the supplier fronted is owed exactly like the goods — it
-      // lives outside `total` only for GST's sake (see the Purchase model).
       _sum: { total: true, transportCharge: true },
       where: { supplierId: { not: null } },
     }),
     prisma.supplierPayment.groupBy({ by: ["supplierId"], _sum: { amount: true } }),
   ]);
+  return {
+    purchasedBy: new Map(
+      purchaseSums.map((p) => [p.supplierId, (p._sum.total ?? 0) + (p._sum.transportCharge ?? 0)])
+    ),
+    paidBy: new Map(paymentSums.map((p) => [p.supplierId, p._sum.amount ?? 0])),
+  };
+}
 
-  const purchasedBy = new Map(
-    purchaseSums.map((p) => [p.supplierId, (p._sum.total ?? 0) + (p._sum.transportCharge ?? 0)])
-  );
-  const paidBy = new Map(paymentSums.map((p) => [p.supplierId, p._sum.amount ?? 0]));
+export async function computePayables(): Promise<{
+  suppliers: SupplierPayable[];
+  totalOwed: number;
+}> {
+  const [suppliers, { purchasedBy, paidBy }] = await Promise.all([
+    prisma.supplier.findMany({ orderBy: { name: "asc" } }),
+    supplierBalanceSums(),
+  ]);
 
   const rows = suppliers.map((s) => {
     const purchased = purchasedBy.get(s.id) ?? 0;
