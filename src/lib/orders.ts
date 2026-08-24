@@ -509,6 +509,10 @@ export async function reuseOrderForCart(params: {
     where: { id: params.orderId },
     data: {
       email: params.input.email?.trim().toLowerCase() ?? "",
+      // Only when the customer actually typed something. An empty box on the
+      // retry means "nothing to add", not "erase the note" — and the note on
+      // the order may be one an admin left.
+      ...(params.input.notes?.trim() ? { notes: params.input.notes.trim() } : {}),
       shipName: a.name,
       shipPhone: a.phone,
       shipLine1: a.line1,
