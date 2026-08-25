@@ -1,6 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, HandHeart, Leaf, ShieldCheck, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  HandHeart,
+  Leaf,
+  ShieldCheck,
+  Truck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroSlideshow } from "@/components/store/hero-slideshow";
 import { InstagramReels } from "@/components/store/instagram-reels";
@@ -48,10 +54,28 @@ const KOVILPATTI_FAQ = [
 export const metadata: Metadata = {
   title: {
     absolute:
-      "Kovilpatti Kadalai Mittai Online | Azhagu Thinpandam — Traditional Tamil Snacks & Sweets",
+      "Kovilpatti Kadalai Mittai Online | Azhagu Thinpandam — Official Online Partner of Kovilpatti Karthick Sweets",
   },
   description:
-    "The home of authentic Kovilpatti kadalai mittai (kadalaimittai) — peanut candy set in country jaggery. Plus murukku, sev, seeval, mixture and karupatti sweets, made fresh and delivered across India.",
+    "The home of authentic Kovilpatti kadalai mittai (kadalaimittai) — the Tamil peanut chikki set in country jaggery. Plus murukku, sev, seeval, mixture and karupatti sweets, made fresh and delivered across India. Official online partner of Kovilpatti Karthick Sweets.",
+  // Overrides the site-wide list in the root layout, so it repeats the terms
+  // that matter there and adds the ones only the homepage targets.
+  keywords: [
+    "kadalai mittai",
+    "kadalaimittai",
+    "kovilpatti kadalai mittai",
+    "kovilpatti kadalaimittai",
+    "கடலை மிட்டாய்",
+    "peanut chikki",
+    "peanut chikki online",
+    "kovilpatti peanut chikki",
+    "groundnut chikki",
+    "kovilpatti karthick sweets",
+    "tamil snacks online",
+    "murukku online",
+    "sev",
+    "mixture",
+  ],
   alternates: { canonical: "/" },
 };
 
@@ -93,9 +117,13 @@ function SectionHeader({
       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
         {eyebrow}
       </p>
-      <h2 className="font-heading text-3xl font-semibold sm:text-4xl">{title}</h2>
+      <h2 className="font-heading text-3xl font-semibold sm:text-4xl">
+        {title}
+      </h2>
       {subtitle && (
-        <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">{subtitle}</p>
+        <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+          {subtitle}
+        </p>
       )}
     </div>
   );
@@ -130,7 +158,31 @@ export default async function HomePage() {
         >
           {/* Copy */}
           <div className="max-w-2xl text-center sm:text-left">
-            <p className="mb-5 animate-fade-in-up text-xs font-semibold uppercase tracking-[0.35em] text-gold-300">
+            {/* Most of our leads arrive redirected from Karthick Sweets' own
+                site, so lead with their mark — a referred visitor should land
+                on something they already recognise. */}
+            <div className="mb-6 inline-flex animate-fade-in-up items-center gap-3 rounded-2xl border border-gold-300/30 bg-white/10 py-2 pl-2 pr-4 backdrop-blur-sm sm:gap-4 sm:pr-5">
+              <span className="flex h-12 shrink-0 items-center rounded-xl bg-white/95 px-2.5 py-1.5 shadow-sm sm:h-14">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/partners/karthick-sweets.webp"
+                  alt="Kovilpatti Karthick Sweets"
+                  className="h-full w-auto object-contain"
+                />
+              </span>
+              <span className="text-left leading-tight">
+                <span className="block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/60">
+                  Official Online Partner of
+                </span>
+                <span className="block font-heading text-base font-semibold text-gold-200 sm:text-lg">
+                  Kovilpatti Karthick Sweets
+                </span>
+              </span>
+            </div>
+            <p
+              className="mb-5 animate-fade-in-up text-xs font-semibold uppercase tracking-[0.35em] text-gold-300"
+              style={{ animationDelay: "0.05s" }}
+            >
               Kovilpatti · அழகு திண்பண்டம்
             </p>
             <h1
@@ -145,8 +197,9 @@ export default async function HomePage() {
               className="mx-auto mb-9 max-w-xl animate-fade-in-up text-base font-light leading-relaxed text-white/75 sm:mx-0 sm:text-lg"
               style={{ animationDelay: "0.2s" }}
             >
-              Kadalai mittai set in country jaggery, hand-twisted murukku, sev and
-              mixture — made fresh in small batches, the way it has always been made.
+              Kadalai mittai set in country jaggery, hand-twisted murukku, sev
+              and mixture — made fresh in small batches, the way it has always
+              been made.
             </p>
 
             <div
@@ -175,7 +228,9 @@ export default async function HomePage() {
             >
               {TRUST_ROW.map(({ Icon, text }, i) => (
                 <span key={text} className="flex items-center">
-                  {i > 0 && <span className="mx-5 hidden h-4 w-px bg-white/15 sm:block" />}
+                  {i > 0 && (
+                    <span className="mx-5 hidden h-4 w-px bg-white/15 sm:block" />
+                  )}
                   <span className="flex items-center gap-2">
                     <Icon className="size-4 text-gold-400" />
                     {text}
@@ -210,8 +265,12 @@ export default async function HomePage() {
                   <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-secondary text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-white">
                     <Icon className="size-6" />
                   </div>
-                  <h3 className="mb-2 font-heading text-xl font-semibold">{title}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{desc}</p>
+                  <h3 className="mb-2 font-heading text-xl font-semibold">
+                    {title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {desc}
+                  </p>
                 </div>
               </Reveal>
             ))}
@@ -221,37 +280,38 @@ export default async function HomePage() {
         {/* Categories */}
         <section className="mt-16 sm:mt-20">
           <Reveal>
-            <SectionHeader
-              eyebrow="Explore"
-              title="Shop by category"
-            />
+            <SectionHeader eyebrow="Explore" title="Shop by category" />
           </Reveal>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {categories.map((c, i) => (
               <Reveal key={c.id} delay={i * 90}>
-              <Link
-                href={`/products?category=${c.slug}`}
-                className="group relative block overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/60 hover:shadow-xl"
-              >
-                <div className="aspect-[4/3] overflow-hidden bg-muted">
-                  {c.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.image}
-                      alt={c.name}
-                      className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  )}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                  <p className="font-heading text-lg font-semibold leading-tight drop-shadow">
-                    {c.name}
-                  </p>
-                  {c.tamilName && <p className="mt-0.5 text-xs text-gold-200">{c.tamilName}</p>}
-                </div>
-              </Link>
+                <Link
+                  href={`/products?category=${c.slug}`}
+                  className="group relative block overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/60 hover:shadow-xl"
+                >
+                  <div className="aspect-[4/3] overflow-hidden bg-muted">
+                    {c.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.image}
+                        alt={c.name}
+                        className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                    <p className="font-heading text-lg font-semibold leading-tight drop-shadow">
+                      {c.name}
+                    </p>
+                    {c.tamilName && (
+                      <p className="mt-0.5 text-xs text-gold-200">
+                        {c.tamilName}
+                      </p>
+                    )}
+                  </div>
+                </Link>
               </Reveal>
             ))}
           </div>
@@ -274,7 +334,12 @@ export default async function HomePage() {
               ))}
             </div>
             <div className="mt-8 text-center">
-              <Button asChild variant="outline" size="lg" className="rounded-full px-8">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="rounded-full px-8"
+              >
                 <Link href="/products">
                   View all products <ArrowRight className="size-4" />
                 </Link>
@@ -329,15 +394,19 @@ export default async function HomePage() {
               <div className="mt-4 space-y-4 leading-relaxed text-muted-foreground">
                 <p>
                   Azhagu Thinpandam brings you authentic{" "}
-                  <strong className="text-foreground">Kovilpatti kadalai mittai</strong> — the
-                  GI-tagged peanut candy that made this little Tamil Nadu town famous. Made the
-                  traditional way with groundnuts and pure country jaggery, our kadalaimittai is
-                  prepared fresh in small batches and delivered to your doorstep anywhere in India.
+                  <strong className="text-foreground">
+                    Kovilpatti kadalai mittai
+                  </strong>{" "}
+                  — the GI-tagged peanut candy that made this little Tamil Nadu
+                  town famous. Made the traditional way with groundnuts and pure
+                  country jaggery, our kadalaimittai is prepared fresh in small
+                  batches and delivered to your doorstep anywhere in India.
                 </p>
                 <p>
-                  Alongside our signature <strong className="text-foreground">kadalai mittai</strong>,
-                  we craft murukku, sev, seeval, mixture and karupatti sweets — the full spread of a
-                  Kovilpatti pettikadai, without shortcuts.
+                  Alongside our signature{" "}
+                  <strong className="text-foreground">kadalai mittai</strong>,
+                  we craft murukku, sev, seeval, mixture and karupatti sweets —
+                  the full spread of a Kovilpatti pettikadai, without shortcuts.
                 </p>
               </div>
             </Reveal>
@@ -350,7 +419,9 @@ export default async function HomePage() {
                       {f.q}
                       <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                     </summary>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      {f.a}
+                    </p>
                   </details>
                 ))}
               </div>
@@ -377,8 +448,8 @@ export default async function HomePage() {
                   Bring home the taste of the pettikadai.
                 </h2>
                 <p className="mb-7 text-sm leading-relaxed text-white/75 sm:text-base">
-                  Order today and we&apos;ll pack your kadalai mittai, murukku and
-                  mixture fresh — straight from Kovilpatti to your door.
+                  Order today and we&apos;ll pack your kadalai mittai, murukku
+                  and mixture fresh — straight from Kovilpatti to your door.
                 </p>
                 <Link
                   href="/products"
