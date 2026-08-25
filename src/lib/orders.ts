@@ -331,14 +331,13 @@ export async function createOrderFromCart(
   verifiedIdentity?: string
 ) {
   // Staff pricing is decided by the user record, never by the request body.
-  const isEmployee = userId
-    ? (
-        await prisma.user.findUnique({
-          where: { id: userId },
-          select: { isEmployee: true },
-        })
-      )?.isEmployee === true
-    : false;
+  const user = userId
+    ? await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isEmployee: true, name: true },
+      })
+    : null;
+  const isEmployee = user?.isEmployee === true;
 
   const priced = await priceOrderLines({
     items: input.items,
@@ -377,6 +376,16 @@ export async function createOrderFromCart(
     },
     include: { items: true },
   });
+
+  // OTP sign-in creates the account with no name, so the first checkout is
+  // the first time we learn it. Only fill a blank — never overwrite a name
+  // the customer set on their profile.
+  if (userId && user && !user.name) {
+    await prisma.user.updateMany({
+      where: { id: userId, name: null },
+      data: { name: input.address.name },
+    });
+  }
 
   return order;
 }

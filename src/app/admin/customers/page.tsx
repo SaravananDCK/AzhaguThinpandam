@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: "Customers" };
 type SimpleOrder = {
   id: string;
   orderNumber: string;
+  shipName?: string;
   total: number;
   status: string;
   createdAt: Date;
@@ -45,7 +46,15 @@ export default async function AdminCustomersPage() {
       where: { role: ROLES.CUSTOMER },
       include: {
         orders: {
-          select: { id: true, orderNumber: true, total: true, status: true, createdAt: true },
+          select: {
+            id: true,
+            orderNumber: true,
+            total: true,
+            status: true,
+            createdAt: true,
+            shipName: true,
+          },
+          orderBy: { createdAt: "desc" },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -104,7 +113,9 @@ export default async function AdminCustomersPage() {
         {
           id: c.id,
           type: "REGISTERED",
-          name: c.name,
+          // Accounts created by OTP login have no name until they edit their
+          // profile — show the name from their latest order instead.
+          name: c.name ?? c.orders[0]?.shipName ?? extra[0]?.shipName ?? null,
           phone: c.phone,
           email: c.email,
           isEmployee: c.isEmployee,
