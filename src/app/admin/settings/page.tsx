@@ -57,6 +57,7 @@ export default async function AdminSettingsPage() {
           instagramHandle: settings[SETTINGS.INSTAGRAM_HANDLE] ?? "",
           instagramReels: settings[SETTINGS.INSTAGRAM_REELS] ?? "",
           gaMeasurementId: settings[SETTINGS.GA_MEASUREMENT_ID] ?? "",
+          metaPixelId: settings[SETTINGS.META_PIXEL_ID] ?? "",
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",

@@ -11,6 +11,7 @@ import { formatINR, paiseToRupees } from "@/lib/money";
 import { getManualPaymentConfig } from "@/lib/queries";
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { PayNow } from "@/components/store/pay-now";
+import { PurchasePixel } from "@/components/store/purchase-pixel";
 import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
@@ -81,8 +82,28 @@ export default async function OrderPage({ params, searchParams }: Props) {
     : null;
   const qrSvg = upiLink ? await upiQrSvg(upiLink) : null;
 
+  // Meta Pixel conversion. Only once the money is actually in — a PENDING order
+  // is placed but unpaid, and a CANCELLED one is no sale. PurchasePixel itself
+  // guards against counting a revisit twice. Money goes over as rupee numbers
+  // (what Meta expects), not paiseToRupees' display string.
+  const isPaid = order.status !== "PENDING" && order.status !== "CANCELLED";
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
+      {isPaid && (
+        <PurchasePixel
+          orderNumber={order.orderNumber}
+          value={order.total / 100}
+          numItems={order.items.reduce((n, i) => n + i.qty, 0)}
+          contents={order.items.map((i) => ({
+            // The variant is snapshotted, not owned — it goes null if the
+            // product is deleted, so fall back to the item row itself.
+            id: i.variantId ?? i.id,
+            quantity: i.qty,
+            item_price: i.price / 100,
+          }))}
+        />
+      )}
       {placed && (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
           <CheckCircle2 className="size-6 shrink-0" />

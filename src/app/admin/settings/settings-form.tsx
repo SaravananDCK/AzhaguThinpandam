@@ -31,6 +31,7 @@ type Props = {
     instagramHandle: string;
     instagramReels: string;
     gaMeasurementId: string;
+    metaPixelId: string;
     preLaunchNotice: string;
     defaultGstRate: string;
     manualUpiPayment: boolean;
@@ -96,6 +97,21 @@ export function SettingsForm({ values, variantOptions }: Props) {
             <p className="text-xs text-muted-foreground">
               GA4 measurement ID. The tag loads on customer-facing pages only
               (never the admin panel). Leave empty to disable tracking.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-pixel">Meta Pixel ID</Label>
+            <Input
+              id="s-pixel"
+              name="metaPixelId"
+              defaultValue={values.metaPixelId}
+              placeholder="1093899719866773"
+            />
+            <p className="text-xs text-muted-foreground">
+              Numeric pixel ID from Meta Events Manager. Same rules as the GA
+              tag — customer-facing pages only, and live site only. Fires a{" "}
+              <strong>Purchase</strong> event once an order is actually paid.
+              Leave empty to disable it.
             </p>
           </div>
         </CardContent>

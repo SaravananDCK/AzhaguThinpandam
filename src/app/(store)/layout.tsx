@@ -3,19 +3,20 @@ import { Navbar } from "@/components/store/navbar";
 import { CartSyncBridge } from "@/components/store/cart-sync-bridge";
 import { Footer } from "@/components/store/footer";
 import { ReviewsTab } from "@/components/store/reviews-tab";
+import { MetaPixel, MetaPixelNoScript } from "@/components/store/meta-pixel";
 import { getSettings } from "@/lib/queries";
 import { getViewerPricing } from "@/lib/viewer";
 import { SETTINGS } from "@/lib/constants";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  // Google Analytics — customer-facing pages only (admin has its own layout and
-  // never loads it). Production-gated so local/dev browsing doesn't pollute the
-  // stats; clearing the setting disables it without a deploy.
+  // Google Analytics and the Meta Pixel — customer-facing pages only (admin has
+  // its own layout and never loads them). Production-gated so local/dev browsing
+  // doesn't pollute the stats; clearing the setting disables either one without
+  // a deploy.
   const [settings, { isEmployee }] = await Promise.all([getSettings(), getViewerPricing()]);
-  const gaId =
-    process.env.NODE_ENV === "production"
-      ? (settings[SETTINGS.GA_MEASUREMENT_ID] ?? "").trim()
-      : "";
+  const isLive = process.env.NODE_ENV === "production";
+  const gaId = isLive ? (settings[SETTINGS.GA_MEASUREMENT_ID] ?? "").trim() : "";
+  const pixelId = isLive ? (settings[SETTINGS.META_PIXEL_ID] ?? "").trim() : "";
 
   return (
     <>
@@ -31,6 +32,12 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', ${JSON.stringify(gaId)});`}
           </Script>
+        </>
+      )}
+      {pixelId && (
+        <>
+          <MetaPixel pixelId={pixelId} />
+          <MetaPixelNoScript pixelId={pixelId} />
         </>
       )}
       <CartSyncBridge />

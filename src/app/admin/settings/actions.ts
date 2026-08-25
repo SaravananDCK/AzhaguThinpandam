@@ -76,6 +76,11 @@ export async function saveSettings(formData: FormData) {
     return { error: "Google Analytics ID should look like G-XXXXXXXXXX (or be empty)." };
   }
 
+  const metaPixelId = String(formData.get("metaPixelId") ?? "").trim();
+  if (metaPixelId && !/^\d{5,20}$/.test(metaPixelId)) {
+    return { error: "Meta Pixel ID should be the numeric id from Events Manager (or be empty)." };
+  }
+
   const upiId = String(formData.get("upiId") ?? "").trim();
   if (upiId && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upiId)) {
     return { error: "UPI ID should look like yourname@bank." };
@@ -103,6 +108,7 @@ export async function saveSettings(formData: FormData) {
       .replace(/^@/, ""),
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
     [SETTINGS.GA_MEASUREMENT_ID]: gaMeasurementId,
+    [SETTINGS.META_PIXEL_ID]: metaPixelId,
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,

@@ -87,6 +87,7 @@ export const SETTINGS = {
   INSTAGRAM_HANDLE: "instagram_handle",
   INSTAGRAM_REELS: "instagram_reels",
   GA_MEASUREMENT_ID: "ga_measurement_id",
+  META_PIXEL_ID: "meta_pixel_id",
   PRE_LAUNCH_NOTICE: "pre_launch_notice",
   DEFAULT_GST_RATE: "default_gst_rate",
   // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
@@ -147,6 +148,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // Google Analytics 4 measurement id ("G-…"). Loaded on customer-facing pages
   // only (never admin), and only in production. Empty disables the tag.
   [SETTINGS.GA_MEASUREMENT_ID]: "G-2DJHGX2CKR",
+  // Meta (Facebook) Pixel id. Same rules as the GA tag: customer-facing pages
+  // only, production only. Empty disables it.
+  [SETTINGS.META_PIXEL_ID]: "1093899719866773",
   // Shown as a banner on the cart/checkout while manual UPI payment is on.
   // Orders are still placed — only the gateway step is replaced.
   [SETTINGS.PRE_LAUNCH_NOTICE]:
