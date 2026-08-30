@@ -23,7 +23,8 @@ type AccessEntry = {
   ts: number; // unix seconds (float)
   status: number;
   duration: number; // seconds
-  request: { remote_ip: string; uri: string };
+  // Caddy logs the method on every line; older lines are treated as POSTs.
+  request: { remote_ip: string; uri: string; method?: string };
 };
 
 export type TrafficSummary = {
@@ -32,8 +33,14 @@ export type TrafficSummary = {
   totalRequests: number;
   pageViews: number;
   uniqueVisitors: number;
-  ordersPlaced: number;
+  /** POST /api/checkout 200 — an order was created, or an abandoned one resumed */
+  checkoutsStarted: number;
+  /** POST /api/checkout/verify 200 — a Razorpay payment confirmed by the browser */
+  paymentsVerified: number;
+  /** Every POST to /api/otp/request, including the ones that failed */
   otpRequests: number;
+  /** ...of which sent a code (the rest were invalid, throttled or undelivered) */
+  otpSent: number;
   /** All 24 IST hours, zero-filled */
   byHour: { hour: string; views: number; visitors: number }[];
   topPages: { path: string; views: number }[];
@@ -95,6 +102,14 @@ function readEntries(): { entries: AccessEntry[]; unreadable: number } | null {
   return { entries, unreadable };
 }
 
+// Exact path, POST only. `startsWith("/api/checkout")` also matches
+// /api/checkout/verify, so a paid order counted twice and a lone payment
+// verification counted as an order; and a crawler's GET (a 405) is neither a
+// checkout nor a login attempt.
+function isPostTo(e: AccessEntry, path: string): boolean {
+  return stripQuery(e.request.uri) === path && (e.request.method ?? "POST") === "POST";
+}
+
 function top<T>(counts: Map<string, T>, cmp: (a: T, b: T) => number, n: number): [string, T][] {
   return [...counts.entries()].sort((a, b) => cmp(a[1], b[1])).slice(0, n);
 }
@@ -131,15 +146,20 @@ export function summarizeTraffic(day: string): TrafficSummary | null {
     }
   }
 
+  const otpPosts = entries.filter((e) => isPostTo(e, "/api/otp/request"));
+
   return {
     unreadableFiles: read.unreadable,
     totalRequests: entries.length,
     pageViews: pages.length,
     uniqueVisitors: new Set(entries.map((e) => e.request.remote_ip)).size,
-    ordersPlaced: entries.filter(
-      (e) => e.request.uri.startsWith("/api/checkout") && e.status === 200
+    checkoutsStarted: entries.filter((e) => isPostTo(e, "/api/checkout") && e.status === 200)
+      .length,
+    paymentsVerified: entries.filter(
+      (e) => isPostTo(e, "/api/checkout/verify") && e.status === 200
     ).length,
-    otpRequests: entries.filter((e) => e.request.uri.startsWith("/api/otp/request")).length,
+    otpRequests: otpPosts.length,
+    otpSent: otpPosts.filter((e) => e.status === 200).length,
     byHour: hourViews.map((views, h) => ({
       hour: `${String(h).padStart(2, "0")}:00`,
       views,

@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Eye, Globe, ShoppingCart, Users } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  Eye,
+  Globe,
+  ShoppingCart,
+  Users,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { summarizeTraffic, todayIST } from "@/lib/traffic";
@@ -131,7 +139,7 @@ export default async function AdminTrafficPage({
               <code>chmod 644 logs/caddy/access*</code> on the server.
             </p>
           )}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               {
                 label: "Page views",
@@ -146,16 +154,29 @@ export default async function AdminTrafficPage({
                 icon: Users,
               },
               {
-                label: "OTP requests",
-                value: summary.otpRequests,
-                sub: "OTP login attempts",
+                label: "OTP codes sent",
+                value: summary.otpSent,
+                sub:
+                  summary.otpRequests === summary.otpSent
+                    ? "login codes delivered"
+                    : `${summary.otpRequests - summary.otpSent} more failed or throttled`,
                 icon: Globe,
               },
               {
-                label: "Orders placed",
-                value: summary.ordersPlaced,
-                sub: "successful checkout calls",
+                // A 200 here only means the order row exists — it is created
+                // pending, and a retry resumes the earlier order instead of
+                // adding a second, so this can move with no new order in the
+                // list.
+                label: "Checkouts started",
+                value: summary.checkoutsStarted,
+                sub: "order created or resumed",
                 icon: ShoppingCart,
+              },
+              {
+                label: "Payments verified",
+                value: summary.paymentsVerified,
+                sub: "confirmed in the browser",
+                icon: CreditCard,
               },
             ].map((s) => (
               <Card key={s.label}>

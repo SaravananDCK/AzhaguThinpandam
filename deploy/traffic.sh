@@ -96,5 +96,17 @@ for path in / /products /cart /checkout /login /account/orders; do
   printf '%-18s %s\n' "$path" "$n"
 done
 echo
-echo "OTP requests:  $(jq -c 'select(.request.uri | startswith("/api/otp/request"))' "$TMP" | wc -l)"
-echo "Orders placed: $(jq -c 'select(.request.uri | startswith("/api/checkout")) | select(.status == 200)' "$TMP" | wc -l)"
+# Exact path and POST only: startswith("/api/checkout") also matches
+# /api/checkout/verify (a paid order counted twice), and a crawler's GET — a
+# 405 — is neither a checkout nor a login attempt.
+post_to() {
+  jq -c "select((.request.uri | split(\"?\")[0]) == \"$1\")
+         | select((.request.method // \"POST\") == \"POST\")" "$TMP"
+}
+otp_all=$(post_to /api/otp/request | wc -l)
+otp_sent=$(post_to /api/otp/request | jq -c 'select(.status == 200)' | wc -l)
+echo "OTP codes sent:    $otp_sent  (of $otp_all requests; the rest failed or were throttled)"
+# A 200 from /api/checkout only means an order row exists — created pending,
+# and a retry resumes the earlier order rather than adding a second one.
+echo "Checkouts started: $(post_to /api/checkout | jq -c 'select(.status == 200)' | wc -l)"
+echo "Payments verified: $(post_to /api/checkout/verify | jq -c 'select(.status == 200)' | wc -l)"
