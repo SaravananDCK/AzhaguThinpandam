@@ -16,7 +16,10 @@ import {
 } from "@/lib/constants";
 
 export const checkoutSchema = z.object({
-  email: z.string().email().max(200),
+  // Optional: plenty of customers here don't have an email address, and making
+  // it mandatory cost us orders. Stored as "" when it's missing, and the email
+  // senders skip empty addresses — the order confirmation goes out on WhatsApp.
+  email: z.string().trim().email().max(200).optional().or(z.literal("")),
   notes: z.string().max(500).optional(),
   couponCode: z.string().trim().max(40).optional().or(z.literal("")),
   address: z.object({
@@ -46,14 +49,12 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 /**
  * Orders an admin enters by hand for a customer who ordered over WhatsApp.
- * Same shape as a customer checkout except the email is optional — WhatsApp
- * customers often don't have one, and Order.email is stored as "" in that case
- * (the email senders skip empty addresses). Pricing rules are identical: this
- * goes through createOrderFromCart like any other order, so discounts,
- * shipping, GST and packing cost can't drift from the storefront.
+ * Same shape as a customer checkout, plus the customer's name and a paid flag.
+ * Pricing rules are identical: this goes through createOrderFromCart like any
+ * other order, so discounts, shipping, GST and packing cost can't drift from
+ * the storefront.
  */
 export const adminOrderSchema = checkoutSchema.extend({
-  email: z.string().trim().email().max(200).optional().or(z.literal("")),
   customerName: z.string().trim().min(2).max(100).optional().or(z.literal("")),
   markPaid: z.boolean().optional(),
 });

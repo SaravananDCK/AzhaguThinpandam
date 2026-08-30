@@ -257,7 +257,10 @@ export function CheckoutForm({
       setOtpStep("phone");
       setDevCode(null);
       setOtpOpen(true);
-      await sendOtp(otpChannel === "phone" ? payload.address.phone : payload.email);
+      // On the email channel there may be no address to send to — the contact
+      // email is optional. Open on the identifier step and let them type one.
+      const identifier = otpChannel === "phone" ? payload.address.phone : payload.email;
+      if (identifier) await sendOtp(identifier);
       return;
     }
 
@@ -391,7 +394,8 @@ export function CheckoutForm({
           setDevCode(null);
           setSubmitting(false);
           setOtpOpen(true);
-          await sendOtp(otpChannel === "phone" ? payload.address.phone : payload.email);
+          const identifier = otpChannel === "phone" ? payload.address.phone : payload.email;
+          if (identifier) await sendOtp(identifier);
           return;
         }
         toast.error(data.error ?? "Could not place the order.");
@@ -478,20 +482,21 @@ export function CheckoutForm({
             <CardContent className="space-y-4">
               <p className="font-semibold">Contact</p>
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">
+                  Email <span className="text-muted-foreground">(optional)</span>
+                </Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
-                  required
                   defaultValue={defaults.email}
                   placeholder="you@example.com"
                 />
                 {!authed && (
                   <p className="text-xs text-muted-foreground">
-                    Your order confirmation is sent here. We&apos;ll WhatsApp a
-                    one-time code to your mobile number to confirm the order —
-                    no password needed.
+                    We&apos;ll WhatsApp a one-time code to your mobile number to
+                    confirm the order — no password needed. Add an email only if
+                    you&apos;d also like the confirmation by mail.
                   </p>
                 )}
               </div>

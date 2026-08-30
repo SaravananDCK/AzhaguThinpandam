@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { MessageCircle } from "lucide-react";
+import { ChevronRight, MessageCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,14 +105,23 @@ export default async function AdminCartsPage() {
                   </Badge>
                 )}
               </div>
-              <ul className="text-sm text-muted-foreground">
-                {cart.items.map((l) => (
-                  <li key={l.id}>
-                    {l.variant.product.name} ({l.variant.label}) × {l.qty} —{" "}
-                    {formatINR(l.variant.price * l.qty)}
-                  </li>
-                ))}
-              </ul>
+              {/* Collapsed by default: with a hundred carts on the page, open
+                  item lists push the next customer off the screen. */}
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                  <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
+                  {cart.items.length} item{cart.items.length === 1 ? "" : "s"}
+                  <span className="min-w-0 truncate group-open:hidden">— {itemsText}</span>
+                </summary>
+                <ul className="mt-1 text-sm text-muted-foreground">
+                  {cart.items.map((l) => (
+                    <li key={l.id}>
+                      {l.variant.product.name} ({l.variant.label}) × {l.qty} —{" "}
+                      {formatINR(l.variant.price * l.qty)}
+                    </li>
+                  ))}
+                </ul>
+              </details>
               {nudge && (
                 <Button asChild size="sm" variant="outline">
                   <a href={nudge} target="_blank" rel="noopener noreferrer">
