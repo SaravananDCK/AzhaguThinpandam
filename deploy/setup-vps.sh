@@ -18,6 +18,9 @@ echo "==> Configuring firewall (SSH, HTTP, HTTPS only)…"
 ufw allow OpenSSH
 ufw allow 80/tcp
 ufw allow 443/tcp
+# HTTP/3 (QUIC) rides on UDP 443. Caddy advertises h3 whether or not this is
+# open, so without it browsers try QUIC, time out and fall back to TCP.
+ufw allow 443/udp
 ufw --force enable
 
 echo "==> Enabling fail2ban (protects SSH from brute force)…"

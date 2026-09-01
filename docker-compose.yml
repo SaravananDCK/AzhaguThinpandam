@@ -31,6 +31,12 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # HTTP/3. Caddy advertises it on every response (Alt-Svc: h3=":443"), and
+      # browsers remember that for 30 days — so without this the QUIC attempt
+      # goes into a black hole and every visitor pays a timeout before falling
+      # back to TCP. Docker publishes TCP only unless the protocol is spelled
+      # out. The host firewall needs `ufw allow 443/udp` to match.
+      - "443:443/udp"
     environment:
       # Set DOMAIN in .env (e.g. DOMAIN=azhaguthinpandam.com)
       DOMAIN: ${DOMAIN:-localhost}
