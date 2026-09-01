@@ -2,9 +2,11 @@
 
 import "@/components/admin/dx-setup";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import DataGrid, {
   Column,
+  FilterBuilderPopup,
+  FilterPanel,
   FilterRow,
   HeaderFilter,
   Lookup,
@@ -42,11 +44,23 @@ const STATUS_LOOKUP = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) =
 const INACTIVE_STATUSES: OrderStatus[] = ["DELIVERED", "CANCELLED"];
 const isActive = (r: OrderRow) => !INACTIVE_STATUSES.includes(r.status as OrderStatus);
 
-type StatusFilter = OrderStatus | "ACTIVE" | "ALL";
+/**
+ * The status chips are shortcuts that write the grid's own filter, so whatever
+ * they do shows up in the filter panel and can be widened from there — pick two
+ * statuses, add a date range, drop the status part. Everything is one filter
+ * expression; nothing filters the rows behind the grid's back.
+ */
+const ACTIVE_FILTER: unknown[] = [
+  ["status", "<>", "DELIVERED"],
+  "and",
+  ["status", "<>", "CANCELLED"],
+];
+const statusFilterFor = (s: OrderStatus): unknown[] => ["status", "=", s];
+const sameFilter = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ACTIVE");
+  const [filterValue, setFilterValue] = useState<unknown[] | null>(ACTIVE_FILTER);
   // Selected order ids — kept across status-chip changes so the admin can
   // gather orders from several views into one purchase order.
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -56,48 +70,45 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
     return acc;
   }, {});
 
-  const filteredRows =
-    statusFilter === "ALL"
-      ? rows
-      : statusFilter === "ACTIVE"
-        ? rows.filter(isActive)
-        : rows.filter((r) => r.status === statusFilter);
+  // Real Dates, so the grid's date editors and the "between" range operator
+  // work on values rather than on ISO strings.
+  const gridRows = useMemo(
+    () => rows.map((r) => ({ ...r, createdAt: new Date(r.createdAt) })),
+    [rows]
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
       {/* Quick status filters */}
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setStatusFilter("ACTIVE")}>
-          <Badge
-            variant={statusFilter === "ACTIVE" ? "default" : "outline"}
-            className={cn("px-3 py-1.5", statusFilter !== "ACTIVE" && "hover:bg-accent")}
-          >
-            Active ({rows.filter(isActive).length})
-          </Badge>
-        </button>
-        <button type="button" onClick={() => setStatusFilter("ALL")}>
-          <Badge
-            variant={statusFilter === "ALL" ? "default" : "outline"}
-            className={cn("px-3 py-1.5", statusFilter !== "ALL" && "hover:bg-accent")}
-          >
-            All ({rows.length})
-          </Badge>
-        </button>
-        {ORDER_STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatusFilter((cur) => (cur === s ? "ACTIVE" : s))}
-          >
-            <Badge
-              variant={statusFilter === s ? "default" : "outline"}
-              className={cn("px-3 py-1.5", statusFilter !== s && "hover:bg-accent")}
+        {[
+          { key: "ACTIVE", label: `Active (${rows.filter(isActive).length})`, filter: ACTIVE_FILTER },
+          { key: "ALL", label: `All (${rows.length})`, filter: null },
+          ...ORDER_STATUSES.map((s) => ({
+            key: s,
+            label: `${ORDER_STATUS_LABELS[s]} (${countByStatus[s] ?? 0})`,
+            filter: statusFilterFor(s),
+          })),
+        ].map((chip) => {
+          const on = sameFilter(filterValue, chip.filter);
+          return (
+            <button
+              key={chip.key}
+              type="button"
+              // Tapping the active chip again falls back to Active, the way it
+              // did before the panel existed.
+              onClick={() => setFilterValue(on && chip.key !== "ACTIVE" ? ACTIVE_FILTER : chip.filter)}
             >
-              {ORDER_STATUS_LABELS[s]} ({countByStatus[s] ?? 0})
-            </Badge>
-          </button>
-        ))}
+              <Badge
+                variant={on ? "default" : "outline"}
+                className={cn("px-3 py-1.5", !on && "hover:bg-accent")}
+              >
+                {chip.label}
+              </Badge>
+            </button>
+          );
+        })}
       </div>
       {selectedIds.length > 0 && (
         <div className="flex gap-2">
@@ -123,8 +134,10 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       </div>
 
     <DataGrid
-      dataSource={filteredRows}
+      dataSource={gridRows}
       keyExpr="id"
+      filterValue={filterValue as unknown[]}
+      onFilterValueChange={(v) => setFilterValue((v as unknown[] | null) ?? null)}
       showBorders
       columnAutoWidth
       rowAlternationEnabled
@@ -140,6 +153,11 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       <Selection mode="multiple" showCheckBoxesMode="always" allowSelectAll />
       <FilterRow visible />
       <HeaderFilter visible />
+      {/* Shows the whole filter as text under the toolbar, with a Clear link
+          and the filter builder for anything the header row can't express —
+          two statuses at once, a date range plus a payment state. */}
+      <FilterPanel visible />
+      <FilterBuilderPopup width={620} height={420} title="Filter orders" />
       <SearchPanel visible width={240} placeholder="Search orders…" />
       <Paging defaultPageSize={20} />
       <Pager showInfo showNavigationButtons allowedPageSizes={[20, 50, 100]} showPageSizeSelector />
@@ -197,14 +215,17 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
           ) : null
         }
       />
+      {/* Opens on "between" so the filter row is a date range straight away;
+          the header filter still gives the year/month/day tree. */}
       <Column
         dataField="createdAt"
         caption="Date"
         dataType="datetime"
         defaultSortOrder="desc"
         format="dd MMM, HH:mm"
-        width={140}
-        allowHeaderFiltering={false}
+        width={190}
+        filterOperations={["between", ">=", "<=", "=", "<>"]}
+        defaultSelectedFilterOperation="between"
       />
     </DataGrid>
     </div>
