@@ -39,7 +39,7 @@ const KOVILPATTI_FAQ = [
   },
   {
     q: "Do you deliver kadalai mittai across India?",
-    a: "Yes. We pack your Kovilpatti kadalai mittai — along with murukku, sev, seeval and mixture — in sealed, cushioned boxes and ship across India, with free shipping on orders above ₹999.",
+    a: "Yes. We pack your Kovilpatti kadalai mittai — along with murukku, sev, seeval and mixture — in sealed, cushioned boxes and ship across India. Delivery is free on orders above ₹999 within Tamil Nadu; elsewhere in India shipping is charged by weight and shown at checkout.",
   },
   {
     q: "Is kadalai mittai the same as peanut chikki?",
@@ -80,7 +80,9 @@ export const metadata: Metadata = {
 };
 
 const TRUST_ROW = [
-  { Icon: Truck, text: "Free shipping over ₹999" },
+  // Free shipping is a Tamil Nadu offer — outside TN every order pays by
+  // weight (src/lib/shipping.ts), so don't promise it India-wide.
+  { Icon: Truck, text: "Free shipping in TN over ₹999" },
   { Icon: HandHeart, text: "Made fresh in small batches" },
   { Icon: ShieldCheck, text: "100% secure payments" },
 ];
