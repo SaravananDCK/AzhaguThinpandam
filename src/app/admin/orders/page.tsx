@@ -23,6 +23,7 @@ export default async function AdminOrdersPage() {
     totalRupees: o.total / 100,
     payment: o.payment?.status ?? "—",
     status: o.status,
+    notes: o.notes ?? "",
     createdAt: o.createdAt.toISOString(),
   }));
 

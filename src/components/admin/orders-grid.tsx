@@ -28,6 +28,8 @@ export type OrderRow = {
   totalRupees: number;
   payment: string;
   status: string;
+  /** What the customer (or the admin) typed at checkout; "" when there is none */
+  notes: string;
   createdAt: string;
 };
 
@@ -181,6 +183,20 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       )}>
         <Lookup dataSource={STATUS_LOOKUP} valueExpr="value" displayExpr="label" />
       </Column>
+      {/* One line here, the whole note in the tooltip and on the order page */}
+      <Column
+        dataField="notes"
+        caption="Notes"
+        width={220}
+        allowHeaderFiltering={false}
+        cellRender={({ value }: { value: string }) =>
+          value ? (
+            <span className="block truncate text-muted-foreground" title={value}>
+              {value}
+            </span>
+          ) : null
+        }
+      />
       <Column
         dataField="createdAt"
         caption="Date"
