@@ -4,11 +4,15 @@ import "@/components/admin/dx-setup";
 import { useMemo, useRef, useState } from "react";
 import DataGrid, {
   Column,
+  Export,
   FilterRow,
+  HeaderFilter,
   MasterDetail,
-  Paging,
   Pager,
+  Paging,
+  SearchPanel,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import type { DataGridRef } from "devextreme-react/data-grid";
 import SelectBox from "devextreme-react/select-box";
 import CustomStore from "devextreme/data/custom_store";
@@ -147,8 +151,11 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
         </Button>
       </div>
 
-    <DataGrid ref={gridRef} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
+    <DataGrid onExporting={exportGrid("reviews")} ref={gridRef} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
       <FilterRow visible />
+      <HeaderFilter visible />
+      <SearchPanel visible width={240} placeholder="Search reviews…" />
+      <Export enabled />
       <Paging defaultPageSize={15} />
       <Pager showInfo showNavigationButtons />
       <Column

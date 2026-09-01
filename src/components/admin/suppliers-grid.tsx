@@ -4,12 +4,17 @@ import "@/components/admin/dx-setup";
 import { useCallback, useMemo, useRef, useState } from "react";
 import DataGrid, {
   Column,
+  Export,
+  FilterRow,
+  HeaderFilter,
   MasterDetail,
-  Paging,
   Pager,
+  Paging,
+  SearchPanel,
   Summary,
   TotalItem,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import type { DataGridRef } from "devextreme-react/data-grid";
 import CustomStore from "devextreme/data/custom_store";
 import { HandCoins, Pencil, Plus, Trash2 } from "lucide-react";
@@ -226,7 +231,11 @@ export function SuppliersGrid() {
         </Button>
       </div>
 
-      <DataGrid ref={gridRef} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
+      <DataGrid onExporting={exportGrid("suppliers")} ref={gridRef} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
+        <FilterRow visible />
+        <HeaderFilter visible />
+        <SearchPanel visible width={240} placeholder="Search suppliers…" />
+        <Export enabled />
         <Paging defaultPageSize={12} />
         <Pager showInfo showNavigationButtons />
         <Column dataField="name" caption="Supplier" />

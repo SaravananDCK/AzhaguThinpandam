@@ -5,12 +5,17 @@ import { useMemo } from "react";
 import DataGrid, {
   Column,
   Editing,
+  Export,
+  FilterRow,
+  HeaderFilter,
   Lookup,
-  Paging,
   Pager,
+  Paging,
+  SearchPanel,
   Summary,
   TotalItem,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import CustomStore from "devextreme/data/custom_store";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
 
@@ -81,12 +86,17 @@ export function ExpensesGrid() {
 
   return (
     <DataGrid
+      onExporting={exportGrid("expenses")}
       dataSource={store}
       showBorders
       columnAutoWidth
       rowAlternationEnabled
     >
       <Editing mode="row" allowAdding allowUpdating allowDeleting useIcons />
+      <FilterRow visible />
+      <HeaderFilter visible />
+      <SearchPanel visible width={240} placeholder="Search expenses…" />
+      <Export enabled />
       <Paging defaultPageSize={15} />
       <Pager showInfo showNavigationButtons />
       <Column

@@ -7,12 +7,14 @@ import { toast } from "sonner";
 import DataGrid, {
   Column,
   Editing,
+  Export,
   FilterRow,
   HeaderFilter,
   Pager,
   Paging,
   SearchPanel,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import CustomStore from "devextreme/data/custom_store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -145,6 +147,7 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
       </div>
 
       <DataGrid
+        onExporting={exportGrid("pricing")}
         dataSource={store}
         showBorders
         columnAutoWidth
@@ -158,6 +161,7 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
         <HeaderFilter visible />
         <SearchPanel visible width={240} placeholder="Search products…" />
         <Editing mode="batch" allowUpdating startEditAction="click" selectTextOnEditStart />
+        <Export enabled />
         <Paging defaultPageSize={50} />
         <Pager showInfo showNavigationButtons allowedPageSizes={[25, 50, 100]} showPageSizeSelector />
         <Column dataField="name" caption="Product" allowEditing={false} />

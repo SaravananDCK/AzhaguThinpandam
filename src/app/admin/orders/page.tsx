@@ -21,6 +21,8 @@ export default async function AdminOrdersPage() {
     phone: o.shipPhone,
     items: o.items.reduce((s, i) => s + i.qty, 0),
     totalRupees: o.total / 100,
+    // What the courier charged us (0 = not recorded yet)
+    courierCostRupees: o.shippingCost / 100,
     payment: o.payment?.status ?? "—",
     status: o.status,
     notes: o.notes ?? "",

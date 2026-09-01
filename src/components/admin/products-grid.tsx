@@ -4,6 +4,7 @@ import "@/components/admin/dx-setup";
 import { useRouter } from "next/navigation";
 import DataGrid, {
   Column,
+  Export,
   FilterRow,
   HeaderFilter,
   Lookup,
@@ -70,6 +71,7 @@ export function ProductsGrid({ rows }: { rows: ProductRow[] }) {
       <FilterRow visible />
       <HeaderFilter visible />
       <SearchPanel visible width={240} placeholder="Search products…" />
+      <Export enabled />
       <Paging defaultPageSize={20} />
       <Pager showInfo showNavigationButtons allowedPageSizes={[20, 50]} showPageSizeSelector />
       <Column

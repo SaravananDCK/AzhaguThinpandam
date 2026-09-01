@@ -5,13 +5,18 @@ import { useMemo } from "react";
 import DataGrid, {
   Column,
   Editing,
+  Export,
+  FilterRow,
   Form,
+  HeaderFilter,
   Lookup,
   Pager,
   Paging,
   Popup,
   RequiredRule,
+  SearchPanel,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import { Item } from "devextreme-react/form";
 import CustomStore from "devextreme/data/custom_store";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +53,11 @@ export function CouponsGrid() {
   );
 
   return (
-    <DataGrid dataSource={store} showBorders columnAutoWidth rowAlternationEnabled repaintChangesOnly>
+    <DataGrid onExporting={exportGrid("coupons")} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled repaintChangesOnly>
+      <FilterRow visible />
+      <HeaderFilter visible />
+      <SearchPanel visible width={240} placeholder="Search coupons…" />
+      <Export enabled />
       <Paging defaultPageSize={25} />
       <Pager showInfo allowedPageSizes={[25, 50]} showPageSizeSelector />
       <Editing mode="popup" allowAdding allowUpdating allowDeleting useIcons>

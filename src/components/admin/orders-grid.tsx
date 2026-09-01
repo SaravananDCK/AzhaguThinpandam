@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import DataGrid, {
   Column,
+  Export,
   FilterBuilderPopup,
   FilterPanel,
   FilterRow,
@@ -16,6 +17,7 @@ import DataGrid, {
   Selection,
 } from "devextreme-react/data-grid";
 import { FileText, PackagePlus } from "lucide-react";
+import { exportGrid } from "@/components/admin/grid-export";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
@@ -28,6 +30,8 @@ export type OrderRow = {
   phone: string;
   items: number;
   totalRupees: number;
+  /** What the courier charged us — 0 means nobody has entered it yet */
+  courierCostRupees: number;
   payment: string;
   status: string;
   /** What the customer (or the admin) typed at checkout; "" when there is none */
@@ -136,6 +140,7 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
     <DataGrid
       dataSource={gridRows}
       keyExpr="id"
+      onExporting={exportGrid("orders")}
       filterValue={filterValue as unknown[]}
       onFilterValueChange={(v) => setFilterValue((v as unknown[] | null) ?? null)}
       showBorders
@@ -153,6 +158,7 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       <Selection mode="multiple" showCheckBoxesMode="always" allowSelectAll />
       <FilterRow visible />
       <HeaderFilter visible />
+      <Export enabled />
       {/* Shows the whole filter as text under the toolbar, with a Clear link
           and the filter builder for anything the header row can't express —
           two statuses at once, a date range plus a payment state. */}
@@ -179,6 +185,19 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
         dataType="number"
         format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
         allowHeaderFiltering={false}
+      />
+      {/* Internal courier cost. Zero means it was never entered, which is not
+          the same as a free delivery — show it blank rather than ₹0.00. */}
+      <Column
+        dataField="courierCostRupees"
+        caption="Courier cost"
+        width={130}
+        dataType="number"
+        format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
+        allowHeaderFiltering={false}
+        cellRender={({ value, text }: { value: number; text: string }) =>
+          value > 0 ? <span>{text}</span> : <span className="text-muted-foreground">—</span>
+        }
       />
       <Column
         dataField="payment"

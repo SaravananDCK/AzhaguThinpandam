@@ -4,6 +4,7 @@ import "@/components/admin/dx-setup";
 import Link from "next/link";
 import DataGrid, {
   Column,
+  Export,
   FilterRow,
   HeaderFilter,
   Lookup,
@@ -12,6 +13,7 @@ import DataGrid, {
   Paging,
   SearchPanel,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import { Badge } from "@/components/ui/badge";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
@@ -38,6 +40,7 @@ export type CustomerRow = {
 export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
   return (
     <DataGrid
+      onExporting={exportGrid("customers")}
       dataSource={rows}
       keyExpr="id"
       showBorders
@@ -47,6 +50,7 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
       <FilterRow visible />
       <HeaderFilter visible />
       <SearchPanel visible width={240} placeholder="Search customers…" />
+      <Export enabled />
       <Paging defaultPageSize={20} />
       <Pager showInfo showNavigationButtons allowedPageSizes={[20, 50, 100]} showPageSizeSelector />
       <Column

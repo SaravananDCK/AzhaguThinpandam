@@ -4,12 +4,15 @@ import "@/components/admin/dx-setup";
 import { useMemo } from "react";
 import DataGrid, {
   Column,
+  Export,
   FilterRow,
+  HeaderFilter,
   Lookup,
   Pager,
   Paging,
   SearchPanel,
 } from "devextreme-react/data-grid";
+import { exportGrid } from "@/components/admin/grid-export";
 import CustomStore from "devextreme/data/custom_store";
 import { STOCK_REASON_LABELS } from "@/lib/stock";
 
@@ -34,9 +37,11 @@ export function StockGrid() {
   );
 
   return (
-    <DataGrid dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
+    <DataGrid onExporting={exportGrid("stock")} dataSource={store} showBorders columnAutoWidth rowAlternationEnabled>
       <FilterRow visible />
       <SearchPanel visible width={240} placeholder="Search product…" />
+      <HeaderFilter visible />
+      <Export enabled />
       <Paging defaultPageSize={20} />
       <Pager showInfo showNavigationButtons />
       <Column
