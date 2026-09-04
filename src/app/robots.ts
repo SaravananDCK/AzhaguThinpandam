@@ -6,7 +6,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/api", "/account", "/checkout", "/cart"],
+      // /feed is the Meta catalog — for Commerce Manager to fetch, not for a
+      // search engine to index as a page.
+      disallow: ["/admin", "/api", "/account", "/checkout", "/cart", "/feed"],
     },
     sitemap: `${base}/sitemap.xml`,
   };
