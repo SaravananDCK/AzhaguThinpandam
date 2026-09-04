@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/money";
 import { useCart } from "@/lib/cart-store";
+import { trackFbq, type FbqContent } from "@/lib/fbq";
 import { useLoginGate } from "@/hooks/use-login-gate";
 import {
   activeGoodieKg,
@@ -118,9 +119,11 @@ export function BoxBuilder({
 
   function addBoxToCartNow() {
     let added = 0;
+    const contents: FbqContent[] = [];
     for (const item of items) {
       const q = qty[item.variantId] ?? 0;
       if (q <= 0) continue;
+      contents.push({ id: item.variantId, quantity: q, item_price: item.price / 100 });
       addItem(
         {
           variantId: item.variantId,
@@ -143,6 +146,18 @@ export function BoxBuilder({
           ? `Box with ${added} packs added — free goodies will be added at checkout!`
           : `${added} packs added to your cart.`
     );
+    // The whole box goes over as one AddToCart. `subtotal` is what the packs
+    // cost — a tier discount or free goodie only lands at checkout, so it has
+    // no place in the value of the add.
+    trackFbq("AddToCart", {
+      content_type: "product",
+      content_ids: contents.map((c) => c.id),
+      content_name: "Build your own box",
+      contents,
+      num_items: added,
+      value: subtotal / 100,
+      currency: "INR",
+    });
     router.push("/cart");
   }
 

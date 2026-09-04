@@ -4,12 +4,7 @@ import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 
-declare global {
-  interface Window {
-    fbq?: ((...args: unknown[]) => void) & { queue?: unknown[] };
-    _fbq?: unknown;
-  }
-}
+// `window.fbq` is typed in src/lib/fbq.ts, alongside the tracking helpers.
 
 /**
  * Meta Pixel base code — the standard snippet, with the id injected from the

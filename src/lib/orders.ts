@@ -326,10 +326,23 @@ export async function priceOrderLines(params: {
  * it — never to the delivery phone, which the customer types freely (and would
  * otherwise let them mint a fresh "one per customer" every order).
  */
+/**
+ * The customer's browser as it was when they placed the order. Kept on the
+ * order because payment is confirmed later, from a request that belongs to
+ * Razorpay or to an admin — see the Order model and src/lib/meta-capi.ts.
+ */
+export type OrderTracking = {
+  clientIp?: string | null;
+  clientUserAgent?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+};
+
 export async function createOrderFromCart(
   input: Omit<CheckoutInput, "email"> & { email?: string },
   userId?: string,
-  verifiedIdentity?: string
+  verifiedIdentity?: string,
+  tracking?: OrderTracking
 ) {
   // Staff pricing is decided by the user record, never by the request body.
   const user = userId
@@ -365,6 +378,10 @@ export async function createOrderFromCart(
       shipCity: input.address.city,
       shipState: input.address.state,
       shipPincode: input.address.pincode,
+      clientIp: tracking?.clientIp ?? null,
+      clientUserAgent: tracking?.clientUserAgent ?? null,
+      fbp: tracking?.fbp ?? null,
+      fbc: tracking?.fbc ?? null,
       subtotal,
       discount,
       shippingFee,
@@ -513,12 +530,23 @@ export async function findReusableOrder(userId: string) {
 export async function reuseOrderForCart(params: {
   orderId: string;
   input: Omit<CheckoutInput, "email"> & { email?: string };
+  tracking?: OrderTracking;
 }) {
   const a = params.input.address;
   await prisma.order.update({
     where: { id: params.orderId },
     data: {
       email: params.input.email?.trim().toLowerCase() ?? "",
+      // The retry is the browser that will see the confirmation — it may be a
+      // different device from the abandoned attempt, so take the newer one.
+      ...(params.tracking
+        ? {
+            clientIp: params.tracking.clientIp ?? null,
+            clientUserAgent: params.tracking.clientUserAgent ?? null,
+            fbp: params.tracking.fbp ?? null,
+            fbc: params.tracking.fbc ?? null,
+          }
+        : {}),
       // Only when the customer actually typed something. An empty box on the
       // retry means "nothing to add", not "erase the note" — and the note on
       // the order may be one an admin left.
@@ -642,6 +670,14 @@ export async function markOrderPaid(params: {
   import("@/lib/email")
     .then(({ sendOrderConfirmationEmail }) => sendOrderConfirmationEmail(updated.orderNumber))
     .catch((e) => console.error("Confirmation email failed:", e));
+
+  // Server-side half of the Meta Purchase event. Same reasoning as the email:
+  // an ad platform being down is not a reason to fail a payment. This runs
+  // once per order — the early return above means a webhook arriving after the
+  // browser already verified never gets here a second time.
+  import("@/lib/meta-capi")
+    .then(({ sendPurchaseEvent }) => sendPurchaseEvent(updated.orderNumber))
+    .catch((e) => console.error("Meta Purchase event failed:", e));
 
   return updated;
 }

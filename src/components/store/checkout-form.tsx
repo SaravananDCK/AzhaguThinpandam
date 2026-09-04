@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useCart, cartSubtotal } from "@/lib/cart-store";
+import { trackFbq } from "@/lib/fbq";
 import { useMounted } from "@/hooks/use-mounted";
 import { useCartSync } from "@/hooks/use-cart-sync";
 import { CartAdjustmentsNotice } from "@/components/store/cart-adjustments-notice";
@@ -222,6 +223,29 @@ export function CheckoutForm({
   useEffect(() => {
     if (mounted && items.length === 0 && !submitting) router.replace("/cart");
   }, [mounted, items.length, submitting, router]);
+
+  // Meta Pixel: the cart reached checkout. Once per visit — editing a quantity
+  // or applying a coupon here is the same checkout, not a second one. Waits for
+  // `mounted` because the cart is only real once the persisted store hydrates.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (!mounted || checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackFbq("InitiateCheckout", {
+      content_type: "product",
+      content_ids: items.map((i) => i.variantId),
+      contents: items.map((i) => ({
+        id: i.variantId,
+        quantity: i.qty,
+        item_price: i.price / 100,
+      })),
+      num_items: items.reduce((n, i) => n + i.qty, 0),
+      // Cart subtotal: shipping, coupons and the weight discount are all still
+      // in flux on this page, and only Purchase reports what was really paid.
+      value: cartSubtotal(items) / 100,
+      currency: "INR",
+    });
+  }, [mounted, items]);
 
   if (!mounted || items.length === 0) return <div className="py-12" />;
 

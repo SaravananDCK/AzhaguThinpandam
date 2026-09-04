@@ -32,6 +32,7 @@ type Props = {
     instagramReels: string;
     gaMeasurementId: string;
     metaPixelId: string;
+    metaDomainVerification: string;
     preLaunchNotice: string;
     defaultGstRate: string;
     manualUpiPayment: boolean;
@@ -109,9 +110,28 @@ export function SettingsForm({ values, variantOptions }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               Numeric pixel ID from Meta Events Manager. Same rules as the GA
-              tag — customer-facing pages only, and live site only. Fires a{" "}
-              <strong>Purchase</strong> event once an order is actually paid.
+              tag — customer-facing pages only, and live site only. Fires{" "}
+              <strong>PageView</strong>, <strong>ViewContent</strong> on a
+              product page, <strong>AddToCart</strong> on every add,{" "}
+              <strong>InitiateCheckout</strong> when a cart reaches checkout, and{" "}
+              <strong>Purchase</strong> once an order is actually paid.
               Leave empty to disable it.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-meta-domain">Meta domain verification</Label>
+            <Input
+              id="s-meta-domain"
+              name="metaDomainVerification"
+              defaultValue={values.metaDomainVerification}
+              placeholder="a1b2c3d4e5f6g7h8i9j0"
+            />
+            <p className="text-xs text-muted-foreground">
+              Token only — the <code>content</code> value of the meta tag Meta
+              gives you under Business settings → Brand safety → Domains, not the
+              whole tag. Unlike the pixel this renders in every environment, since
+              Meta only ever crawls the live domain. Verification is required
+              before you can set event priority for iOS traffic.
             </p>
           </div>
         </CardContent>

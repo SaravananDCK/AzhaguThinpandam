@@ -81,6 +81,16 @@ export async function saveSettings(formData: FormData) {
     return { error: "Meta Pixel ID should be the numeric id from Events Manager (or be empty)." };
   }
 
+  const metaDomainVerification = String(
+    formData.get("metaDomainVerification") ?? ""
+  ).trim();
+  if (metaDomainVerification && !/^[a-z0-9]{10,64}$/i.test(metaDomainVerification)) {
+    return {
+      error:
+        "Meta domain verification should be just the token from the meta tag (letters and digits), not the whole tag.",
+    };
+  }
+
   const upiId = String(formData.get("upiId") ?? "").trim();
   if (upiId && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upiId)) {
     return { error: "UPI ID should look like yourname@bank." };
@@ -109,6 +119,7 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.INSTAGRAM_REELS]: String(formData.get("instagramReels") ?? "").trim(),
     [SETTINGS.GA_MEASUREMENT_ID]: gaMeasurementId,
     [SETTINGS.META_PIXEL_ID]: metaPixelId,
+    [SETTINGS.META_DOMAIN_VERIFICATION]: metaDomainVerification,
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,

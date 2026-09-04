@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/money";
 import { basePacketGrams, packNote } from "@/lib/pack";
 import { useCart } from "@/lib/cart-store";
+import { trackFbq } from "@/lib/fbq";
 import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
 import { cn } from "@/lib/utils";
@@ -172,6 +173,22 @@ export function AddToCart({
               qty
             );
             toast.success(`${productName} (${selected.label}) added to cart`);
+            // Inside the gate: an abandoned login is not an add.
+            trackFbq("AddToCart", {
+              content_type: "product",
+              content_ids: [selected.id],
+              content_name: productName,
+              contents: [
+                {
+                  id: selected.id,
+                  quantity: qty,
+                  item_price: selected.price / 100,
+                },
+              ],
+              num_items: qty,
+              value: (selected.price * qty) / 100,
+              currency: "INR",
+            });
             });
           }}
         >

@@ -242,6 +242,15 @@ model Order {
   redemption  CouponRedemption?
   items       OrderItem[]
   payment     Payment?
+  // Browser context captured when the customer placed the order, so the
+  // server-side Meta Purchase event can be attributed to them. Payment is
+  // confirmed later — by a webhook, or by an admin for a manual UPI order —
+  // and neither of those requests carries the customer's browser. Null for
+  // admin-entered orders, which never had one.
+  clientIp        String?
+  clientUserAgent String?
+  fbp             String? // _fbp cookie — Meta's browser id
+  fbc             String? // _fbc cookie — the click that brought them here
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

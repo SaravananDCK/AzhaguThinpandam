@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ChevronRight } from "lucide-react";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { AddToCart } from "@/components/store/add-to-cart";
+import { ViewContentPixel } from "@/components/store/view-content-pixel";
 import { ProductCard } from "@/components/store/product-card";
 import { ProductReviews } from "@/components/store/product-reviews";
 import { Stars } from "@/components/store/stars";
@@ -157,6 +158,17 @@ export default async function ProductPage({ params }: Props) {
                 {product.ratingAvg?.toFixed(1)} ({product.ratingCount})
               </span>
             </a>
+          )}
+
+          {/* A product with no variants has nothing to price or retarget */}
+          {prices.length > 0 && (
+            <ViewContentPixel
+              productSlug={product.slug}
+              productName={product.name}
+              category={product.category.name}
+              variantIds={product.variants.map((v) => v.id)}
+              value={Math.min(...prices) / 100}
+            />
           )}
 
           <div className="mt-6">

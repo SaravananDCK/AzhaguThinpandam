@@ -25,6 +25,26 @@ export async function POST(req: Request) {
 
     const manual = await getManualPaymentConfig();
 
+    // The customer's browser, recorded on the order for the server-side Meta
+    // Purchase event (src/lib/meta-capi.ts). This request is the only moment
+    // it is available — the webhook and the admin's confirmation are not the
+    // customer. Caddy sets X-Forwarded-For; the first hop is the client.
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const readCookie = (name: string) =>
+      cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith(`${name}=`))
+        ?.slice(name.length + 1) || null;
+    const tracking = {
+      clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+      clientUserAgent: req.headers.get("user-agent"),
+      // Set by the Meta pixel itself — never rebuilt from fbclid here, the
+      // pixel already does that and gets the format right.
+      fbp: readCookie("_fbp"),
+      fbc: readCookie("_fbc"),
+    };
+
     // Orders require an OTP-verified account: it makes the delivery contact
     // real, ties the order to a customer, and keeps coupon limits honest.
     // The client opens an inline OTP dialog when it sees this 401.
@@ -45,7 +65,11 @@ export async function POST(req: Request) {
     let order = null;
     if (reused) {
       try {
-        order = await reuseOrderForCart({ orderId: reused.id, input: parsed.data });
+        order = await reuseOrderForCart({
+          orderId: reused.id,
+          input: parsed.data,
+          tracking,
+        });
       } catch (err) {
         // A late webhook can capture the abandoned attempt in the gap between
         // picking it up and repricing it. That order is genuinely paid now, so
@@ -63,7 +87,8 @@ export async function POST(req: Request) {
       parsed.data,
       session.user.id,
       // Verified identity: phone, or email for accounts that logged in by email
-      session.user.phone ?? session.user.email ?? undefined
+      session.user.phone ?? session.user.email ?? undefined,
+      tracking
     );
 
     // Only when the takeover actually happened. On the fallback above `reused`

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { waitForFbq } from "@/lib/fbq";
 
 export type PurchaseContent = {
   id: string;
@@ -48,16 +49,14 @@ export function PurchasePixel({
       // effects can beat it. Wait for it the same way PayNow waits for
       // Razorpay — marking the order sent before fbq exists would burn the
       // guard and lose the conversion permanently.
-      for (let waited = 0; !window.fbq && waited < 5000; waited += 250) {
-        await new Promise((r) => setTimeout(r, 250));
-      }
-      if (cancelled || !window.fbq) return;
+      const fbq = await waitForFbq();
+      if (cancelled || !fbq) return;
       try {
         localStorage.setItem(key, "1");
       } catch {
         // Same as above — unstorable, still worth sending.
       }
-      window.fbq(
+      fbq(
         "track",
         "Purchase",
         {
