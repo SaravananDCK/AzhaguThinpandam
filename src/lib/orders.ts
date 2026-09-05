@@ -14,6 +14,7 @@ import {
   WEIGHT_DISCOUNT_LINES,
   type ProductLine,
 } from "@/lib/constants";
+import { logError } from "@/lib/log";
 
 export const checkoutSchema = z.object({
   // Optional: plenty of customers here don't have an email address, and making
@@ -669,7 +670,7 @@ export async function markOrderPaid(params: {
   // Fire-and-forget; email failures must never fail the payment flow
   import("@/lib/email")
     .then(({ sendOrderConfirmationEmail }) => sendOrderConfirmationEmail(updated.orderNumber))
-    .catch((e) => console.error("Confirmation email failed:", e));
+    .catch((e) => logError("email", "Order confirmation email failed", e, { extra: { orderNumber: updated.orderNumber } }));
 
   // Server-side half of the Meta Purchase event. Same reasoning as the email:
   // an ad platform being down is not a reason to fail a payment. This runs
@@ -677,7 +678,7 @@ export async function markOrderPaid(params: {
   // browser already verified never gets here a second time.
   import("@/lib/meta-capi")
     .then(({ sendPurchaseEvent }) => sendPurchaseEvent(updated.orderNumber))
-    .catch((e) => console.error("Meta Purchase event failed:", e));
+    .catch((e) => logError("meta", "Meta Purchase event failed", e, { extra: { orderNumber: updated.orderNumber } }));
 
   return updated;
 }

@@ -17,11 +17,16 @@ services:
       DATABASE_URL: "file:/app/data/store.db?connection_limit=1"
       UPLOADS_DIR: "/app/uploads"
       CADDY_LOG_DIR: "/app/logs/caddy"
+      APP_LOG_DIR: "/app/logs/app"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
       # Caddy's access logs, read-only — the admin Traffic page parses them.
       - ./logs/caddy:/app/logs/caddy:ro
+      # The app's own error log (one JSON line per error) — the admin Errors
+      # page reads it. Must be owned by uid 1000 on the host (deploy.sh does
+      # this) or the container can't write to it.
+      - ./logs/app:/app/logs/app
     expose:
       - "3000"
 

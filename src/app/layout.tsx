@@ -3,6 +3,7 @@ import { Fraunces, Geist, Geist_Mono, Noto_Sans_Tamil } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { JsonLd } from "@/lib/seo";
+import { TRANSLATE_GUARD_SCRIPT } from "@/lib/translate-guard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -74,6 +75,10 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
+      <head>
+        {/* Keeps React alive under Chrome page translation — see translate-guard.ts */}
+        <script dangerouslySetInnerHTML={{ __html: TRANSLATE_GUARD_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <JsonLd
           data={{

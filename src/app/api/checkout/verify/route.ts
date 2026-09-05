@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { markOrderPaid, CheckoutError } from "@/lib/orders";
 import { verifyPaymentSignature } from "@/lib/razorpay";
+import { logError } from "@/lib/log";
 
 const verifySchema = z.object({
   razorpay_order_id: z.string().min(1),
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     if (err instanceof CheckoutError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("Verify error:", err);
+    await logError("checkout", "Payment verification failed", err);
     return NextResponse.json({ error: "Verification failed." }, { status: 500 });
   }
 }

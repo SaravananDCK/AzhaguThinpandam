@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CheckoutError, markOrderPaid, markPaymentFailed } from "@/lib/orders";
 import { sendUnmatchedPaymentAlert } from "@/lib/email";
 import { verifyWebhookSignature } from "@/lib/razorpay";
+import { logError } from "@/lib/log";
 
 // Razorpay webhook — source of truth for payment status when the browser
 // callback never fires (closed tab, network drop). Configure the same secret
@@ -33,14 +34,17 @@ export async function POST(req: Request) {
             // attempt that a later checkout superseded. Retrying can never
             // resolve it, so acknowledge and get a human to refund it rather
             // than let Razorpay redeliver for days.
-            console.error(
-              `[webhook] captured payment ${payment.id} has no matching order (${payment.order_id})`
+            await logError(
+              "webhook",
+              `Captured payment ${payment.id} has no matching order (${payment.order_id})`,
+              undefined,
+              { extra: { paymentId: payment.id, razorpayOrderId: payment.order_id, amount: payment.amount } },
             );
             await sendUnmatchedPaymentAlert({
               razorpayOrderId: payment.order_id,
               razorpayPaymentId: payment.id,
               amount: payment.amount,
-            }).catch((e) => console.error("Unmatched payment alert failed:", e));
+            }).catch((e) => logError("webhook", "Unmatched payment alert failed", e));
           }
         }
         break;
@@ -55,7 +59,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err);
+    await logError("webhook", "Razorpay webhook failed", err);
     // 500 so Razorpay retries the delivery
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }

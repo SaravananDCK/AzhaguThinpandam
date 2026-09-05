@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import { ROLES } from "@/lib/constants";
 import { createOtp, normalizePhone } from "@/lib/otp";
+import { logError } from "@/lib/log";
 
 const customerSchema = z.object({
   phone: z.string().trim().min(1, "Enter a mobile number"),
@@ -84,7 +85,7 @@ export async function createCustomer(formData: FormData) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { error: "That email is already linked to another customer." };
     }
-    console.error("Customer creation failed:", e);
+    await logError("admin", "Customer creation failed", e);
     return { error: "Could not create the customer. Please try again." };
   }
 }
@@ -147,7 +148,7 @@ export async function updateCustomer(id: string, formData: FormData) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { error: "That email is already linked to another customer." };
     }
-    console.error("Customer update failed:", e);
+    await logError("admin", "Customer update failed", e, { extra: { id } });
     return { error: "Could not save the customer. Please try again." };
   }
 }

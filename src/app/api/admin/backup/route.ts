@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin";
+import { logError } from "@/lib/log";
 
 // Streams a consistent snapshot of the SQLite database. VACUUM INTO writes a
 // clean, compacted copy that is safe even while the app is serving traffic
@@ -33,7 +34,7 @@ export async function GET() {
       },
     });
   } catch (e) {
-    console.error("Backup failed:", e);
+    await logError("backup", "Database backup failed", e);
     return NextResponse.json({ error: "Backup failed." }, { status: 500 });
   } finally {
     unlink(target).catch(() => {});

@@ -38,8 +38,8 @@ Setup complete. Next steps:
        git clone <YOUR_REPO_URL> .
 
   2. Create the runtime folders (owned by the container's node user, uid 1000):
-       mkdir -p data uploads backups
-       chown -R 1000:1000 data uploads
+       mkdir -p data uploads backups logs/app
+       chown -R 1000:1000 data uploads logs/app
 
   3. Configure environment:
        cp .env.example .env

@@ -13,6 +13,7 @@ import {
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { ensurePayableRazorpayOrder } from "@/lib/razorpay-order";
 import { getManualPaymentConfig } from "@/lib/queries";
+import { logError } from "@/lib/log";
 
 export async function POST(req: Request) {
   try {
@@ -190,7 +191,7 @@ export async function POST(req: Request) {
       console.warn("[checkout] rejected:", err.message);
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("Checkout error:", err);
+    await logError("checkout", "Checkout failed", err);
     return NextResponse.json(
       { error: "Something went wrong while placing your order. Please try again." },
       { status: 500 }

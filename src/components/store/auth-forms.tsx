@@ -282,16 +282,24 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
           required
           autoComplete="one-time-code"
           autoFocus
+          translate="no"
           className="text-center text-lg tracking-[0.5em]"
         />
         <p className="text-xs text-muted-foreground">
           {channel === "phone" ? (
             <>
-              Sent via WhatsApp to <span className="font-medium">{phone}</span>
+              Sent via WhatsApp to{" "}
+              <span className="font-medium" translate="no">
+                {phone}
+              </span>
             </>
           ) : (
             <>
-              Sent to <span className="font-medium">{email}</span> — check spam
+              Sent to{" "}
+              <span className="font-medium" translate="no">
+                {email}
+              </span>{" "}
+              — check spam
               if you don&apos;t see it
             </>
           )}
@@ -310,7 +318,10 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
         {devCode && (
           <p className="rounded-md bg-amber-100 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
             Dev mode ({channel === "phone" ? "WhatsApp" : "SMTP"} not configured)
-            — your code is <span className="font-mono font-bold">{devCode}</span>
+            — your code is{" "}
+            <span className="font-mono font-bold" translate="no">
+              {devCode}
+            </span>
           </p>
         )}
       </div>

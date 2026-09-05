@@ -4,6 +4,7 @@ import { CheckoutError } from "@/lib/orders";
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { ensurePayableRazorpayOrder } from "@/lib/razorpay-order";
 import { getManualPaymentConfig } from "@/lib/queries";
+import { logError } from "@/lib/log";
 
 /**
  * Re-arms payment for a pending order so the customer can pay it from the
@@ -59,7 +60,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ orderNumber: 
     if (err instanceof CheckoutError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error("Pay-now error:", err);
+    await logError("checkout", "Pay-now failed", err);
     return NextResponse.json(
       { error: "Could not start the payment. Please try again." },
       { status: 500 }

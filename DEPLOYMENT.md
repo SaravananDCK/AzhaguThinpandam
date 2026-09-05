@@ -290,6 +290,7 @@ downtime is a few seconds.
 | Task | Command |
 |------|---------|
 | View logs | `docker compose logs -f app` |
+| See errors | open `/admin/errors`, or `tail -f logs/app/errors-*.jsonl \| jq -r '"\(.time) [\(.source)] \(.message) \(.url // "")"'` |
 | Restart | `docker compose restart app` |
 | Update OS packages (monthly) | `apt update && apt upgrade -y` |
 | Check disk space | `df -h` |

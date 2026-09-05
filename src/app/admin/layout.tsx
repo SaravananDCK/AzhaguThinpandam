@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   Activity,
+  Bug,
   ArrowLeftRight,
   FolderTree,
   LayoutDashboard,
@@ -44,6 +45,7 @@ const NAV = [
   { href: "/admin/expenses", label: "Expenses", icon: Receipt },
   { href: "/admin/finance", label: "Finance", icon: LineChart },
   { href: "/admin/traffic", label: "Traffic", icon: Activity },
+  { href: "/admin/errors", label: "Errors", icon: Bug },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

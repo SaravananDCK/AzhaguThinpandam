@@ -5,6 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { requireAdminApi } from "@/lib/admin";
 import { getUploadsDir } from "@/lib/uploads";
+import { logError } from "@/lib/log";
 
 const MAX_SIZE = 8 * 1024 * 1024; // 8 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: `/uploads/${name}` });
   } catch (err) {
-    console.error("Upload error:", err);
+    await logError("upload", "Image upload failed", err);
     return NextResponse.json({ error: "Could not process the image." }, { status: 500 });
   }
 }

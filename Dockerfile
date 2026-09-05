@@ -53,7 +53,7 @@ COPY scripts/delete-larger-variants.mjs ./scripts/delete-larger-variants.mjs
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
 RUN chmod +x docker-entrypoint.sh \
-  && mkdir -p /app/data /app/uploads \
+  && mkdir -p /app/data /app/uploads /app/logs/app \
   && chown -R node:node /app
 
 USER node

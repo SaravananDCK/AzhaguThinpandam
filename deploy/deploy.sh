@@ -7,6 +7,11 @@ cd "$(dirname "$0")/.."
 echo "==> Pulling latest code…"
 git pull --ff-only
 
+# The app's error log lives on the host. If Docker creates the directory
+# itself it is owned by root and the container (uid 1000) can't write to it.
+mkdir -p logs/app
+chown -R 1000:1000 logs/app
+
 echo "==> Building and restarting containers…"
 docker compose build app
 docker compose up -d

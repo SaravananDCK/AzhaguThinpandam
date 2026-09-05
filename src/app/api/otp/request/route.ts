@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createOtp, normalizeEmail, normalizePhone } from "@/lib/otp";
 import { isOtpChannelConfigured, sendOtpMessage } from "@/lib/whatsapp";
 import { isSmtpConfigured, sendOtpEmail } from "@/lib/email";
+import { logError } from "@/lib/log";
 
 // Best-effort per-IP throttle (single-process deployment). The per-phone
 // limit in createOtp is the real guard against OTP pumping.
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
       if (hasPhone) await sendOtpMessage(identifier, result.code);
       else await sendOtpEmail(identifier, result.code);
     } catch (e) {
-      console.error(`[otp] ${hasPhone ? "WhatsApp" : "Email"} delivery failed:`, e);
+      await logError("otp", `${hasPhone ? "WhatsApp" : "Email"} delivery failed`, e, { extra: { identifier } });
       return NextResponse.json(
         { error: "Could not send the code. Please try again." },
         { status: 502 },
