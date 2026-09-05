@@ -11,7 +11,11 @@ import {
   type OrderStatus,
 } from "@/lib/constants";
 import { sendOrderStatusEmail } from "@/lib/email";
-import { createOrderForCustomer, lookupCustomerByPhone } from "@/lib/admin-orders";
+import {
+  createOrderForCustomer,
+  lookupCustomerByPhone,
+  searchCustomers,
+} from "@/lib/admin-orders";
 import {
   CheckoutError,
   manualPaymentRef,
@@ -233,6 +237,12 @@ export async function deleteOrder(orderId: string) {
 export async function findCustomerByPhone(phone: string) {
   await assertAdmin();
   return lookupCustomerByPhone(phone);
+}
+
+/** Name / phone fragment / email / order number → matching customers. */
+export async function findCustomers(query: string) {
+  await assertAdmin();
+  return searchCustomers(query);
 }
 
 export async function createAdminOrder(input: unknown) {

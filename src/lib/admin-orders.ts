@@ -8,6 +8,7 @@ import {
   markOrderPaid,
 } from "@/lib/orders";
 import { normalizePhone } from "@/lib/otp";
+import { ROLES } from "@/lib/constants";
 
 export type AdminOrderResult =
   | { ok: true; orderNumber: string }
@@ -196,4 +197,119 @@ export async function createOrderForCustomer(input: unknown): Promise<AdminOrder
     console.error("Admin order creation failed:", e);
     return { ok: false, error: "Could not create the order. Please try again." };
   }
+}
+
+export type CustomerCandidate = {
+  /** Normalized phone — the identity the order flow keys on */
+  phone: string;
+  name: string;
+  email: string;
+  orderCount: number;
+  /** "account" = registered user; "orders" = only prior orders on this number */
+  source: "account" | "orders";
+  /** Order number that matched the query, when that's why this row is here */
+  matchedOrder: string | null;
+};
+
+/**
+ * Finds customers by name, phone fragment, email or order number, for the
+ * new-order screen — an admin taking an order over WhatsApp rarely has the full
+ * 10-digit number to hand, but almost always has a name or a past order.
+ *
+ * Searches accounts and past orders (guest or otherwise) and merges them on the
+ * normalized phone, the same identity `createOrderForCustomer` lands on.
+ * Candidates whose number isn't a valid Indian mobile are dropped — an order
+ * can't be raised against them anyway.
+ */
+export async function searchCustomers(rawQuery: string): Promise<CustomerCandidate[]> {
+  const query = rawQuery.trim();
+  if (query.length < 2) return [];
+  // Digits only count as a phone fragment when that's all the query is —
+  // otherwise the digits inside an order number ("AT-29JRCP9Y") drag in every
+  // customer whose number happens to contain them.
+  const rawDigits = /^[\d\s+()-]+$/.test(query) ? query.replace(/\D/g, "") : "";
+  // A number given in full may carry a +91 or leading 0 that the stored one
+  // doesn't; a partial number is matched as typed.
+  const digits = rawDigits ? (normalizePhone(rawDigits) ?? rawDigits) : "";
+  // SQLite's LIKE is already case-insensitive for ASCII, so `contains` needs no
+  // mode (which Prisma doesn't support on SQLite anyway).
+  const text = { contains: query };
+
+  const [users, orders] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        role: ROLES.CUSTOMER,
+        OR: [
+          { name: text },
+          { email: text },
+          ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
+        ],
+      },
+      include: {
+        orders: { select: { id: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.order.findMany({
+      where: {
+        OR: [
+          { shipName: text },
+          { email: text },
+          { orderNumber: text },
+          ...(digits.length >= 3 ? [{ shipPhone: { contains: digits } }] : []),
+        ],
+      },
+      select: {
+        orderNumber: true,
+        shipName: true,
+        shipPhone: true,
+        email: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    }),
+  ]);
+
+  const byPhone = new Map<string, CustomerCandidate>();
+
+  for (const u of users) {
+    const phone = u.phone ? normalizePhone(u.phone) : null;
+    if (!phone) continue; // the order flow needs a usable mobile
+    byPhone.set(phone, {
+      phone,
+      name: u.name ?? "",
+      email: u.email ?? "",
+      orderCount: u.orders.length,
+      source: "account",
+      matchedOrder: null,
+    });
+  }
+
+  for (const o of orders) {
+    const phone = normalizePhone(o.shipPhone);
+    if (!phone) continue;
+    const existing = byPhone.get(phone);
+    if (existing) {
+      // An account row wins on details, except a name it doesn't have — OTP
+      // accounts have none until the customer edits their profile.
+      if (!existing.name) existing.name = o.shipName;
+      if (!existing.matchedOrder && o.orderNumber.toLowerCase().includes(query.toLowerCase())) {
+        existing.matchedOrder = o.orderNumber;
+      }
+      continue;
+    }
+    // Orders are newest-first, so the first sighting carries the latest details
+    byPhone.set(phone, {
+      phone,
+      name: o.shipName,
+      email: o.email,
+      orderCount: orders.filter((x) => normalizePhone(x.shipPhone) === phone).length,
+      source: "orders",
+      matchedOrder: o.orderNumber,
+    });
+  }
+
+  return [...byPhone.values()].slice(0, 12);
 }
