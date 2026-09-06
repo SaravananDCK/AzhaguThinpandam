@@ -11,6 +11,7 @@ import type { Instrumentation } from "next";
  */
 export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (isScannerNoise(err, request.headers)) return;
   const { logError } = await import("./lib/log");
   await logError("server", `${context.routerKind} ${context.routeType} ${context.routePath}`, err, {
     url: request.path,
@@ -20,6 +21,20 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
     extra: { renderSource: context.renderSource, revalidateReason: context.revalidateReason },
   });
 };
+
+/**
+ * Vulnerability scanners POST junk at `/`, `/index.php`, `/wp-login.php` and
+ * so on. Next treats any POST to a page as a possible Server Action
+ * submission, finds no action id in the body, and throws "Failed to find
+ * Server Action". A genuine action call from our own JavaScript always sends
+ * a `Next-Action` header, so the same error WITH that header is kept: it
+ * means a customer's stale tab submitted a form across a deploy.
+ */
+function isScannerNoise(err: unknown, headers: NodeJS.Dict<string | string[]>): boolean {
+  if (headerValue(headers["next-action"])) return false;
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes("Failed to find Server Action");
+}
 
 function headerValue(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
