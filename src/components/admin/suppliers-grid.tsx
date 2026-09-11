@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatINR, rupeesToPaise } from "@/lib/money";
 import { SUPPLIER_PAYMENT_METHODS } from "@/lib/constants";
+import { formatDate } from "@/lib/dates";
 
 type PaymentRow = {
   id: string;
@@ -343,11 +344,7 @@ export function SuppliersGrid() {
                     {data.payments.map((p) => (
                       <tr key={p.id}>
                         <td className="py-0.5 pr-4">
-                          {new Date(p.date).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatDate(p.date)}
                         </td>
                         <td className="py-0.5 pr-4">{formatINR(p.amount)}</td>
                         <td className="py-0.5 pr-4">{p.method ?? "—"}</td>

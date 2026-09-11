@@ -70,7 +70,8 @@ export default async function AdminDashboard() {
     if (revenueByDay.has(key)) revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + o.total);
   }
   const daily = [...revenueByDay.entries()].map(([iso, paise]) => ({
-    day: new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+    // `iso` is already an IST calendar day; format it as-is (UTC) so no zone shifts it
+    day: new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }),
     revenue: Math.round(paise / 100),
   }));
   const topProducts = topItems.map((t) => ({

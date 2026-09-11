@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CustomerForm } from "../customer-form";
 import { SupportLogin } from "./support-login";
+import { formatDateLong, formatDateNumeric } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Edit customer" };
 
@@ -42,11 +43,7 @@ export default async function AdminCustomerPage({ params }: Props) {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Joined{" "}
-          {customer.createdAt.toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          {formatDateLong(customer.createdAt)}
           {customer.role === "ADMIN" && " · admin account"}
         </p>
       </div>
@@ -83,7 +80,7 @@ export default async function AdminCustomerPage({ params }: Props) {
                 >
                   <span className="font-mono">{o.orderNumber}</span>
                   <span className="text-muted-foreground">
-                    {o.createdAt.toLocaleDateString("en-IN")}
+                    {formatDateNumeric(o.createdAt)}
                   </span>
                   <Badge variant="outline">
                     {ORDER_STATUS_LABELS[o.status as OrderStatus] ?? o.status}

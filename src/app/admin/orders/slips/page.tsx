@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { SlipsView } from "./slips-view";
+import { formatDateNumeric } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Shipping slips" };
 
@@ -72,7 +73,7 @@ export default async function ShippingSlipsPage({ searchParams }: Props) {
           state: o.shipState,
           pincode: o.shipPincode,
           itemCount: o.items.reduce((s, i) => s + i.qty, 0),
-          createdAt: o.createdAt.toLocaleDateString("en-IN"),
+          createdAt: formatDateNumeric(o.createdAt),
         }))}
       />
     </div>

@@ -16,6 +16,7 @@ import DataGrid, {
 import { exportGrid } from "@/components/admin/grid-export";
 import { Badge } from "@/components/ui/badge";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { formatDate } from "@/lib/dates";
 
 export type CustomerRow = {
   id: string;
@@ -152,11 +153,7 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
                 >
                   <span className="font-mono font-medium text-primary">{o.orderNumber}</span>
                   <span className="text-xs text-muted-foreground">
-                    {new Date(o.createdAt).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                    {formatDate(o.createdAt)}
                   </span>
                   <span className="font-medium">₹{o.totalRupees.toLocaleString("en-IN")}</span>
                   <Badge variant="outline">

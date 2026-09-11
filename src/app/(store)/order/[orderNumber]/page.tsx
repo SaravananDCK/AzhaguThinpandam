@@ -15,6 +15,7 @@ import { PurchasePixel } from "@/components/store/purchase-pixel";
 import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { formatDateLong } from "@/lib/dates";
 
 // The order number is the only thing guarding this page (it's deliberately
 // viewable without login so WhatsApp/UPI customers can track and pay), so keep
@@ -221,11 +222,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Placed on{" "}
-            {order.createdAt.toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
+            {formatDateLong(order.createdAt)}
           </p>
         </div>
         <Badge variant={STATUS_VARIANT[order.status] ?? "outline"} className="px-3 py-1 text-sm">

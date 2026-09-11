@@ -10,6 +10,7 @@ import { gstFromInclusive } from "@/lib/finance";
 import { packNote } from "@/lib/pack";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/admin/print-button";
+import { formatDateLong } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Print order" };
 
@@ -69,11 +70,7 @@ export default async function OrderPrintPage({ params }: Props) {
             <p className="text-lg font-semibold">Invoice</p>
             <p className="mt-1 font-mono text-sm">{order.orderNumber}</p>
             <p className="text-xs text-neutral-600">
-              {order.createdAt.toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {formatDateLong(order.createdAt)}
             </p>
             <p className="text-xs text-neutral-600">
               {ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status}

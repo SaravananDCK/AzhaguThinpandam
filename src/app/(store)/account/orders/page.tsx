@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "My Orders" };
 
@@ -41,11 +42,7 @@ export default async function AccountOrdersPage() {
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {order.createdAt.toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}{" "}
+                {formatDate(order.createdAt)}{" "}
                 · {order.items.length} item{order.items.length > 1 ? "s" : ""} ·{" "}
                 <span className="font-medium text-foreground">{formatINR(order.total)}</span>
               </p>

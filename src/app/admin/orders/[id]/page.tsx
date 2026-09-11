@@ -20,6 +20,7 @@ import { EditOrderItems } from "./edit-items";
 import { AdjustTotals } from "./adjust-totals";
 import { CostPanel } from "./cost-panel";
 import { updatePackingCost, updateShippingCost } from "../actions";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -57,7 +58,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             Order <span className="font-mono">{order.orderNumber}</span>
           </h1>
           <p className="text-xs text-muted-foreground">
-            {order.createdAt.toLocaleString("en-IN")} ·{" "}
+            {formatDateTime(order.createdAt)} ·{" "}
             {order.user
               ? `Account: ${order.user.phone ?? order.user.email ?? order.user.id}`
               : "Guest checkout"}

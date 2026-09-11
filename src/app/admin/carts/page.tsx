@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/money";
 import { whatsappNumber } from "@/lib/upi";
+import { formatDateTime } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Pending Carts" };
 
@@ -97,7 +98,7 @@ export default async function AdminCartsPage() {
                 )}
                 <Badge variant="outline">{formatINR(cart.total)}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  last activity {cart.updatedAt.toLocaleString("en-IN")}
+                  last activity {formatDateTime(cart.updatedAt)}
                 </span>
                 {cart.pendingOrder && (
                   <Badge variant="secondary">

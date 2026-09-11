@@ -18,6 +18,9 @@ services:
       UPLOADS_DIR: "/app/uploads"
       CADDY_LOG_DIR: "/app/logs/caddy"
       APP_LOG_DIR: "/app/logs/app"
+      # Every date the store shows is IST (src/lib/dates.ts pins it explicitly;
+      # this catches anything that formats a Date without a time zone).
+      TZ: "Asia/Kolkata"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads

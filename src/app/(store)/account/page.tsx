@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/money";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { formatDateNumeric } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "My Account" };
 
@@ -76,7 +77,7 @@ export default async function AccountPage() {
                 <div>
                   <p className="font-mono font-medium">{order.orderNumber}</p>
                   <p className="text-xs text-muted-foreground">
-                    {order.createdAt.toLocaleDateString("en-IN")}
+                    {formatDateNumeric(order.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

@@ -3,6 +3,7 @@ import { BadgeCheck } from "lucide-react";
 import { Stars } from "@/components/store/stars";
 import { ReviewForm } from "@/components/store/review-form";
 import type { PublicReview } from "@/lib/reviews";
+import { formatDate } from "@/lib/dates";
 
 type ExistingReview = {
   rating: number;
@@ -93,11 +94,7 @@ export function ProductReviews({
               )}
               <p className="mt-2 text-xs text-muted-foreground">
                 {r.authorName} ·{" "}
-                {new Date(r.createdAt).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {formatDate(r.createdAt)}
               </p>
             </li>
           ))}

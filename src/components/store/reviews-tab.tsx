@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BadgeCheck, Loader2, Star } from "lucide-react";
 import { Stars } from "@/components/store/stars";
+import { formatDate } from "@/lib/dates";
 import {
   Sheet,
   SheetContent,
@@ -116,11 +117,7 @@ export function ReviewsTab() {
                 )}
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   {r.authorName} ·{" "}
-                  {new Date(r.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {formatDate(r.createdAt)}
                 </p>
               </div>
             ))}
