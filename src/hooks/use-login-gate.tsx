@@ -19,7 +19,10 @@ export function useLoginGate() {
 
   function gate(action: () => void) {
     void (async () => {
-      if (await check()) {
+      // A cached "logged out" may be stale — the customer may have logged in
+      // on /login and navigated back client-side. Confirm with the server
+      // before asking them to log in again.
+      if ((await check()) || (await check(true))) {
         action();
         return;
       }

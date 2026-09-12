@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthed } from "@/hooks/use-authed";
 
 const RESEND_COOLDOWN_MS = 30_000;
 
@@ -93,6 +94,9 @@ function CustomerOtpForm({ callbackUrl }: { callbackUrl: string }) {
       setBusy(false);
       return;
     }
+    // The add-to-cart gate and cart mirror cache the session state; a
+    // client-side navigation back to the shop keeps that cache, so tell it.
+    useAuthed.getState().setAuthed(true);
     // First-ever login (or profile never completed): ask for their details once
     try {
       const session = await fetch("/api/auth/session").then((r) => r.json());
@@ -365,6 +369,7 @@ function AdminEmailForm({ callbackUrl }: { callbackUrl: string }) {
       toast.error("Incorrect email or password.");
       setLoading(false);
     } else {
+      useAuthed.getState().setAuthed(true);
       router.push(callbackUrl);
       router.refresh();
     }

@@ -6,8 +6,13 @@ type AuthedState = {
   /** null = not checked yet */
   authed: boolean | null;
   setAuthed: (v: boolean) => void;
-  /** Resolves the current session state, checking the server once. */
-  check: () => Promise<boolean>;
+  /**
+   * Resolves the current session state. Cached after the first server check;
+   * pass `force` to ask the server again — the gate does this before showing
+   * a login dialog, because a "logged out" answer can be stale (the customer
+   * logged in on /login and came back by client-side navigation).
+   */
+  check: (force?: boolean) => Promise<boolean>;
 };
 
 let inflight: Promise<boolean> | null = null;
@@ -19,9 +24,9 @@ let inflight: Promise<boolean> | null = null;
 export const useAuthed = create<AuthedState>((set, get) => ({
   authed: null,
   setAuthed: (v) => set({ authed: v }),
-  check: () => {
+  check: (force = false) => {
     const { authed } = get();
-    if (authed !== null) return Promise.resolve(authed);
+    if (authed !== null && !force) return Promise.resolve(authed);
     inflight ??= fetch("/api/auth/session")
       .then((r) => r.json())
       .then((s) => {
