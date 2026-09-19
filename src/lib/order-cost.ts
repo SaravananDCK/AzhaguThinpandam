@@ -36,6 +36,41 @@ export type OrderCost = {
   unknownLines: number;
 };
 
+/** The order fields and item/variant lookups the cost math needs. */
+export const ORDER_COST_ITEMS_INCLUDE = {
+  include: {
+    variant: {
+      select: {
+        label: true,
+        weightGrams: true,
+        unitCost: true,
+        product: { select: { purchasePricePerKg: true } },
+      },
+    },
+  },
+} as const;
+
+export type OrderForCost = {
+  subtotal: number;
+  discount: number;
+  manualDiscount: number;
+  shippingFee: number;
+  shippingCost: number;
+  packingCost: number;
+  items: {
+    productName: string;
+    variantLabel: string;
+    price: number;
+    qty: number;
+    variant: {
+      label: string;
+      weightGrams: number | null;
+      unitCost: number | null;
+      product: { purchasePricePerKg: number | null };
+    } | null;
+  }[];
+};
+
 /**
  * Wholesale cost and margin for an order, so an admin can see the headroom
  * before agreeing a bulk discount.
@@ -46,27 +81,11 @@ export type OrderCost = {
  * discount now, but not a substitute for the Finance module's historical
  * figures. Shipping appears on both sides — what the customer paid and what the
  * courier charged — because a flat rate can quietly undercharge a heavy parcel.
+ *
+ * Pure: the caller loads the order (with ORDER_COST_ITEMS_INCLUDE) so a list
+ * page can price hundreds of orders from one query.
  */
-export async function computeOrderCost(orderId: string): Promise<OrderCost | null> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      items: {
-        include: {
-          variant: {
-            select: {
-              label: true,
-              weightGrams: true,
-              unitCost: true,
-              product: { select: { purchasePricePerKg: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-  if (!order) return null;
-
+export function orderCostOf(order: OrderForCost): OrderCost {
   let goodsCost = 0;
   let unknownLines = 0;
 
@@ -145,4 +164,14 @@ export async function computeOrderCost(orderId: string): Promise<OrderCost | nul
     marginPct: netRevenue > 0 ? (margin / netRevenue) * 100 : null,
     unknownLines,
   };
+}
+
+/** Cost and margin for one order by id (the order detail page). */
+export async function computeOrderCost(orderId: string): Promise<OrderCost | null> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: ORDER_COST_ITEMS_INCLUDE },
+  });
+  if (!order) return null;
+  return orderCostOf(order);
 }

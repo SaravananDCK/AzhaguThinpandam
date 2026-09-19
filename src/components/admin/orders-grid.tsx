@@ -32,6 +32,12 @@ export type OrderRow = {
   totalRupees: number;
   /** What the courier charged us — 0 means nobody has entered it yet */
   courierCostRupees: number;
+  /** Goods + shipping income − today's wholesale cost − packing − courier (rupees) */
+  marginRupees: number;
+  /** Margin as % of goods revenue; null when there was no goods revenue */
+  marginPct: number | null;
+  /** Some lines have no wholesale price or the courier cost isn't recorded — the margin is overstated */
+  marginIncomplete: boolean;
   payment: string;
   status: string;
   /** What the customer (or the admin) typed at checkout; "" when there is none */
@@ -197,6 +203,45 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
         allowHeaderFiltering={false}
         cellRender={({ value, text }: { value: number; text: string }) =>
           value > 0 ? <span>{text}</span> : <span className="text-muted-foreground">—</span>
+        }
+      />
+      {/* Internal margin: what the order earned over today's wholesale cost,
+          packing and courier. Red when the order lost money; an asterisk when
+          part of the cost is unknown, so the figure is optimistic. */}
+      <Column
+        dataField="marginRupees"
+        caption="Margin"
+        width={120}
+        dataType="number"
+        format={{ type: "currency", currency: "INR", useCurrencyAccountingStyle: false }}
+        allowHeaderFiltering={false}
+        cellRender={({ value, text, data }: { value: number; text: string; data: OrderRow }) => (
+          <span
+            className={cn(value < 0 && "font-medium text-destructive")}
+            title={
+              data.marginIncomplete
+                ? "Some cost is unknown (unpriced items or no courier cost yet) — the real margin is lower"
+                : undefined
+            }
+          >
+            {text}
+            {data.marginIncomplete && <span className="text-muted-foreground">*</span>}
+          </span>
+        )}
+      />
+      <Column
+        dataField="marginPct"
+        caption="Margin %"
+        width={100}
+        dataType="number"
+        format={{ type: "fixedPoint", precision: 1 }}
+        allowHeaderFiltering={false}
+        cellRender={({ value, text }: { value: number | null; text: string }) =>
+          value == null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className={cn(value < 0 && "font-medium text-destructive")}>{text}%</span>
+          )
         }
       />
       <Column
