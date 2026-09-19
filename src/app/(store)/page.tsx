@@ -80,9 +80,9 @@ export const metadata: Metadata = {
 };
 
 const TRUST_ROW = [
-  // Free shipping is a Tamil Nadu offer — outside TN every order pays by
-  // weight (src/lib/shipping.ts), so don't promise it India-wide.
-  { Icon: Truck, text: "Free shipping in TN over ₹999" },
+  // Free shipping is a Tamil Nadu / Puducherry offer — elsewhere every order
+  // pays by weight (src/lib/shipping.ts), so don't promise it India-wide.
+  { Icon: Truck, text: "Free shipping in TN & Puducherry over ₹999" },
   { Icon: HandHeart, text: "Made fresh in small batches" },
   { Icon: ShieldCheck, text: "100% secure payments" },
 ];

@@ -262,7 +262,7 @@ export function CartView({
 
             {!isEmployee && (
               <p className="text-[11px] text-muted-foreground">
-                Shipping shown is for Tamil Nadu. Deliveries outside TN are charged by
+                Shipping shown is for Tamil Nadu and Puducherry. Other states are charged by
                 weight — your final shipping appears at checkout once you enter your state.
               </p>
             )}

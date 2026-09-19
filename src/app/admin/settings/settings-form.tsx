@@ -22,6 +22,9 @@ type Props = {
     shippingFeeRupees: string;
     freeShippingAboveRupees: string;
     outsideTnPerKgRupees: string;
+    keralaPerKgRupees: string;
+    karnatakaPerKgRupees: string;
+    telanganaPerKgRupees: string;
     lowStockThreshold: string;
     boxTiers: string;
     discountType: DiscountType;
@@ -141,8 +144,9 @@ export function SettingsForm({ values, variantOptions }: Props) {
         <CardContent className="space-y-4">
           <p className="font-semibold">Shipping & stock</p>
           <p className="text-xs text-muted-foreground">
-            Inside Tamil Nadu: a flat fee, free above the threshold. Outside Tamil Nadu:
-            charged by weight (rounded up to the next kg), always — no free shipping.
+            Inside Tamil Nadu and Puducherry: a flat fee, free above the threshold. Every
+            other state: charged by weight (rounded up to the next kg), always — no free
+            shipping.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2">
@@ -169,7 +173,40 @@ export function SettingsForm({ values, variantOptions }: Props) {
               <p className="text-xs text-muted-foreground">0 disables free shipping.</p>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="s-outtn">Outside TN ₹ per kg</Label>
+              <Label htmlFor="s-kerala">Kerala ₹ per kg</Label>
+              <Input
+                id="s-kerala"
+                name="keralaPerKg"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.keralaPerKgRupees}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-karnataka">Karnataka ₹ per kg</Label>
+              <Input
+                id="s-karnataka"
+                name="karnatakaPerKg"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.karnatakaPerKgRupees}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-telangana">Telangana ₹ per kg</Label>
+              <Input
+                id="s-telangana"
+                name="telanganaPerKg"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={values.telanganaPerKgRupees}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-outtn">Other states ₹ per kg</Label>
               <Input
                 id="s-outtn"
                 name="outsideTnPerKg"
@@ -178,7 +215,10 @@ export function SettingsForm({ values, variantOptions }: Props) {
                 step="0.01"
                 defaultValue={values.outsideTnPerKgRupees}
               />
-              <p className="text-xs text-muted-foreground">Charged per kg, always.</p>
+              <p className="text-xs text-muted-foreground">
+                Every state other than TN, Puducherry, Kerala, Karnataka and Telangana. Per-kg rates are
+                charged on every order, rounded up to the next kg — no free shipping.
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="s-lowstock">Low stock alert at</Label>

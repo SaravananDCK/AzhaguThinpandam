@@ -77,7 +77,10 @@ export const SETTINGS = {
   STORE_ADDRESS: "store_address",
   SHIPPING_FEE: "shipping_fee_paise", // inside Tamil Nadu, flat
   FREE_SHIPPING_ABOVE: "free_shipping_above_paise", // inside Tamil Nadu threshold
-  OUTSIDE_TN_PER_KG: "outside_tn_shipping_per_kg_paise", // per kg, always charged
+  OUTSIDE_TN_PER_KG: "outside_tn_shipping_per_kg_paise", // per kg, always charged (states without their own rate)
+  KERALA_PER_KG: "kerala_shipping_per_kg_paise",
+  KARNATAKA_PER_KG: "karnataka_shipping_per_kg_paise",
+  TELANGANA_PER_KG: "telangana_shipping_per_kg_paise",
   LOW_STOCK_THRESHOLD: "low_stock_threshold",
   BOX_TIERS: "box_discount_tiers",
   DISCOUNT_TYPE: "discount_type", // "percent" | "goodies" (DISCOUNT_TYPES)
@@ -130,6 +133,11 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // Outside Tamil Nadu: charged by weight (rounded up to the next kg), always —
   // no free shipping. ₹70/kg default.
   [SETTINGS.OUTSIDE_TN_PER_KG]: "7000",
+  // Neighbouring states get their own ₹/kg; they start equal to the outside
+  // rate so nothing changes until the admin sets them in Settings.
+  [SETTINGS.KERALA_PER_KG]: "7000",
+  [SETTINGS.KARNATAKA_PER_KG]: "7000",
+  [SETTINGS.TELANGANA_PER_KG]: "7000",
   [SETTINGS.LOW_STOCK_THRESHOLD]: "5",
   // "kg:percent" pairs — discount on the whole order once the cart's total
   // weight reaches that many kilograms. Applied server-side at checkout.

@@ -58,6 +58,7 @@ export default async function CheckoutPage() {
         shippingFee={shippingConfig.shippingFee}
         freeShippingAbove={shippingConfig.freeShippingAbove}
         outsideTnPerKg={shippingConfig.outsideTnPerKg}
+        statePerKg={shippingConfig.statePerKg}
         tiers={discount.tiers}
         discountType={discount.type}
         goodieTiers={discount.goodieTiers}

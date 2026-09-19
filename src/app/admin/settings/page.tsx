@@ -45,6 +45,13 @@ export default async function AdminSettingsPage() {
           outsideTnPerKgRupees: paiseToRupees(
             parseInt(settings[SETTINGS.OUTSIDE_TN_PER_KG], 10) || 0
           ),
+          keralaPerKgRupees: paiseToRupees(parseInt(settings[SETTINGS.KERALA_PER_KG], 10) || 0),
+          karnatakaPerKgRupees: paiseToRupees(
+            parseInt(settings[SETTINGS.KARNATAKA_PER_KG], 10) || 0
+          ),
+          telanganaPerKgRupees: paiseToRupees(
+            parseInt(settings[SETTINGS.TELANGANA_PER_KG], 10) || 0
+          ),
           lowStockThreshold: settings[SETTINGS.LOW_STOCK_THRESHOLD],
           boxTiers: settings[SETTINGS.BOX_TIERS],
           discountType:

@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants";
 import { parseBoxTiers, parseGoodieTiers, type BoxTier, type GoodieTier } from "@/lib/box";
 import { staffUnitPrice } from "@/lib/staff-pricing";
+import type { ShippingConfig } from "@/lib/shipping";
 import { getViewerPricing } from "@/lib/viewer";
 
 const productInclude = {
@@ -173,12 +174,18 @@ export async function getManualPaymentConfig() {
   };
 }
 
-export async function getShippingConfig() {
+export async function getShippingConfig(): Promise<ShippingConfig> {
   const settings = await getSettings();
+  const paise = (key: string) => parseInt(settings[key], 10) || 0;
   return {
-    shippingFee: parseInt(settings[SETTINGS.SHIPPING_FEE], 10) || 0,
-    freeShippingAbove: parseInt(settings[SETTINGS.FREE_SHIPPING_ABOVE], 10) || 0,
-    outsideTnPerKg: parseInt(settings[SETTINGS.OUTSIDE_TN_PER_KG], 10) || 0,
+    shippingFee: paise(SETTINGS.SHIPPING_FEE),
+    freeShippingAbove: paise(SETTINGS.FREE_SHIPPING_ABOVE),
+    outsideTnPerKg: paise(SETTINGS.OUTSIDE_TN_PER_KG),
+    statePerKg: {
+      kerala: paise(SETTINGS.KERALA_PER_KG),
+      karnataka: paise(SETTINGS.KARNATAKA_PER_KG),
+      telangana: paise(SETTINGS.TELANGANA_PER_KG),
+    },
   };
 }
 

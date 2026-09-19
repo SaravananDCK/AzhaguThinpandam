@@ -49,11 +49,11 @@ export default function ShippingPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>Within Tamil Nadu:</strong> 2–4 business days after dispatch.
+          <strong>Within Tamil Nadu and Puducherry:</strong> 2–4 business days after dispatch.
         </li>
         <li>
-          <strong>Rest of South India</strong> (Kerala, Karnataka, Andhra Pradesh, Telangana,
-          Puducherry): 3–6 business days after dispatch.
+          <strong>Rest of South India</strong> (Kerala, Karnataka, Andhra Pradesh, Telangana):
+          3–6 business days after dispatch.
         </li>
         <li>
           <strong>Rest of India:</strong> 5–10 business days after dispatch.
@@ -64,7 +64,8 @@ export default function ShippingPolicyPage() {
         </li>
       </ul>
       <p>
-        So, in total, most orders reach you within 3–7 business days inside Tamil Nadu and within
+        So, in total, most orders reach you within 3–7 business days inside Tamil Nadu and
+        Puducherry, and within
         6–13 business days elsewhere in India. These are estimates based on courier performance and
         are not guaranteed: weather, strikes, festival rush, regional restrictions and courier
         network delays can extend them. Azhagu Thinpandam is not liable for delays caused by the
@@ -75,12 +76,14 @@ export default function ShippingPolicyPage() {
       <h2>3. Shipping charges</h2>
       <ul>
         <li>
-          <strong>Within Tamil Nadu:</strong> a flat shipping fee is charged per order, and shipping
-          is <strong>free</strong> above the order value shown in the cart.
+          <strong>Within Tamil Nadu and Puducherry:</strong> a flat shipping fee is charged per
+          order, and shipping is <strong>free</strong> above the order value shown in the cart.
         </li>
         <li>
-          <strong>Outside Tamil Nadu:</strong> shipping is charged by the parcel weight (per kg,
+          <strong>All other states:</strong> shipping is charged by the parcel weight (per kg,
           rounded up to the next whole kg) and is not eligible for the free-shipping offer.
+          Kerala, Karnataka and Telangana have their own per-kg rate; all other states and union
+          territories share one per-kg rate.
         </li>
         <li>
           The exact shipping charge for your address is always shown at checkout, before you pay.

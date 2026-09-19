@@ -34,7 +34,15 @@ import {
 } from "@/lib/box";
 import type { DiscountType } from "@/lib/constants";
 import type { GoodieInfo } from "@/lib/queries";
-import { billableKg, computeShipping, isTamilNadu } from "@/lib/shipping";
+import {
+  billableKg,
+  computeShipping,
+  isTamilNadu,
+  perKgFor,
+  shippingZone,
+  zoneLabel,
+  type StateZone,
+} from "@/lib/shipping";
 import { INDIAN_STATES } from "@/lib/india-states";
 
 declare global {
@@ -66,6 +74,7 @@ type Props = {
   shippingFee: number;
   freeShippingAbove: number;
   outsideTnPerKg: number;
+  statePerKg: Record<StateZone, number>;
   tiers: BoxTier[];
   discountType: DiscountType;
   goodieTiers: GoodieInfo[];
@@ -86,6 +95,7 @@ export function CheckoutForm({
   shippingFee,
   freeShippingAbove,
   outsideTnPerKg,
+  statePerKg,
   tiers,
   discountType,
   goodieTiers,
@@ -167,7 +177,9 @@ export function CheckoutForm({
           }))
         )
       : 0);
-  // Mirrors createOrderFromCart: inside TN flat/free-above, outside TN weight × ₹/kg
+  // Mirrors createOrderFromCart: inside TN flat/free-above, elsewhere weight × ₹/kg
+  // (Kerala / Karnataka / Telangana at their own rate, other states at the outside rate)
+  const shippingConfig = { shippingFee, freeShippingAbove, outsideTnPerKg, statePerKg };
   const stateChosen = state.trim().length > 0;
   const outsideTn = !isEmployee && stateChosen && !isTamilNadu(state);
   // Staff collect at the shop — never a delivery charge.
@@ -177,7 +189,7 @@ export function CheckoutForm({
           state,
           weightKg: parcelKg,
           subtotal: discounted,
-          config: { shippingFee, freeShippingAbove, outsideTnPerKg },
+          config: shippingConfig,
         })
       : 0;
   const total = discounted + fee;
@@ -759,15 +771,15 @@ export function CheckoutForm({
               </p>
             ) : outsideTn ? (
               <p className="text-xs text-muted-foreground">
-                Outside Tamil Nadu — charged by weight: {billableKg(parcelKg)} kg ×{" "}
-                {formatINR(outsideTnPerKg)}/kg (rounded up to the next kg
+                {zoneLabel(shippingZone(state))} — charged by weight: {billableKg(parcelKg)} kg ×{" "}
+                {formatINR(perKgFor(state, shippingConfig))}/kg (rounded up to the next kg
                 {goodiesApply ? ", free goodies included" : ""}).
               </p>
             ) : (
               fee > 0 &&
               freeShippingAbove > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Free shipping within Tamil Nadu on{" "}
+                  Free shipping within Tamil Nadu and Puducherry on{" "}
                   {discount > 0 ? "the after-discount total" : "orders"} above{" "}
                   {formatINR(freeShippingAbove)}
                 </p>

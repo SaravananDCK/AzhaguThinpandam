@@ -13,6 +13,9 @@ export async function saveSettings(formData: FormData) {
   const shippingFee = rupeesToPaise(String(formData.get("shippingFee") ?? ""));
   const freeAbove = rupeesToPaise(String(formData.get("freeShippingAbove") ?? ""));
   const outsideTnPerKg = rupeesToPaise(String(formData.get("outsideTnPerKg") ?? "0"));
+  const keralaPerKg = rupeesToPaise(String(formData.get("keralaPerKg") ?? "0"));
+  const karnatakaPerKg = rupeesToPaise(String(formData.get("karnatakaPerKg") ?? "0"));
+  const telanganaPerKg = rupeesToPaise(String(formData.get("telanganaPerKg") ?? "0"));
   const packingCost = rupeesToPaise(String(formData.get("packingCost") ?? "0"));
   const lowStock = parseInt(String(formData.get("lowStockThreshold") ?? ""), 10);
 
@@ -20,6 +23,9 @@ export async function saveSettings(formData: FormData) {
     shippingFee === null ||
     freeAbove === null ||
     outsideTnPerKg === null ||
+    keralaPerKg === null ||
+    karnatakaPerKg === null ||
+    telanganaPerKg === null ||
     packingCost === null ||
     Number.isNaN(lowStock) ||
     lowStock < 0
@@ -107,6 +113,9 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.SHIPPING_FEE]: String(shippingFee),
     [SETTINGS.FREE_SHIPPING_ABOVE]: String(freeAbove),
     [SETTINGS.OUTSIDE_TN_PER_KG]: String(outsideTnPerKg),
+    [SETTINGS.KERALA_PER_KG]: String(keralaPerKg),
+    [SETTINGS.KARNATAKA_PER_KG]: String(karnatakaPerKg),
+    [SETTINGS.TELANGANA_PER_KG]: String(telanganaPerKg),
     [SETTINGS.LOW_STOCK_THRESHOLD]: String(lowStock),
     [SETTINGS.BOX_TIERS]: boxTiers,
     [SETTINGS.DISCOUNT_TYPE]: discountType,
