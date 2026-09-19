@@ -22,7 +22,10 @@ import {
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { Button } from "@/components/ui/button";
-import "devextreme/dist/css/dx.light.css";
+import { ThemeToggle } from "@/components/store/theme-toggle";
+import { DxTheme, DX_THEME_BOOT_SCRIPT } from "@/components/admin/dx-theme";
+// DevExtreme's stylesheet is not imported here: it is a <link> whose href
+// follows the light/dark toggle (see dx-theme.tsx and scripts/copy-dx-css.mjs).
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s | Admin — Azhagu Thinpandam" },
@@ -54,6 +57,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen">
+      <script dangerouslySetInnerHTML={{ __html: DX_THEME_BOOT_SCRIPT }} />
+      <DxTheme />
       <aside className="hidden w-56 shrink-0 flex-col border-r bg-secondary/30 p-4 md:flex">
         <Link href="/admin" className="mb-6 flex items-center gap-2 px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -72,11 +77,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Button>
           ))}
         </nav>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/">
-            <Store className="size-4" /> View store
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="flex-1">
+            <Link href="/">
+              <Store className="size-4" /> View store
+            </Link>
+          </Button>
+          <ThemeToggle />
+        </div>
       </aside>
 
       <div className="flex-1">
@@ -90,6 +98,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
+          <ThemeToggle />
         </div>
         <main className="p-4 sm:p-6">{children}</main>
       </div>

@@ -75,3 +75,6 @@ rzp*.csv
 
 # Claude Code's local session settings
 /.claude
+
+# DevExtreme stylesheets copied from node_modules by scripts/copy-dx-css.mjs
+/public/dx
