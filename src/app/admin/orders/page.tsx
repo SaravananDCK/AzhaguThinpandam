@@ -5,15 +5,24 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { OrdersGrid } from "@/components/admin/orders-grid";
 import { ORDER_COST_ITEMS_INCLUDE, orderCostOf } from "@/lib/order-cost";
+import { REVENUE_STATUSES } from "@/lib/finance";
+import { loadPaidHistory, ordinalOf } from "@/lib/repeat-customers";
 
 export const metadata: Metadata = { title: "Orders" };
 
 export default async function AdminOrdersPage() {
-  const orders = await prisma.order.findMany({
-    include: { items: ORDER_COST_ITEMS_INCLUDE, payment: true },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  const [orders, paidHistory] = await Promise.all([
+    prisma.order.findMany({
+      include: {
+        items: ORDER_COST_ITEMS_INCLUDE,
+        payment: true,
+        user: { select: { phone: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    }),
+    loadPaidHistory(),
+  ]);
 
   const rows = orders.map((o) => {
     // Today's wholesale cost against what the order earned — the same figure
@@ -23,6 +32,9 @@ export default async function AdminOrdersPage() {
       id: o.id,
       orderNumber: o.orderNumber,
       customer: o.shipName,
+      // 1st / 2nd / 3rd paid order from this customer (see repeat-customers.ts)
+      customerOrdinal: ordinalOf(paidHistory, o),
+      countsAsPaid: REVENUE_STATUSES.includes(o.status),
       phone: o.shipPhone,
       items: o.items.reduce((s, i) => s + i.qty, 0),
       totalRupees: o.total / 100,

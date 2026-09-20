@@ -21,12 +21,17 @@ import { exportGrid } from "@/components/admin/grid-export";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { ordinalLabel } from "@/lib/ordinal";
 import { cn } from "@/lib/utils";
 
 export type OrderRow = {
   id: string;
   orderNumber: string;
   customer: string;
+  /** Position among this customer's paid orders: 1 = first-time buyer, 2+ = repeat */
+  customerOrdinal: number;
+  /** False for unpaid/cancelled rows — the ordinal is then the position it would take */
+  countsAsPaid: boolean;
   phone: string;
   items: number;
   totalRupees: number;
@@ -182,6 +187,31 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
         )}
       />
       <Column dataField="customer" />
+      {/* Repeat buyers at a glance: filled badge from the 2nd paid order on.
+          Untick "1" in the header filter for repeat customers only. Muted on
+          unpaid rows, where it is the position the order would take. */}
+      <Column
+        dataField="customerOrdinal"
+        caption="Nth order"
+        width={105}
+        dataType="number"
+        alignment="left"
+        cellRender={({ value, data }: { value: number; data: OrderRow }) => (
+          <Badge
+            variant={value > 1 ? "secondary" : "outline"}
+            className={cn(!data.countsAsPaid && "opacity-50")}
+            title={
+              data.countsAsPaid
+                ? value > 1
+                  ? `Repeat customer — their ${ordinalLabel(value)} paid order`
+                  : "First paid order from this customer"
+                : `Not paid yet — would be their ${ordinalLabel(value)} order`
+            }
+          >
+            {ordinalLabel(value)}
+          </Badge>
+        )}
+      />
       <Column dataField="phone" width={130} allowHeaderFiltering={false} />
       <Column dataField="items" caption="Packs" width={85} allowHeaderFiltering={false} />
       <Column

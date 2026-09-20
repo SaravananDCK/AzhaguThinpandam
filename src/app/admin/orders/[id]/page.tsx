@@ -21,6 +21,9 @@ import { AdjustTotals } from "./adjust-totals";
 import { CostPanel } from "./cost-panel";
 import { updatePackingCost, updateShippingCost } from "../actions";
 import { formatDateTime } from "@/lib/dates";
+import { REVENUE_STATUSES } from "@/lib/finance";
+import { ordinalLabel } from "@/lib/ordinal";
+import { historyFor, loadPaidHistory, ordinalOf } from "@/lib/repeat-customers";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -41,7 +44,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const cost = await computeOrderCost(order.id);
+  const [cost, paidHistory] = await Promise.all([computeOrderCost(order.id), loadPaidHistory()]);
+  // Which order this is for the customer, and what they've spent so far
+  const ordinal = ordinalOf(paidHistory, order);
+  const { paidOrders, lifetimeSpend } = historyFor(paidHistory, order);
+  const isPaid = REVENUE_STATUSES.includes(order.status);
   // Same weight the shipping and bundle-discount rules use
   const orderKg = totalKg(order.items.map((i) => ({ label: i.variantLabel, qty: i.qty })));
 
@@ -62,6 +69,26 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             {order.user
               ? `Account: ${order.user.phone ?? order.user.email ?? order.user.id}`
               : "Guest checkout"}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs">
+            <Badge variant={ordinal > 1 ? "secondary" : "outline"}>
+              {ordinal > 1 ? "Repeat customer" : "New customer"}
+            </Badge>
+            <span className="text-muted-foreground">
+              {isPaid
+                ? `${ordinalLabel(ordinal)} paid order`
+                : `not paid yet — would be their ${ordinalLabel(ordinal)} order`}
+              {paidOrders > 0 &&
+                ` · ${paidOrders} paid order${paidOrders === 1 ? "" : "s"}, ${formatINR(lifetimeSpend)} in all`}
+            </span>
+            {order.user && (
+              <Link
+                href={`/admin/customers/${order.user.id}`}
+                className="text-primary hover:underline"
+              >
+                View customer
+              </Link>
+            )}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">

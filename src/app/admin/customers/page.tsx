@@ -20,7 +20,10 @@ type SimpleOrder = {
 };
 
 function withStats(
-  base: Omit<CustomerRow, "orderCount" | "totalSpentRupees" | "lastOrder" | "recentOrders">,
+  base: Omit<
+    CustomerRow,
+    "orderCount" | "totalSpentRupees" | "lastOrder" | "daysSinceLastOrder" | "recentOrders"
+  >,
   orders: SimpleOrder[]
 ): CustomerRow {
   const sorted = [...orders].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -30,6 +33,10 @@ function withStats(
     orderCount: paid.length,
     totalSpentRupees: paid.reduce((s, o) => s + o.total, 0) / 100,
     lastOrder: sorted[0]?.createdAt.toISOString() ?? null,
+    // Spot regulars who have gone quiet: sort this column descending
+    daysSinceLastOrder: sorted[0]
+      ? Math.floor((Date.now() - sorted[0].createdAt.getTime()) / 86_400_000)
+      : null,
     recentOrders: sorted.slice(0, 5).map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,

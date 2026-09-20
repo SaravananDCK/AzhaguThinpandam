@@ -29,6 +29,8 @@ export type CustomerRow = {
   orderCount: number;
   totalSpentRupees: number;
   lastOrder: string | null;
+  /** Whole days since their latest order (any status); null when they never ordered */
+  daysSinceLastOrder: number | null;
   recentOrders: {
     id: string;
     orderNumber: string;
@@ -125,6 +127,13 @@ export function CustomersGrid({ rows }: { rows: CustomerRow[] }) {
         dataType="date"
         format="dd MMM yyyy"
         width={125}
+        allowHeaderFiltering={false}
+      />
+      <Column
+        dataField="daysSinceLastOrder"
+        caption="Days ago"
+        width={105}
+        dataType="number"
         allowHeaderFiltering={false}
       />
       <Column
