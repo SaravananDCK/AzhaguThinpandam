@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, MessageCircle, Printer } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { computeOrderCost } from "@/lib/order-cost";
 import { formatKg, totalKg } from "@/lib/box";
@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { formatINR, paiseToRupees } from "@/lib/money";
-import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
+import { ORDER_STATUS_LABELS, SETTINGS, type OrderStatus } from "@/lib/constants";
 import { StatusButtons } from "./status-buttons";
 import { DeleteOrder } from "./delete-order";
 import { RevertPayment } from "./revert-payment";
@@ -24,6 +24,8 @@ import { formatDateTime } from "@/lib/dates";
 import { REVENUE_STATUSES } from "@/lib/finance";
 import { ordinalLabel } from "@/lib/ordinal";
 import { historyFor, loadPaidHistory, ordinalOf } from "@/lib/repeat-customers";
+import { getSettings } from "@/lib/queries";
+import { orderWhatsAppLink, parseOrderMessages, renderOrderMessage } from "@/lib/order-messages";
 
 export const metadata: Metadata = { title: "Order Detail" };
 
@@ -44,7 +46,29 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   ]);
   if (!order) notFound();
 
-  const [cost, paidHistory] = await Promise.all([computeOrderCost(order.id), loadPaidHistory()]);
+  const [cost, paidHistory, settings] = await Promise.all([
+    computeOrderCost(order.id),
+    loadPaidHistory(),
+    getSettings(),
+  ]);
+  // WhatsApp chat with the message for this order's status filled in — same
+  // link as the button on the Orders list.
+  const messageTemplate = parseOrderMessages(settings[SETTINGS.ORDER_WHATSAPP_MESSAGES])[
+    order.status as OrderStatus
+  ];
+  const whatsappHref = messageTemplate
+    ? orderWhatsAppLink(
+        order.shipPhone,
+        renderOrderMessage(messageTemplate, {
+          name: order.shipName,
+          orderNumber: order.orderNumber,
+          totalRupees: order.total / 100,
+          packs: order.items.reduce((n, i) => n + i.qty, 0),
+          storeName: settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam",
+          appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
+        })
+      )
+    : null;
   // Which order this is for the customer, and what they've spent so far
   const ordinal = ordinalOf(paidHistory, order);
   const { paidOrders, lifetimeSpend } = historyFor(paidHistory, order);
@@ -92,6 +116,13 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {whatsappHref && (
+            <Button asChild variant="outline" size="sm">
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="size-4 text-[#25D366]" /> WhatsApp
+              </a>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/admin/orders/${order.id}/print`}>
               <Printer className="size-4" /> Print

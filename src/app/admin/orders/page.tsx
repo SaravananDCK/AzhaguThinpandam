@@ -7,11 +7,14 @@ import { OrdersGrid } from "@/components/admin/orders-grid";
 import { ORDER_COST_ITEMS_INCLUDE, orderCostOf } from "@/lib/order-cost";
 import { REVENUE_STATUSES } from "@/lib/finance";
 import { loadPaidHistory, ordinalOf } from "@/lib/repeat-customers";
+import { getSettings } from "@/lib/queries";
+import { SETTINGS } from "@/lib/constants";
+import { parseOrderMessages } from "@/lib/order-messages";
 
 export const metadata: Metadata = { title: "Orders" };
 
 export default async function AdminOrdersPage() {
-  const [orders, paidHistory] = await Promise.all([
+  const [orders, paidHistory, settings] = await Promise.all([
     prisma.order.findMany({
       include: {
         items: ORDER_COST_ITEMS_INCLUDE,
@@ -22,6 +25,7 @@ export default async function AdminOrdersPage() {
       take: 500,
     }),
     loadPaidHistory(),
+    getSettings(),
   ]);
 
   const rows = orders.map((o) => {
@@ -75,7 +79,14 @@ export default async function AdminOrdersPage() {
           </Button>
         </div>
       </div>
-      <OrdersGrid rows={rows} />
+      <OrdersGrid
+        rows={rows}
+        messaging={{
+          templates: parseOrderMessages(settings[SETTINGS.ORDER_WHATSAPP_MESSAGES]),
+          storeName: settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam",
+          appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
+        }}
+      />
     </div>
   );
 }

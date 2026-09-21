@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
-import { DISCOUNT_TYPES, SETTINGS, type DiscountType } from "@/lib/constants";
+import { DISCOUNT_TYPES, ORDER_STATUSES, SETTINGS, type DiscountType } from "@/lib/constants";
 import { parseGoodieTiers } from "@/lib/box";
 import { rupeesToPaise } from "@/lib/money";
 
@@ -130,6 +130,12 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.META_PIXEL_ID]: metaPixelId,
     [SETTINGS.META_DOMAIN_VERIFICATION]: metaDomainVerification,
     [SETTINGS.PRE_LAUNCH_NOTICE]: String(formData.get("preLaunchNotice") ?? "").trim(),
+    // Only what differs from the built-in text is worth storing; blanks fall back to it
+    [SETTINGS.ORDER_WHATSAPP_MESSAGES]: JSON.stringify(
+      Object.fromEntries(
+        ORDER_STATUSES.map((s) => [s, String(formData.get(`orderMessage_${s}`) ?? "").trim()])
+      )
+    ),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,
     [SETTINGS.UPI_ID]: upiId,

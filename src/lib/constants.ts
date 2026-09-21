@@ -95,6 +95,9 @@ export const SETTINGS = {
   // as a <meta> tag so Meta can verify the domain.
   META_DOMAIN_VERIFICATION: "meta_domain_verification",
   PRE_LAUNCH_NOTICE: "pre_launch_notice",
+  // JSON {STATUS: text} — WhatsApp messages sent from the Orders screen.
+  // Blank/missing statuses use DEFAULT_ORDER_MESSAGES (src/lib/order-messages.ts).
+  ORDER_WHATSAPP_MESSAGES: "order_whatsapp_messages",
   DEFAULT_GST_RATE: "default_gst_rate",
   // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
   // opening the payment gateway. For use until the gateway goes live.

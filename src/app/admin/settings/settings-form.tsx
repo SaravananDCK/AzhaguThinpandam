@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { DiscountType } from "@/lib/constants";
 import type { GoodieTier } from "@/lib/box";
+import { ORDER_STATUSES, ORDER_STATUS_LABELS, type DiscountType } from "@/lib/constants";
+import { ORDER_MESSAGE_PLACEHOLDERS, type OrderMessageTemplates } from "@/lib/order-messages";
 import { GoodieTiersEditor, type GoodieVariantOption } from "./goodie-tiers-editor";
 import { saveSettings } from "./actions";
 
@@ -37,6 +38,7 @@ type Props = {
     metaPixelId: string;
     metaDomainVerification: string;
     preLaunchNotice: string;
+    orderMessages: OrderMessageTemplates;
     defaultGstRate: string;
     manualUpiPayment: boolean;
     upiId: string;
@@ -399,6 +401,35 @@ export function SettingsForm({ values, variantOptions }: Props) {
               went through. Leave empty for no note.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">WhatsApp order messages</p>
+          <p className="text-xs text-muted-foreground">
+            The WhatsApp button on the Orders screen opens a chat with the customer and fills in
+            the message for the order&apos;s current status. Nothing is sent automatically — you
+            review it, attach a photo (such as the courier receipt) and press send. Placeholders:{" "}
+            {ORDER_MESSAGE_PLACEHOLDERS.map(([token, meaning], i) => (
+              <span key={token}>
+                {i > 0 && ", "}
+                <code>{token}</code> {meaning}
+              </span>
+            ))}
+            . Clear a box to go back to the built-in text.
+          </p>
+          {ORDER_STATUSES.map((status) => (
+            <div key={status} className="grid gap-2">
+              <Label htmlFor={`s-msg-${status}`}>{ORDER_STATUS_LABELS[status]}</Label>
+              <Textarea
+                id={`s-msg-${status}`}
+                name={`orderMessage_${status}`}
+                rows={3}
+                defaultValue={values.orderMessages[status]}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 

@@ -16,12 +16,17 @@ import DataGrid, {
   SearchPanel,
   Selection,
 } from "devextreme-react/data-grid";
-import { FileText, PackagePlus } from "lucide-react";
+import { FileText, MessageCircle, PackagePlus } from "lucide-react";
 import { exportGrid } from "@/components/admin/grid-export";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { ordinalLabel } from "@/lib/ordinal";
+import {
+  orderWhatsAppLink,
+  renderOrderMessage,
+  type OrderMessageTemplates,
+} from "@/lib/order-messages";
 import { cn } from "@/lib/utils";
 
 export type OrderRow = {
@@ -73,7 +78,14 @@ const ACTIVE_FILTER: unknown[] = [
 const statusFilterFor = (s: OrderStatus): unknown[] => ["status", "=", s];
 const sameFilter = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
+/** What the WhatsApp button needs to fill in a message (templates come from Settings). */
+export type OrderMessaging = {
+  templates: OrderMessageTemplates;
+  storeName: string;
+  appUrl: string;
+};
+
+export function OrdersGrid({ rows, messaging }: { rows: OrderRow[]; messaging: OrderMessaging }) {
   const router = useRouter();
   const [filterValue, setFilterValue] = useState<unknown[] | null>(ACTIVE_FILTER);
   // Selected order ids — kept across status-chip changes so the admin can
@@ -162,7 +174,13 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
       onSelectionChanged={(e) => setSelectedIds(e.selectedRowKeys as string[])}
       onRowClick={(e) => {
         // Clicking the selection checkbox also fires rowClick — don't navigate
-        if ((e.event?.target as HTMLElement | null)?.closest?.(".dx-command-select")) return;
+        // …and so does the WhatsApp button, which must only open the chat
+        if (
+          (e.event?.target as HTMLElement | null)?.closest?.(
+            ".dx-command-select, .dx-command-whatsapp"
+          )
+        )
+          return;
         router.push(`/admin/orders/${e.data.id}`);
       }}
     >
@@ -185,6 +203,57 @@ export function OrdersGrid({ rows }: { rows: OrderRow[] }) {
         cellRender={({ value }: { value: string }) => (
           <span className="font-mono font-medium text-primary">{value}</span>
         )}
+      />
+      {/* Opens WhatsApp on the customer's number with the message for the
+          order's current status filled in (Settings → WhatsApp order
+          messages). Nothing is sent until the admin presses send there, so a
+          photo of the courier receipt can go with it. */}
+      <Column
+        name="whatsapp"
+        caption=""
+        width={52}
+        alignment="center"
+        allowSorting={false}
+        allowFiltering={false}
+        allowHeaderFiltering={false}
+        allowExporting={false}
+        cssClass="dx-command-whatsapp"
+        cellRender={({ data }: { data: OrderRow }) => {
+          const template = messaging.templates[data.status as OrderStatus];
+          const href = template
+            ? orderWhatsAppLink(
+                data.phone,
+                renderOrderMessage(template, {
+                  name: data.customer,
+                  orderNumber: data.orderNumber,
+                  totalRupees: data.totalRupees,
+                  packs: data.items,
+                  storeName: messaging.storeName,
+                  appUrl: messaging.appUrl,
+                })
+              )
+            : null;
+          const label = ORDER_STATUS_LABELS[data.status as OrderStatus] ?? data.status;
+          return href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`WhatsApp the "${label}" message to ${data.customer}`}
+              aria-label={`WhatsApp ${data.customer} about order ${data.orderNumber}`}
+              className="inline-flex size-8 items-center justify-center rounded-full text-[#25D366] transition-colors hover:bg-[#25D366]/15"
+            >
+              <MessageCircle className="size-[18px]" />
+            </a>
+          ) : (
+            <span
+              title="No Indian mobile number on this order"
+              className="inline-flex size-8 items-center justify-center text-muted-foreground/40"
+            >
+              <MessageCircle className="size-[18px]" />
+            </span>
+          );
+        }}
       />
       <Column dataField="customer" />
       {/* Repeat buyers at a glance: filled badge from the 2nd paid order on.

@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
 import { parseGoodieTiers } from "@/lib/box";
 import { paiseToRupees } from "@/lib/money";
+import { parseOrderMessages } from "@/lib/order-messages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SettingsForm } from "./settings-form";
@@ -67,6 +68,7 @@ export default async function AdminSettingsPage() {
           metaPixelId: settings[SETTINGS.META_PIXEL_ID] ?? "",
           metaDomainVerification: settings[SETTINGS.META_DOMAIN_VERIFICATION] ?? "",
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
+          orderMessages: parseOrderMessages(settings[SETTINGS.ORDER_WHATSAPP_MESSAGES]),
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
           upiId: settings[SETTINGS.UPI_ID] ?? "",
