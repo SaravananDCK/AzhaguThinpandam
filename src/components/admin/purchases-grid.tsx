@@ -30,10 +30,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatINR, rupeesToPaise } from "@/lib/money";
+import { formatINR } from "@/lib/money";
 import {
   PURCHASE_STATUS_LABELS,
-  SUPPLIER_PAYMENT_METHODS,
   type PurchaseStatus,
 } from "@/lib/constants";
 
@@ -169,61 +168,21 @@ export function PurchasesGrid({
     window.history.replaceState(null, "", "/admin/purchases");
   }, [draft, supplierOptions]);
 
-  // "Mark as paid" dialog — flips the invoice and optionally logs the matching
-  // supplier payment so the payables ledger keeps agreeing with the statuses.
-  const [payRow, setPayRow] = useState<PurchaseRow | null>(null);
-  const [payLogging, setPayLogging] = useState(true);
-  const [payDate, setPayDate] = useState("");
-  const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState<string>("UPI");
-  const [payReference, setPayReference] = useState("");
-  const [payBusy, setPayBusy] = useState(false);
-
-  function openPay(row: PurchaseRow) {
-    setPayRow(row);
-    setPayLogging(Boolean(row.supplierId));
-    setPayDate(new Date().toISOString().slice(0, 10));
-    // Goods + transport: what the supplier is actually owed for this invoice.
-    setPayAmount(String((row.total + (row.transportCharge ?? 0)) / 100));
-    setPayMethod("UPI");
-    setPayReference("");
-  }
-
-  async function setStatus(row: PurchaseRow, status: PurchaseStatus, withPayment: boolean) {
-    setPayBusy(true);
-    try {
-      const amount = rupeesToPaise(payAmount);
-      if (withPayment && (amount === null || amount < 1)) {
-        toast.error("Enter a valid payment amount.");
-        return;
-      }
-      const res = await fetch(`/api/admin/purchases/${row.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status,
-          ...(withPayment
-            ? { payment: { date: payDate, amount, method: payMethod, reference: payReference } }
-            : {}),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Could not update the purchase.");
-        return;
-      }
-      toast.success(
-        status === "PAID"
-          ? withPayment
-            ? "Marked paid — payment recorded against the supplier"
-            : "Marked paid"
-          : "Marked unpaid"
-      );
-      setPayRow(null);
-      gridRef.current?.instance().refresh();
-    } finally {
-      setPayBusy(false);
+  // Paid/unpaid is only a per-invoice marker � it never touches the supplier
+  // ledger. Payments are recorded in Suppliers (often lump sums across bills).
+  async function setStatus(row: PurchaseRow, status: PurchaseStatus) {
+    const res = await fetch(`/api/admin/purchases/${row.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error ?? "Could not update the purchase.");
+      return;
     }
+    toast.success(status === "PAID" ? "Marked paid" : "Marked unpaid");
+    gridRef.current?.instance().refresh();
   }
 
   const openEdit = useCallback((row: PurchaseRow) => {
@@ -426,7 +385,7 @@ export function PurchasesGrid({
                 <button
                   type="button"
                   className="rounded p-1.5 hover:bg-muted"
-                  onClick={() => setStatus(data, "UNPAID", false)}
+                  onClick={() => setStatus(data, "UNPAID")}
                   aria-label="Mark unpaid"
                   title="Mark unpaid"
                 >
@@ -436,7 +395,7 @@ export function PurchasesGrid({
                 <button
                   type="button"
                   className="rounded p-1.5 text-green-700 hover:bg-muted dark:text-green-400"
-                  onClick={() => openPay(data)}
+                  onClick={() => setStatus(data, "PAID")}
                   aria-label="Mark as paid"
                   title="Mark as paid"
                 >
@@ -725,107 +684,6 @@ export function PurchasesGrid({
         </DialogContent>
       </Dialog>
 
-      {/* Mark as paid */}
-      <Dialog open={payRow !== null} onOpenChange={(o) => !o && setPayRow(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Mark as paid</DialogTitle>
-          </DialogHeader>
-          {payRow && (
-            <div className="grid gap-4">
-              <p className="text-sm text-muted-foreground">
-                {payRow.supplier} · <span className="font-semibold">{formatINR(payRow.total)}</span>
-                {payRow.invoiceNo ? ` · invoice ${payRow.invoiceNo}` : ""}
-              </p>
-
-              {payRow.supplierId ? (
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={payLogging}
-                    onChange={(e) => setPayLogging(e.target.checked)}
-                    className="mt-0.5 size-4 accent-primary"
-                  />
-                  <span>
-                    Also record a payment to {payRow.supplier}
-                    <span className="block text-xs text-muted-foreground">
-                      Keeps &ldquo;Owed to suppliers&rdquo; right. Untick if you already
-                      logged this in Suppliers (e.g. as part of a lump sum).
-                    </span>
-                  </span>
-                </label>
-              ) : (
-                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-                  This purchase isn&apos;t linked to a supplier, so only the status
-                  changes — nothing is added to the payables ledger.
-                </p>
-              )}
-
-              {payRow.supplierId && payLogging && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="pay-amount">Amount ₹</Label>
-                      <Input
-                        id="pay-amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="pay-date">Date</Label>
-                      <Input
-                        id="pay-date"
-                        type="date"
-                        value={payDate}
-                        onChange={(e) => setPayDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="pay-method">Method</Label>
-                      <select
-                        id="pay-method"
-                        className="h-9 rounded-md border bg-background px-2 text-sm"
-                        value={payMethod}
-                        onChange={(e) => setPayMethod(e.target.value)}
-                      >
-                        {SUPPLIER_PAYMENT_METHODS.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="pay-ref">Reference</Label>
-                      <Input
-                        id="pay-ref"
-                        placeholder="Txn / cheque no."
-                        value={payReference}
-                        onChange={(e) => setPayReference(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <Button
-                onClick={() =>
-                  setStatus(payRow, "PAID", Boolean(payRow.supplierId) && payLogging)
-                }
-                disabled={payBusy}
-              >
-                {payBusy ? "Saving…" : "Mark as paid"}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

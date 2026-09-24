@@ -388,7 +388,7 @@ model Purchase {
   transportCharge Int        @default(0) // paise
   // UNPAID | PAID (PURCHASE_STATUSES) — a per-invoice marker. The authoritative
   // supplier balance stays Σ(purchases) − Σ(SupplierPayment); marking an invoice
-  // paid offers to record that payment so the two agree.
+  // paid is only a status flip � it never creates a payment.
   status      String         @default("UNPAID")
   items       PurchaseItem[]
   createdAt   DateTime       @default(now())
