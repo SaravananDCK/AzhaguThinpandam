@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CheckCircle2, IndianRupee, MessageCircle, Package } from "lucide-react";
+import { CheckCircle2, IndianRupee, MessageCircle, Package, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -11,6 +11,7 @@ import { formatINR, paiseToRupees } from "@/lib/money";
 import { getManualPaymentConfig } from "@/lib/queries";
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { PayNow } from "@/components/store/pay-now";
+import { OrderReviewForm } from "@/components/store/order-review-form";
 import { PurchasePixel } from "@/components/store/purchase-pixel";
 import { upiPayLink, upiQrSvg, whatsappOrderLink } from "@/lib/upi";
 import { packNote } from "@/lib/pack";
@@ -47,7 +48,22 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const [order, manual] = await Promise.all([
     prisma.order.findUnique({
       where: { orderNumber: orderNumber.toUpperCase() },
-      include: { items: true, payment: true },
+      include: {
+        items: true,
+        payment: true,
+        review: {
+          select: {
+            rating: true,
+            tasteRating: true,
+            packingRating: true,
+            deliveryRating: true,
+            authorName: true,
+            title: true,
+            body: true,
+            status: true,
+          },
+        },
+      },
     }),
     getManualPaymentConfig(),
   ]);
@@ -229,6 +245,30 @@ export default async function OrderPage({ params, searchParams }: Props) {
           {statusLabel}
         </Badge>
       </div>
+
+      {/* The "delivered" WhatsApp message links here — rate the whole order */}
+      {order.status === "DELIVERED" && (
+        <Card id="review" className="mt-6 scroll-mt-24 border-gold-500/40">
+          <CardContent className="space-y-4">
+            <div>
+              <p className="flex items-center gap-2 font-semibold">
+                <Star className="size-4 fill-gold-500 text-gold-500" /> How was your order?
+              </p>
+              {!order.review && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  We&apos;d love to hear about the taste, the packing and the delivery.
+                  It takes a minute and helps other families find us.
+                </p>
+              )}
+            </div>
+            <OrderReviewForm
+              orderNumber={order.orderNumber}
+              defaultName={order.shipName}
+              existing={order.review}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mt-6">
         <CardContent className="space-y-4">

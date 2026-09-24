@@ -13,6 +13,7 @@ export async function GET() {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
       product: { select: { name: true, slug: true } },
+      order: { select: { orderNumber: true } },
       user: { select: { name: true, phone: true } },
     },
   });
@@ -21,9 +22,10 @@ export async function GET() {
 
 // Admin-entered review on a customer's behalf (feedback sent over WhatsApp).
 // No user link, goes live immediately as APPROVED, and may be backdated to
-// when the customer actually said it.
+// when the customer actually said it. Product is optional — without one it's a
+// general review of the store, like the ones customers leave per order.
 const createSchema = z.object({
-  productId: z.string().min(1),
+  productId: z.string().optional().or(z.literal("")),
   authorName: z.string().trim().min(1, "Customer name is required").max(80),
   rating: z.number().int().min(1).max(5),
   title: z.string().trim().max(120).optional().or(z.literal("")),
@@ -48,15 +50,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "The review date can't be in the future." }, { status: 400 });
   }
   // Inactive products allowed on purpose — feedback can predate a delisting.
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product) {
+  if (productId && !(await prisma.product.findUnique({ where: { id: productId } }))) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
   await prisma.$transaction(async (tx) => {
     await tx.review.create({
       data: {
-        productId,
+        productId: productId || null,
         userId: null,
         rating,
         title: title || null,
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
         createdAt: date,
       },
     });
-    await recomputeProductRating(tx, productId);
+    if (productId) await recomputeProductRating(tx, productId);
   });
 
   return NextResponse.json({ ok: true }, { status: 201 });

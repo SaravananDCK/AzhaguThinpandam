@@ -16,6 +16,9 @@ import {
 type RecentReview = {
   id: string;
   rating: number;
+  tasteRating: number | null;
+  packingRating: number | null;
+  deliveryRating: number | null;
   title: string | null;
   body: string | null;
   authorName: string;
@@ -26,7 +29,7 @@ type RecentReview = {
 
 /**
  * Slim tab pinned to the right edge of every storefront page. Opens a panel of
- * the latest approved reviews across all products — social proof that follows
+ * the latest approved reviews (orders and products) — social proof that follows
  * the customer around instead of hiding on one product page. Data loads only
  * when it's opened.
  */
@@ -76,7 +79,7 @@ export function ReviewsTab() {
             <SheetTitle>Customer reviews</SheetTitle>
             <SheetDescription>
               {total > 0
-                ? `${total} review${total === 1 ? "" : "s"} across our products — here are the latest.`
+                ? `${total} review${total === 1 ? "" : "s"} from our customers — here are the latest.`
                 : "What our customers are saying."}
             </SheetDescription>
           </SheetHeader>
@@ -89,7 +92,7 @@ export function ReviewsTab() {
             )}
             {loaded && reviews.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                No reviews yet — be the first to leave one on any product page.
+                No reviews yet. Once your order arrives, you can review it from your order page.
               </p>
             )}
             {reviews.map((r) => (
@@ -111,6 +114,23 @@ export function ReviewsTab() {
                     {r.product.name}
                   </Link>
                 )}
+                {(r.tasteRating || r.packingRating || r.deliveryRating) && (
+                  <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    {(
+                      [
+                        ["Taste", r.tasteRating],
+                        ["Packing", r.packingRating],
+                        ["Delivery", r.deliveryRating],
+                      ] as const
+                    ).map(([label, v]) =>
+                      v ? (
+                        <span key={label}>
+                          {label} <span className="font-medium text-foreground">{v}★</span>
+                        </span>
+                      ) : null
+                    )}
+                  </p>
+                )}
                 {r.title && <p className="mt-1 text-sm font-medium">{r.title}</p>}
                 {r.body && (
                   <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{r.body}</p>
@@ -128,7 +148,7 @@ export function ReviewsTab() {
                 onClick={() => setOpen(false)}
                 className="block rounded-lg border px-3 py-2 text-center text-sm font-medium hover:bg-accent"
               >
-                Browse products to leave a review
+                Browse our sweets
               </Link>
             )}
           </div>

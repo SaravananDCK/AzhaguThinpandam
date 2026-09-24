@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   await prisma.$transaction(async (tx) => {
     await tx.review.update({ where: { id }, data: { status: parsed.data.status } });
-    await recomputeProductRating(tx, existing.productId);
+    if (existing.productId) await recomputeProductRating(tx, existing.productId);
   });
   return NextResponse.json({ ok: true });
 }
@@ -45,7 +45,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   await prisma.$transaction(async (tx) => {
     await tx.review.delete({ where: { id } });
-    await recomputeProductRating(tx, existing.productId);
+    if (existing.productId) await recomputeProductRating(tx, existing.productId);
   });
   return NextResponse.json({ ok: true });
 }

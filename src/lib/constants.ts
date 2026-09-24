@@ -66,9 +66,6 @@ export const REVIEW_STATUSES = {
 } as const;
 export type ReviewStatus = keyof typeof REVIEW_STATUSES;
 
-// Orders that count as a completed purchase (gates who may review)
-export const PURCHASED_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"] as const;
-
 // Setting keys (values stored as strings in the Setting table)
 export const SETTINGS = {
   STORE_NAME: "store_name",

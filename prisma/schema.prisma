@@ -160,13 +160,22 @@ model CartLine {
 // API), and reviews stay PENDING until an admin approves them. Admins can also
 // enter reviews on a customer's behalf (WhatsApp feedback) — those have no
 // user link (userId null) and are created APPROVED.
+// Either an order review (orderId set, productId null) — the customer rates the
+// whole experience from their order page once it's delivered — or a legacy /
+// admin-entered review of one product. Order reviews are the main kind now.
 model Review {
   id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId    String?  @unique // one review per order (editable)
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rating     Int // 1..5
+  rating     Int // 1..5, overall
+  // Optional 1..5 breakdown asked on order reviews
+  tasteRating    Int?
+  packingRating  Int?
+  deliveryRating Int?
   title      String?
   body       String?
   authorName String? // display-name snapshot at submit time
@@ -242,6 +251,7 @@ model Order {
   redemption  CouponRedemption?
   items       OrderItem[]
   payment     Payment?
+  review      Review?
   // Browser context captured when the customer placed the order, so the
   // server-side Meta Purchase event can be attributed to them. Payment is
   // confirmed later — by a webhook, or by an admin for a manual UPI order —
@@ -388,7 +398,7 @@ model Purchase {
   transportCharge Int        @default(0) // paise
   // UNPAID | PAID (PURCHASE_STATUSES) — a per-invoice marker. The authoritative
   // supplier balance stays Σ(purchases) − Σ(SupplierPayment); marking an invoice
-  // paid is only a status flip � it never creates a payment.
+  // paid is only a status flip — it never creates a payment.
   status      String         @default("UNPAID")
   items       PurchaseItem[]
   createdAt   DateTime       @default(now())

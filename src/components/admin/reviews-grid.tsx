@@ -32,12 +32,16 @@ import { Textarea } from "@/components/ui/textarea";
 type ReviewRow = {
   id: string;
   rating: number;
+  tasteRating: number | null;
+  packingRating: number | null;
+  deliveryRating: number | null;
   title: string | null;
   body: string | null;
   authorName: string | null;
   status: string;
   createdAt: string;
   product: { name: string; slug: string } | null;
+  order: { orderNumber: string } | null;
   user: { name: string | null; phone: string | null } | null;
 };
 
@@ -48,6 +52,27 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export type ProductOption = { id: string; name: string };
+
+/** What a review is about: a product, a customer's order, or the store in general. */
+function reviewSubject(r: ReviewRow): string {
+  if (r.product) return r.product.name;
+  if (r.order) return `Order ${r.order.orderNumber}`;
+  return "General";
+}
+
+/** "Taste 5★ · Packing 4★" — only the parts the customer rated. */
+function aspectSummary(r: ReviewRow): string {
+  return (
+    [
+      ["Taste", r.tasteRating],
+      ["Packing", r.packingRating],
+      ["Delivery", r.deliveryRating],
+    ] as const
+  )
+    .filter(([, v]) => v)
+    .map(([label, v]) => `${label} ${v}★`)
+    .join(" · ");
+}
 
 export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[] }) {
   const gridRef = useRef<DataGridRef>(null);
@@ -72,10 +97,6 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
   }
 
   async function save() {
-    if (!productId) {
-      toast.error("Pick a product.");
-      return;
-    }
     if (!authorName.trim()) {
       toast.error("Enter the customer's name.");
       return;
@@ -168,8 +189,8 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
         allowFiltering={false}
       />
       <Column
-        caption="Product"
-        calculateCellValue={(r: ReviewRow) => r.product?.name ?? "—"}
+        caption="For"
+        calculateCellValue={reviewSubject}
         width={180}
       />
       <Column
@@ -184,14 +205,21 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
         width={120}
         allowFiltering={false}
         cellRender={({ data }: { data: ReviewRow }) => (
-          <span className="flex text-gold-500">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Star
-                key={n}
-                className={`size-3.5 ${n <= data.rating ? "fill-current" : "text-muted-foreground/30"}`}
-              />
-            ))}
-          </span>
+          <div>
+            <span className="flex text-gold-500">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={`size-3.5 ${n <= data.rating ? "fill-current" : "text-muted-foreground/30"}`}
+                />
+              ))}
+            </span>
+            {aspectSummary(data) && (
+              <span className="mt-0.5 block whitespace-normal text-xs text-muted-foreground">
+                {aspectSummary(data)}
+              </span>
+            )}
+          </div>
         )}
       />
       <Column
@@ -263,9 +291,15 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
         render={({ data }: { data: ReviewRow }) => (
           <div className="space-y-1 text-sm">
             <p>
-              <span className="text-muted-foreground">Product: </span>
-              {data.product?.name ?? "—"}
+              <span className="text-muted-foreground">For: </span>
+              {reviewSubject(data)}
             </p>
+            {aspectSummary(data) && (
+              <p>
+                <span className="text-muted-foreground">Breakdown: </span>
+                {aspectSummary(data)}
+              </p>
+            )}
             <p>
               <span className="text-muted-foreground">Customer: </span>
               {data.authorName || data.user?.name || "—"}
@@ -295,12 +329,13 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
             For feedback a customer sent over WhatsApp or in person. Goes live
-            immediately (no moderation step) and counts toward the product&apos;s
-            star rating.
+            immediately (no moderation step). Leave the product empty for a
+            general review of the store; pick one to count it toward that
+            product&apos;s star rating.
           </p>
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Product</Label>
+              <Label>Product (optional)</Label>
               <SelectBox
                 dataSource={productOptions}
                 valueExpr="id"
@@ -310,7 +345,8 @@ export function ReviewsGrid({ productOptions }: { productOptions: ProductOption[
                 searchExpr="name"
                 searchMode="contains"
                 minSearchLength={0}
-                placeholder="Search product…"
+                placeholder="General — whole store"
+                showClearButton
                 onValueChanged={(e) => setProductId(e.value ?? "")}
                 aria-label="Product"
               />

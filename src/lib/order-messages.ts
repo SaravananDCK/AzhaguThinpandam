@@ -16,6 +16,7 @@ export const ORDER_MESSAGE_PLACEHOLDERS = [
   ["{total}", "order total, e.g. ₹1,130"],
   ["{packs}", "number of packs"],
   ["{link}", "the customer's order page"],
+  ["{review}", "where they rate the order (taste, packing, delivery)"],
   ["{store}", "store name"],
 ] as const;
 
@@ -28,7 +29,7 @@ export const DEFAULT_ORDER_MESSAGES: OrderMessageTemplates = {
   SHIPPED:
     "Vanakkam {name}! 🙏 Your {store} order {order} ({packs} packs) has been shipped today. 📦 The courier receipt with the tracking number is attached below.\nTrack your order: {link}",
   DELIVERED:
-    "Vanakkam {name}! 🙏 Your {store} order {order} shows as delivered. We hope you enjoy every bite! If you have a minute, a review would mean a lot to us: {link}",
+    "Vanakkam {name}! 🙏 Your {store} order {order} shows as delivered. We hope you enjoy every bite! If you have a minute, please tell us how the taste, packing and delivery were — it means a lot to us: {review}",
   CANCELLED:
     "Vanakkam {name}. Your {store} order {order} has been cancelled. If you paid, the refund of {total} will reach you within 7 business days. Sorry for the trouble — reply here if you have any questions.",
 };
@@ -67,9 +68,10 @@ export function renderOrderMessage(template: string, c: OrderMessageContext): st
     "{total}": `₹${c.totalRupees.toLocaleString("en-IN")}`,
     "{packs}": String(c.packs),
     "{link}": `${c.appUrl}/order/${c.orderNumber}`,
+    "{review}": `${c.appUrl}/order/${c.orderNumber}#review`,
     "{store}": c.storeName,
   };
-  return template.replace(/\{(name|order|total|packs|link|store)\}/g, (m) => values[m]);
+  return template.replace(/\{(name|order|total|packs|link|review|store)\}/g, (m) => values[m]);
 }
 
 /** wa.me link that opens a chat with the customer, message prefilled. Null when the number isn't an Indian mobile. */

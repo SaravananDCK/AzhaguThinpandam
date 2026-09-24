@@ -168,7 +168,7 @@ export function PurchasesGrid({
     window.history.replaceState(null, "", "/admin/purchases");
   }, [draft, supplierOptions]);
 
-  // Paid/unpaid is only a per-invoice marker — it never touches the supplier
+  // Paid/unpaid is only a per-invoice marker â€” it never touches the supplier
   // ledger. Payments are recorded in Suppliers (often lump sums across bills).
   async function setStatus(row: PurchaseRow, status: PurchaseStatus) {
     const res = await fetch(`/api/admin/purchases/${row.id}`, {

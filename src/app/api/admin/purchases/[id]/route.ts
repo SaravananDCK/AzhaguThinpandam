@@ -43,7 +43,7 @@ async function revertLinkedStock(
 // Payment status only. Deliberately NOT folded into PUT: that path deletes and
 // recreates the items, reversing and re-applying every linked stock movement —
 // far too much churn for flipping a flag.
-// A per-invoice marker only � never writes to the supplier payments ledger
+// A per-invoice marker only — never writes to the supplier payments ledger
 // (payments are recorded in Suppliers, often as lump sums across invoices).
 const statusSchema = z.object({ status: z.enum(PURCHASE_STATUSES) });
 

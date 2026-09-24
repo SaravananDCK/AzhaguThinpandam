@@ -9,9 +9,7 @@ import { ProductCard } from "@/components/store/product-card";
 import { ProductReviews } from "@/components/store/product-reviews";
 import { Stars } from "@/components/store/stars";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { getApprovedReviews, hasPurchasedProduct } from "@/lib/reviews";
+import { getApprovedReviews } from "@/lib/reviews";
 import { JsonLd, absoluteUrl, siteUrl } from "@/lib/seo";
 import { paiseToRupees } from "@/lib/money";
 import { isSellable } from "@/lib/availability";
@@ -56,25 +54,9 @@ export default async function ProductPage({ params }: Props) {
   const prices = product.variants.map((v) => v.price);
   const inStock = product.variants.some((v) => isSellable(v.stock, product.madeToOrder));
 
-  // Reviews: approved list for everyone, plus this customer's eligibility to post
+  // Existing product reviews stay on show; new reviews are per order (the
+  // order page asks once it's delivered), so there's no write form here.
   const reviews = await getApprovedReviews(product.id);
-  const session = await auth();
-  let loggedIn = false;
-  let purchased = false;
-  let existingReview = null;
-  if (session?.user?.id) {
-    loggedIn = true;
-    purchased = await hasPurchasedProduct(
-      { id: session.user.id, phone: session.user.phone },
-      product.id
-    );
-    if (purchased) {
-      existingReview = await prisma.review.findUnique({
-        where: { productId_userId: { productId: product.id, userId: session.user.id } },
-        select: { rating: true, title: true, body: true, status: true },
-      });
-    }
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -200,14 +182,9 @@ export default async function ProductPage({ params }: Props) {
       </div>
 
       <ProductReviews
-        productId={product.id}
-        productSlug={product.slug}
         ratingAvg={product.ratingAvg}
         ratingCount={product.ratingCount}
         reviews={reviews}
-        loggedIn={loggedIn}
-        purchased={purchased}
-        existing={existingReview}
       />
 
       {related.length > 0 && (
