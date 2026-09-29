@@ -3,12 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin";
 import { formatINR } from "@/lib/money";
+import { normalizeLabels } from "@/lib/labels";
 import { priceRoundingIsFive, recomputeProductPrices } from "@/lib/pricing-server";
 
 // Grid sends rupees / percent; nulls clear the field.
 const patchSchema = z.object({
   purchasePerKg: z.number().min(0).nullable().optional(),
   marginPct: z.number().min(0).max(1000).nullable().optional(),
+  labels: z.string().max(300).nullable().optional(), // comma-separated
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -38,15 +40,22 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const margin =
     parsed.data.marginPct === undefined ? existing.profitMarginPct : parsed.data.marginPct;
 
+  const labels =
+    parsed.data.labels === undefined ? existing.labels : normalizeLabels(parsed.data.labels);
+  // A labels-only edit must not reprice: that would overwrite pack prices
+  // adjusted by hand in the product form.
+  const pricingChanged =
+    parsed.data.purchasePerKg !== undefined || parsed.data.marginPct !== undefined;
+
   const roundToFive = await priceRoundingIsFive();
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.product.update({
       where: { id },
-      data: { purchasePricePerKg: purchasePaise, profitMarginPct: margin },
+      data: { purchasePricePerKg: purchasePaise, profitMarginPct: margin, labels },
     });
     // Reprice variants only when both inputs are present
-    if (purchasePaise != null && purchasePaise > 0 && margin != null) {
+    if (pricingChanged && purchasePaise != null && purchasePaise > 0 && margin != null) {
       await recomputeProductPrices(tx, id, purchasePaise, margin, roundToFive);
     }
     return tx.product.findUniqueOrThrow({
@@ -73,6 +82,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     name: updated.name,
     category: updated.category.name,
     active: updated.isActive,
+    labels: updated.labels,
     purchasePerKg: purchasePaise != null ? purchasePaise / 100 : null,
     marginPct: margin,
     prices,

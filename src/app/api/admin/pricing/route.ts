@@ -34,6 +34,7 @@ export async function GET() {
       name: p.name,
       category: p.category.name,
       active: p.isActive,
+      labels: p.labels,
       purchasePerKg: p.purchasePricePerKg != null ? p.purchasePricePerKg / 100 : null,
       marginPct: p.profitMarginPct,
       prices: pricesSummary(p.variants),

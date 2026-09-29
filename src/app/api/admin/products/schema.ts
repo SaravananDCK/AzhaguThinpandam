@@ -12,6 +12,7 @@ export const productSchema = z.object({
   isFlagship: z.boolean().default(false),
   madeToOrder: z.boolean().default(false),
   line: z.enum(PRODUCT_LINES).default("SNACKS"),
+  labels: z.string().max(300).optional().or(z.literal("")), // comma-separated
   purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise
   profitMarginPct: z.number().min(0).max(1000).nullable().optional(),
   gstRate: z.number().min(0).max(100).nullable().optional(), // GST% in the sale price

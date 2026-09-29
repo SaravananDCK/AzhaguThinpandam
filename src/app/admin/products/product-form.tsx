@@ -28,6 +28,7 @@ import {
 import { paiseToRupees, rupeesToPaise } from "@/lib/money";
 import { PRODUCT_LINES, PRODUCT_LINE_LABELS } from "@/lib/constants";
 import { applyMarginPricing } from "@/lib/pricing";
+import { MAX_LABELS, parseLabels } from "@/lib/labels";
 
 type VariantRow = {
   id?: string;
@@ -52,6 +53,7 @@ type ProductData = {
   isFlagship: boolean;
   madeToOrder: boolean;
   line: string;
+  labels: string;
   purchasePricePerKg: number | null;
   profitMarginPct: number | null;
   gstRate: number | null;
@@ -93,6 +95,7 @@ export function ProductForm({
   const [isFlagship, setIsFlagship] = useState(product?.isFlagship ?? false);
   const [madeToOrder, setMadeToOrder] = useState(product?.madeToOrder ?? false);
   const [line, setLine] = useState<string>(product?.line ?? "SNACKS");
+  const [labels, setLabels] = useState(product?.labels ?? "");
   const [purchasePerKg, setPurchasePerKg] = useState(
     product?.purchasePricePerKg ? paiseToRupees(product.purchasePricePerKg) : ""
   );
@@ -228,6 +231,7 @@ export function ProductForm({
         isFlagship,
         madeToOrder,
         line,
+        labels,
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
         profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
         gstRate: gstRate.trim() ? parseFloat(gstRate) : null,
@@ -310,6 +314,32 @@ export function ProductForm({
                 onChange={(e) => setDescription(e.target.value)}
                 required
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="p-labels">Labels</Label>
+              <Input
+                id="p-labels"
+                value={labels}
+                onChange={(e) => setLabels(e.target.value)}
+                placeholder="No Palm Oil, No Preservatives, No Maida"
+                maxLength={300}
+              />
+              <p className="text-xs text-muted-foreground">
+                Short selling points shown on the product page. Separate them with
+                commas — up to {MAX_LABELS}.
+              </p>
+              {parseLabels(labels).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {parseLabels(labels).map((l) => (
+                    <span
+                      key={l}
+                      className="rounded-full border border-gold-500/50 bg-gold-500/10 px-3 py-0.5 text-xs font-medium"
+                    >
+                      {l}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

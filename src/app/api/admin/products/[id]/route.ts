@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi, slugify } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
+import { normalizeLabels } from "@/lib/labels";
 import { productSchema } from "../schema";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -51,6 +52,7 @@ export async function PUT(req: Request, { params }: Ctx) {
         isFlagship: data.isFlagship,
         madeToOrder: data.madeToOrder,
         line: data.line,
+        labels: normalizeLabels(data.labels),
         purchasePricePerKg: data.purchasePricePerKg ?? null,
         profitMarginPct: data.profitMarginPct ?? null,
         gstRate: data.gstRate ?? null,

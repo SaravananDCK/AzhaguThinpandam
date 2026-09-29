@@ -81,6 +81,9 @@ model Product {
   // and discounted by weight; merchandise (fridge magnets) is not, so the two
   // are listed separately on the storefront. SQLite has no enums.
   line        String      @default("SNACKS")
+  // Selling points shown as pills on the product page, comma-separated
+  // ("No Palm Oil, No Maida"). See src/lib/labels.ts.
+  labels      String      @default("")
 
   // Pricing rule: wholesale cost + target margin drive variant sale prices
   purchasePricePerKg Int? // paise per kg (wholesale cost)

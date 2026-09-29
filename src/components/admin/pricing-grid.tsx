@@ -25,6 +25,7 @@ type PricingRow = {
   name: string;
   category: string;
   active: boolean;
+  labels: string; // comma-separated
   purchasePerKg: number | null; // rupees
   marginPct: number | null;
   prices: string;
@@ -58,6 +59,7 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
           const body: Record<string, unknown> = {};
           if (values.purchasePerKg !== undefined) body.purchasePerKg = values.purchasePerKg;
           if (values.marginPct !== undefined) body.marginPct = values.marginPct;
+          if (values.labels !== undefined) body.labels = values.labels ?? "";
           return apiJson(`/api/admin/pricing/${key}`, {
             method: "PUT",
             body: JSON.stringify(body),
@@ -195,6 +197,13 @@ export function PricingGrid({ initialRoundToFive }: { initialRoundToFive: boolea
           width={120}
           allowHeaderFiltering={false}
           format={{ type: "fixedPoint", precision: 1 }}
+        />
+        <Column
+          dataField="labels"
+          caption="Labels (comma-separated)"
+          minWidth={220}
+          allowHeaderFiltering={false}
+          editorOptions={{ maxLength: 300, placeholder: "No Palm Oil, No Maida" }}
         />
         <Column
           dataField="prices"

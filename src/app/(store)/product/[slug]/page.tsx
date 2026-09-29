@@ -10,6 +10,7 @@ import { ProductReviews } from "@/components/store/product-reviews";
 import { Stars } from "@/components/store/stars";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
 import { getApprovedReviews } from "@/lib/reviews";
+import { parseLabels } from "@/lib/labels";
 import { JsonLd, absoluteUrl, siteUrl } from "@/lib/seo";
 import { paiseToRupees } from "@/lib/money";
 import { isSellable } from "@/lib/availability";
@@ -161,6 +162,7 @@ export default async function ProductPage({ params }: Props) {
               image={product.images[0]?.url}
               line={product.line}
               madeToOrder={product.madeToOrder}
+              labels={parseLabels(product.labels)}
               variants={product.variants.map((v) => ({
                 id: v.id,
                 label: v.label,

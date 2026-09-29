@@ -33,6 +33,8 @@ type Props = {
   line?: string;
   /** Made fresh per order — stock never marks it unavailable */
   madeToOrder?: boolean;
+  /** Selling points ("No Palm Oil") shown as pills beside the size and price */
+  labels?: string[];
 };
 
 export function AddToCart({
@@ -43,6 +45,7 @@ export function AddToCart({
   variants,
   line,
   madeToOrder = false,
+  labels = [],
 }: Props) {
   const firstAvailable =
     variants.find((v) => isSellable(v.stock, madeToOrder)) ?? variants[0];
@@ -63,6 +66,8 @@ export function AddToCart({
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+      <div className="space-y-5">
       <div>
         <p className="mb-2 text-sm font-medium">Size</p>
         <div className="flex flex-wrap gap-2">
@@ -107,6 +112,21 @@ export function AddToCart({
           )}
         </div>
       )}
+      </div>
+
+      {labels.length > 0 && (
+        <ul className="grid grid-cols-2 gap-2 sm:max-w-sm sm:flex-1">
+          {labels.map((l) => (
+            <li
+              key={l}
+              className="flex items-center justify-center rounded-full border border-gold-500/50 bg-gold-500/10 px-3 py-1.5 text-center text-xs font-medium leading-tight"
+            >
+              {l}
+            </li>
+          ))}
+        </ul>
+      )}
+      </div>
 
       {selected && packNote(selected.label, packetGrams) && (
         <p className="inline-flex items-center gap-1.5 rounded-md bg-gold-100 px-3 py-1.5 text-sm font-medium text-gold-800 dark:bg-gold-950/60 dark:text-gold-300">
