@@ -14,7 +14,9 @@ import {
   parseMonthParam,
   startOfISTMonth,
 } from "@/lib/finance";
+import { computeOrderAnalytics } from "@/lib/finance-analytics";
 import { FinanceCharts } from "@/components/admin/finance-charts";
+import { OrderAnalysis } from "./order-analysis";
 
 export const metadata: Metadata = { title: "Finance" };
 
@@ -51,7 +53,8 @@ export default async function AdminFinancePage({
     to: startOfISTMonth(1),
   };
 
-  const [pnl, allTime, gst, payables, ...history] = await Promise.all([
+  const [analytics, pnl, allTime, gst, payables, ...history] = await Promise.all([
+    computeOrderAnalytics(range.from, range.to),
     computePnL(range.from, range.to),
     computePnL(new Date(0), new Date()),
     computeGst(range.from, range.to),
@@ -136,6 +139,8 @@ export default async function AdminFinancePage({
           </CardContent>
         </Card>
       </div>
+
+      <OrderAnalysis data={analytics} month={monthLabel(range.from)} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* GST for the selected month */}
