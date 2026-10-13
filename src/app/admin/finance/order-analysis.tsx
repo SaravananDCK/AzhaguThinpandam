@@ -29,7 +29,17 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 const th = "px-2 py-1.5 text-right font-medium first:text-left";
 const td = "px-2 py-1.5 text-right first:text-left";
 
-export function OrderAnalysis({ data, month }: { data: OrderAnalytics; month: string }) {
+export function OrderAnalysis({
+  data,
+  month,
+  expensesTotal,
+}: {
+  data: OrderAnalytics;
+  month: string;
+  /** Overheads in the period (Expenses table + supplier-billed transport), paise */
+  expensesTotal: number;
+}) {
+  const expensesPerOrder = data.paidOrders ? Math.round(expensesTotal / data.paidOrders) : 0;
   const share = (n: number) =>
     data.paidOrders ? ` (${Math.round((n / data.paidOrders) * 100)}%)` : "";
 
@@ -96,6 +106,16 @@ export function OrderAnalysis({ data, month }: { data: OrderAnalytics; month: st
                 }
               />
               <Stat
+                label="Average expenses per order"
+                value={formatINR(expensesPerOrder)}
+                hint={`${formatINR(expensesTotal)} overheads ÷ ${data.paidOrders} orders`}
+              />
+              <Stat
+                label="Margin after expenses, per order"
+                value={signed(data.avgMargin - expensesPerOrder)}
+                hint="Average margin − average expenses"
+              />
+              <Stat
                 label="New / repeat customers"
                 value={`${data.newCustomerOrders} / ${data.repeatCustomerOrders}`}
                 hint={`Repeat${share(data.repeatCustomerOrders)} of orders`}
@@ -103,8 +123,10 @@ export function OrderAnalysis({ data, month }: { data: OrderAnalytics; month: st
             </div>
             <p className="text-xs text-muted-foreground">
               Margin = goods revenue + shipping collected − wholesale cost at
-              today&apos;s purchase price − packing − courier. Overheads (Expenses)
-              are not included, so this won&apos;t match the P&amp;L&apos;s net profit.
+              today&apos;s purchase price − packing − courier. Expenses are the
+              month&apos;s overheads from the Expenses table (and supplier-billed
+              transport) spread evenly over the orders. Stock purchases are not
+              included, so this won&apos;t match the P&amp;L&apos;s net profit.
             </p>
             {data.ordersWithUnknownCost > 0 && (
               <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">

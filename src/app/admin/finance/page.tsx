@@ -140,7 +140,11 @@ export default async function AdminFinancePage({
         </Card>
       </div>
 
-      <OrderAnalysis data={analytics} month={monthLabel(range.from)} />
+      <OrderAnalysis
+        data={analytics}
+        month={monthLabel(range.from)}
+        expensesTotal={pnl.expensesTotal}
+      />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* GST for the selected month */}
