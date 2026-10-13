@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Azhagu Thinpandam",
+    "slug": "azhagu-thinpandam",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "azhagu",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.azhaguthinpandam.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.azhaguthinpandam.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
