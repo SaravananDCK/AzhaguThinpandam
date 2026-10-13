@@ -97,6 +97,13 @@ export function CartView({
       <div className="mt-4">
         <CartAdjustmentsNotice adjustments={adjustments} onDismiss={dismiss} />
       </div>
+      {items.some((i) => i.preorder) && (
+        <p className="mt-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <span className="font-semibold text-primary">Pre-order.</span> This is booked
+          now and dispatched closer to the festival, as its own order. To buy other
+          items, place this order first.
+        </p>
+      )}
       <div className="mt-2 grid gap-6 md:grid-cols-[1fr_300px]">
         <div className="space-y-3">
           {items.map((item) => (

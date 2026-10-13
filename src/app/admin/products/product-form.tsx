@@ -52,6 +52,7 @@ type ProductData = {
   isFeatured: boolean;
   isFlagship: boolean;
   madeToOrder: boolean;
+  preorder: boolean;
   line: string;
   labels: string;
   purchasePricePerKg: number | null;
@@ -94,6 +95,7 @@ export function ProductForm({
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [isFlagship, setIsFlagship] = useState(product?.isFlagship ?? false);
   const [madeToOrder, setMadeToOrder] = useState(product?.madeToOrder ?? false);
+  const [preorder, setPreorder] = useState(product?.preorder ?? false);
   const [line, setLine] = useState<string>(product?.line ?? "SNACKS");
   const [labels, setLabels] = useState(product?.labels ?? "");
   const [purchasePerKg, setPurchasePerKg] = useState(
@@ -230,6 +232,7 @@ export function ProductForm({
         isFeatured,
         isFlagship,
         madeToOrder,
+        preorder,
         line,
         labels,
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
@@ -583,6 +586,23 @@ export function ProductForm({
                 className="size-4 accent-primary"
               />
               Flagship — pinned first with a “Signature” badge
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={preorder}
+                onChange={(e) => setPreorder(e.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span>
+                Pre-order — booked now, dispatched later
+                <span className="block text-xs text-muted-foreground">
+                  For festival combos. Shows a Pre-order badge, is always placed
+                  as its own order (never mixed with regular items) and stops
+                  taking bookings on the dates in Settings. Tick “Made to
+                  order” as well so stock never blocks a booking.
+                </span>
+              </span>
             </label>
             <label className="flex items-start gap-2 text-sm">
               <input

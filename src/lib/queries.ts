@@ -10,6 +10,7 @@ import {
 import { parseBoxTiers, parseGoodieTiers, type BoxTier, type GoodieTier } from "@/lib/box";
 import { staffUnitPrice } from "@/lib/staff-pricing";
 import type { ShippingConfig } from "@/lib/shipping";
+import type { PreorderConfig } from "@/lib/preorder";
 import { getViewerPricing } from "@/lib/viewer";
 
 const productInclude = {
@@ -171,6 +172,16 @@ export async function getManualPaymentConfig() {
     whatsappPhone: (settings[SETTINGS.STORE_PHONE] ?? "").trim(),
     notice: (settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "").trim(),
     pendingNote: (settings[SETTINGS.PAYMENT_PENDING_NOTE] ?? "").trim(),
+  };
+}
+
+/** Pre-order booking cutoffs and dispatch note (src/lib/preorder.ts). */
+export async function getPreorderConfig(): Promise<PreorderConfig> {
+  const settings = await getSettings();
+  return {
+    closeTn: (settings[SETTINGS.PREORDER_CLOSE_TN] ?? "").trim(),
+    closeOther: (settings[SETTINGS.PREORDER_CLOSE_OTHER] ?? "").trim(),
+    dispatchNote: (settings[SETTINGS.PREORDER_DISPATCH_NOTE] ?? "").trim(),
   };
 }
 

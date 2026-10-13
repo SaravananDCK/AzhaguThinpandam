@@ -84,6 +84,9 @@ model Product {
   // Selling points shown as pills on the product page, comma-separated
   // ("No Palm Oil, No Maida"). See src/lib/labels.ts.
   labels      String      @default("")
+  // Booked and paid now, dispatched later (festival combos). Booking cutoffs
+  // and the dispatch note are store settings — see src/lib/preorder.ts.
+  preorder    Boolean     @default(false)
 
   // Pricing rule: wholesale cost + target margin drive variant sale prices
   purchasePricePerKg Int? // paise per kg (wholesale cost)
@@ -255,6 +258,9 @@ model Order {
   items       OrderItem[]
   payment     Payment?
   review      Review?
+  // A pre-order (festival combo) order: never mixed with regular items, so
+  // this one flag separates them everywhere in the admin.
+  preorder    Boolean     @default(false)
   // Browser context captured when the customer placed the order, so the
   // server-side Meta Purchase event can be attributed to them. Payment is
   // confirmed later — by a webhook, or by an admin for a manual UPI order —

@@ -73,6 +73,10 @@ export default async function AdminSettingsPage() {
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
           upiId: settings[SETTINGS.UPI_ID] ?? "",
           paymentPendingNote: settings[SETTINGS.PAYMENT_PENDING_NOTE] ?? "",
+          preorderCloseTn: settings[SETTINGS.PREORDER_CLOSE_TN] ?? "",
+          preorderCloseOther: settings[SETTINGS.PREORDER_CLOSE_OTHER] ?? "",
+          preorderDispatchNote: settings[SETTINGS.PREORDER_DISPATCH_NOTE] ?? "",
+          thermalPaperWidth: settings[SETTINGS.THERMAL_PAPER_WIDTH] === "58" ? "58" : "80",
         }}
         variantOptions={variantOptions}
       />

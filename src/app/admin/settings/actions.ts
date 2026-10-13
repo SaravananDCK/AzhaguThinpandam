@@ -97,6 +97,19 @@ export async function saveSettings(formData: FormData) {
     };
   }
 
+  const preorderCloseTn = String(formData.get("preorderCloseTn") ?? "").trim();
+  const preorderCloseOther = String(formData.get("preorderCloseOther") ?? "").trim();
+  for (const day of [preorderCloseTn, preorderCloseOther]) {
+    if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return { error: "Pre-order closing dates must be valid dates (or empty)." };
+    }
+  }
+
+  const thermalWidth = String(formData.get("thermalPaperWidth") ?? "80");
+  if (thermalWidth !== "58" && thermalWidth !== "80") {
+    return { error: "Thermal paper width must be 58 or 80 mm." };
+  }
+
   const upiId = String(formData.get("upiId") ?? "").trim();
   if (upiId && !/^[\w.\-]{2,}@[\w.\-]{2,}$/.test(upiId)) {
     return { error: "UPI ID should look like yourname@bank." };
@@ -137,6 +150,10 @@ export async function saveSettings(formData: FormData) {
       )
     ),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
+    [SETTINGS.PREORDER_CLOSE_TN]: preorderCloseTn,
+    [SETTINGS.PREORDER_CLOSE_OTHER]: preorderCloseOther,
+    [SETTINGS.PREORDER_DISPATCH_NOTE]: String(formData.get("preorderDispatchNote") ?? "").trim(),
+    [SETTINGS.THERMAL_PAPER_WIDTH]: thermalWidth,
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,
     [SETTINGS.UPI_ID]: upiId,
     [SETTINGS.PAYMENT_PENDING_NOTE]: String(

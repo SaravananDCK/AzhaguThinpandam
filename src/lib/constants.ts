@@ -103,6 +103,13 @@ export const SETTINGS = {
   // Reassurance on the order page while a UPI payment is pending — customers
   // who expected a card option need telling their order is safe.
   PAYMENT_PENDING_NOTE: "payment_pending_note",
+  // Pre-order combos (src/lib/preorder.ts): last booking day per zone as
+  // "YYYY-MM-DD", and the dispatch line shown to the customer.
+  PREORDER_CLOSE_TN: "preorder_close_tn",
+  PREORDER_CLOSE_OTHER: "preorder_close_other",
+  PREORDER_DISPATCH_NOTE: "preorder_dispatch_note",
+  // Roll width of the thermal receipt printer: "58" or "80" (mm)
+  THERMAL_PAPER_WIDTH: "thermal_paper_width_mm",
 } as const;
 
 // Ways a supplier payment can be made (stored as a plain string)
@@ -184,6 +191,13 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // Default GST% (used for products with no per-product rate, and as the
   // starting value on the purchase form). Prices are treated as GST-inclusive.
   [SETTINGS.DEFAULT_GST_RATE]: "5",
+  // Diwali 2026 is 8 November. Other states close a day before Tamil Nadu —
+  // their parcels spend longer on the road.
+  [SETTINGS.PREORDER_CLOSE_TN]: "2026-11-02",
+  [SETTINGS.PREORDER_CLOSE_OTHER]: "2026-11-01",
+  [SETTINGS.PREORDER_DISPATCH_NOTE]:
+    "Freshly made and dispatched in the first week of November, in time for Diwali.",
+  [SETTINGS.THERMAL_PAPER_WIDTH]: "80",
 };
 
 // Suggested expense categories for the accounting module

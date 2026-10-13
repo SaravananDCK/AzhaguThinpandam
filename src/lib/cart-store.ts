@@ -19,11 +19,14 @@ export type CartItem = {
   // falls back to the old behaviour (weight from the label, treated as snacks).
   weightGrams?: number | null; // real pack weight, for shipping
   line?: string; // PRODUCT_LINES — only snacks earn the weight discount
+  /** Pre-order combo — never shares a cart with regular items (lib/preorder.ts) */
+  preorder?: boolean;
 };
 
 type CartState = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
+  /** False when refused: pre-orders and regular items can't share a cart. */
+  addItem: (item: Omit<CartItem, "qty">, qty?: number) => boolean;
   removeItem: (variantId: string) => void;
   setQty: (variantId: string, qty: number) => void;
   clear: () => void;
@@ -54,7 +57,11 @@ export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
-      addItem: (item, qty = 1) =>
+      addItem: (item, qty = 1) => {
+        // The server enforces the same rule; refusing here just says so sooner.
+        if (get().items.some((i) => Boolean(i.preorder) !== Boolean(item.preorder))) {
+          return false;
+        }
         set((state) => {
           const existing = state.items.find((i) => i.variantId === item.variantId);
           if (existing) {
@@ -67,7 +74,9 @@ export const useCart = create<CartState>()(
             };
           }
           return { items: [...state.items, { ...item, qty: Math.min(qty, item.maxStock) }] };
-        }),
+        });
+        return true;
+      },
       removeItem: (variantId) =>
         set((state) => ({ items: state.items.filter((i) => i.variantId !== variantId) })),
       setQty: (variantId, qty) =>

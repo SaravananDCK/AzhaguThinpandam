@@ -21,6 +21,8 @@ export default async function BuildBoxPage() {
 
   // One row per product: its base (smallest) in-stock pack is the box unit
   const items = products
+    // Pre-order combos are booked on their own, never as part of a box
+    .filter((p) => !p.preorder)
     .map((p) => {
       const variant =
         p.variants.find((v) => isSellable(v.stock, p.madeToOrder)) ?? p.variants[0];

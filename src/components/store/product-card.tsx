@@ -3,6 +3,7 @@ import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
 import { CardAddToCart } from "@/components/store/card-add-to-cart";
 import { Stars } from "@/components/store/stars";
 import { isSellable } from "@/lib/availability";
+import { formatINR } from "@/lib/money";
 import type { ProductWithDetails } from "@/lib/queries";
 
 export function ProductCard({ product }: { product: ProductWithDetails }) {
@@ -32,6 +33,10 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
       {!inStock ? (
         <div className="absolute left-3 top-3 z-20 rounded-full bg-dark-700/90 px-3 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur-sm">
           Out of stock
+        </div>
+      ) : product.preorder ? (
+        <div className="absolute left-3 top-3 z-20 rounded-full bg-primary-700 px-3 py-1 text-[11px] font-bold text-white shadow-lg">
+          Pre-order
         </div>
       ) : (
         product.isFlagship && (
@@ -88,7 +93,21 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           </p>
         )}
 
-        {/* Price + size picker + add to cart */}
+        {/* A pre-order has dates and terms to read first, so the card sends
+            the customer to the product page rather than adding blind. */}
+        {product.preorder ? (
+          <div className="space-y-2">
+            <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
+              {formatINR(minPrice)}
+            </p>
+            <Link
+              href={href}
+              className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 py-2.5 text-sm font-bold text-white transition-all duration-300 hover:shadow-[0_0_20px_rgba(207,68,68,0.35)] active:scale-95"
+            >
+              View &amp; pre-order
+            </Link>
+          </div>
+        ) : (
         <CardAddToCart
           productSlug={product.slug}
           productName={product.name}
@@ -105,6 +124,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
             stock: v.stock,
           }))}
         />
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Printer } from "lucide-react";
+import { Plus, Printer, Receipt } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { OrdersGrid } from "@/components/admin/orders-grid";
@@ -51,6 +51,7 @@ export default async function AdminOrdersPage() {
       marginIncomplete: cost.unknownLines > 0 || cost.shippingCostMissing,
       payment: o.payment?.status ?? "—",
       status: o.status,
+      type: o.preorder ? "Pre-order" : "Regular",
       notes: o.notes ?? "",
       createdAt: o.createdAt.toISOString(),
     };
@@ -72,6 +73,11 @@ export default async function AdminOrdersPage() {
               <Printer className="size-4" /> Shipping slips
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/orders/receipts">
+              <Receipt className="size-4" /> Thermal receipts
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/admin/orders/new">
               <Plus className="size-4" /> New order
@@ -85,6 +91,7 @@ export default async function AdminOrdersPage() {
           templates: parseOrderMessages(settings[SETTINGS.ORDER_WHATSAPP_MESSAGES]),
           storeName: settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam",
           appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
+          preorderDispatchNote: settings[SETTINGS.PREORDER_DISPATCH_NOTE] ?? "",
         }}
       />
     </div>

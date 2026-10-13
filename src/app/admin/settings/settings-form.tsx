@@ -43,6 +43,10 @@ type Props = {
     manualUpiPayment: boolean;
     upiId: string;
     paymentPendingNote: string;
+    preorderCloseTn: string;
+    preorderCloseOther: string;
+    preorderDispatchNote: string;
+    thermalPaperWidth: "58" | "80";
   };
   variantOptions: GoodieVariantOption[];
 };
@@ -399,6 +403,72 @@ export function SettingsForm({ values, variantOptions }: Props) {
               Shown above the UPI instructions after an order is placed —
               reassures customers who expected a card option that their order
               went through. Leave empty for no note.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Pre-order combos</p>
+          <p className="text-xs text-muted-foreground">
+            For products marked “Pre-order” (festival combos). Booking stays open
+            through the end of each closing day; leave a date empty for no cutoff.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="s-pre-tn">Last booking day — Tamil Nadu &amp; Puducherry</Label>
+              <Input
+                id="s-pre-tn"
+                name="preorderCloseTn"
+                type="date"
+                defaultValue={values.preorderCloseTn}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-pre-other">Last booking day — other states</Label>
+              <Input
+                id="s-pre-other"
+                name="preorderCloseOther"
+                type="date"
+                defaultValue={values.preorderCloseOther}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-pre-note">Dispatch note</Label>
+            <Input
+              id="s-pre-note"
+              name="preorderDispatchNote"
+              defaultValue={values.preorderDispatchNote}
+              placeholder="Dispatched from 3 November, in time for Diwali."
+              maxLength={200}
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown on the product page, the customer&apos;s order page, the
+              confirmation email and the WhatsApp messages for pre-orders.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Printing</p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-thermal">Thermal receipt printer paper width</Label>
+            <select
+              id="s-thermal"
+              name="thermalPaperWidth"
+              defaultValue={values.thermalPaperWidth}
+              className="h-9 w-40 rounded-md border bg-background px-2 text-sm"
+            >
+              <option value="80">80 mm</option>
+              <option value="58">58 mm</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Used by Orders → Thermal receipts. Most receipt printers take 80 mm rolls;
+              small portable ones take 58 mm.
             </p>
           </div>
         </CardContent>

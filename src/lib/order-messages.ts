@@ -59,6 +59,10 @@ export type OrderMessageContext = {
   storeName: string;
   /** Site origin without a trailing slash, e.g. https://azhaguthinpandam.com */
   appUrl: string;
+  /** Pre-order orders only: the dispatch line from Settings */
+  dispatchNote?: string;
+  /** Order status the message is for — the dispatch line is added only before shipping */
+  status?: OrderStatus;
 };
 
 export function renderOrderMessage(template: string, c: OrderMessageContext): string {
@@ -71,7 +75,16 @@ export function renderOrderMessage(template: string, c: OrderMessageContext): st
     "{review}": `${c.appUrl}/order/${c.orderNumber}#review`,
     "{store}": c.storeName,
   };
-  return template.replace(/\{(name|order|total|packs|link|review|store)\}/g, (m) => values[m]);
+  const text = template.replace(
+    /\{(name|order|total|packs|link|review|store)\}/g,
+    (m) => values[m]
+  );
+  // A pre-order isn't being prepared or shipped yet, whatever the status
+  // template says — so while it waits, the message ends with when it will go.
+  const waiting = c.status === "PENDING" || c.status === "PAID" || c.status === "CONFIRMED";
+  return c.dispatchNote?.trim() && waiting
+    ? `${text}\n\n📦 This is a pre-order: ${c.dispatchNote.trim()}`
+    : text;
 }
 
 /** wa.me link that opens a chat with the customer, message prefilled. Null when the number isn't an Indian mobile. */

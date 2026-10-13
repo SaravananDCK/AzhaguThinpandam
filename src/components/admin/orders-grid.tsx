@@ -50,6 +50,8 @@ export type OrderRow = {
   marginIncomplete: boolean;
   payment: string;
   status: string;
+  /** "Pre-order" for festival combo bookings, else "Regular" */
+  type: string;
   /** What the customer (or the admin) typed at checkout; "" when there is none */
   notes: string;
   createdAt: string;
@@ -83,6 +85,8 @@ export type OrderMessaging = {
   templates: OrderMessageTemplates;
   storeName: string;
   appUrl: string;
+  /** Dispatch line added to messages for pre-order orders */
+  preorderDispatchNote: string;
 };
 
 export function OrdersGrid({ rows, messaging }: { rows: OrderRow[]; messaging: OrderMessaging }) {
@@ -230,6 +234,9 @@ export function OrdersGrid({ rows, messaging }: { rows: OrderRow[]; messaging: O
                   packs: data.items,
                   storeName: messaging.storeName,
                   appUrl: messaging.appUrl,
+                  status: data.status as OrderStatus,
+                  dispatchNote:
+                    data.type === "Pre-order" ? messaging.preorderDispatchNote : undefined,
                 })
               )
             : null;
@@ -256,6 +263,21 @@ export function OrdersGrid({ rows, messaging }: { rows: OrderRow[]; messaging: O
         }}
       />
       <Column dataField="customer" />
+      {/* Festival bookings at a glance — filter the header to "Pre-order" */}
+      <Column
+        dataField="type"
+        caption="Type"
+        width={105}
+        cellRender={({ value }: { value: string }) =>
+          value === "Pre-order" ? (
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+              Pre-order
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Regular</span>
+          )
+        }
+      />
       {/* Repeat buyers at a glance: filled badge from the 2nd paid order on.
           Untick "1" in the header filter for repeat customers only. Muted on
           unpaid rows, where it is the position the order would take. */}

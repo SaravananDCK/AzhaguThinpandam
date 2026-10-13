@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
 import { ORDER_STATUS_LABELS, SETTINGS, type OrderStatus } from "@/lib/constants";
-import { getSettings } from "@/lib/queries";
+import { getPreorderConfig, getSettings } from "@/lib/queries";
 
 export function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
@@ -126,12 +126,20 @@ export async function sendOrderConfirmationEmail(orderNumber: string) {
   if (!order.email) return;
 
   const trackUrl = `${appUrl()}/order/${order.orderNumber}`;
+  // A pre-order isn't being prepared yet, so say when it will go instead
+  const preorderNote = order.preorder
+    ? (await getPreorderConfig()).dispatchNote.replace(/[<>&]/g, "")
+    : "";
   await sendMail(
     order.email,
     `Order confirmed — ${order.orderNumber}`,
     wrap(`
       <p>Vanakkam ${order.shipName},</p>
-      <p>Thank you for your order! We've received your payment and will start preparing your snacks fresh.</p>
+      <p>Thank you for your order! We've received your payment and ${
+        preorderNote
+          ? `your pre-order is booked. ${preorderNote}`
+          : "will start preparing your snacks fresh."
+      }</p>
       <p style="font-size:15px"><strong>Order ${order.orderNumber}</strong></p>
       ${orderItemsTable(order.items, order)}
       <p style="margin-top:20px"><a href="${trackUrl}" style="background:#8f1e1e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Track your order</a></p>

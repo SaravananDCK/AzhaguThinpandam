@@ -51,6 +51,7 @@ export async function PUT(req: Request, { params }: Ctx) {
         isFeatured: data.isFeatured,
         isFlagship: data.isFlagship,
         madeToOrder: data.madeToOrder,
+        preorder: data.preorder,
         line: data.line,
         labels: normalizeLabels(data.labels),
         purchasePricePerKg: data.purchasePricePerKg ?? null,

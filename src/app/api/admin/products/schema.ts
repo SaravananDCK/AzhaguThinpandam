@@ -11,6 +11,7 @@ export const productSchema = z.object({
   isFeatured: z.boolean(),
   isFlagship: z.boolean().default(false),
   madeToOrder: z.boolean().default(false),
+  preorder: z.boolean().default(false),
   line: z.enum(PRODUCT_LINES).default("SNACKS"),
   labels: z.string().max(300).optional().or(z.literal("")), // comma-separated
   purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise

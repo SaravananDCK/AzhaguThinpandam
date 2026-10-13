@@ -11,6 +11,8 @@ import { Stars } from "@/components/store/stars";
 import { getProductBySlug, getRelatedProducts } from "@/lib/queries";
 import { getApprovedReviews } from "@/lib/reviews";
 import { parseLabels } from "@/lib/labels";
+import { getPreorderConfig } from "@/lib/queries";
+import { isPreorderOpen, preorderDeadlineText } from "@/lib/preorder";
 import { JsonLd, absoluteUrl, siteUrl } from "@/lib/seo";
 import { paiseToRupees } from "@/lib/money";
 import { isSellable } from "@/lib/availability";
@@ -58,6 +60,14 @@ export default async function ProductPage({ params }: Props) {
   // Existing product reviews stay on show; new reviews are per order (the
   // order page asks once it's delivered), so there's no write form here.
   const reviews = await getApprovedReviews(product.id);
+  const preorderConfig = product.preorder ? await getPreorderConfig() : null;
+  const preorder = preorderConfig
+    ? {
+        closed: !isPreorderOpen(preorderConfig),
+        deadline: preorderDeadlineText(preorderConfig),
+        dispatchNote: preorderConfig.dispatchNote,
+      }
+    : undefined;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -163,6 +173,7 @@ export default async function ProductPage({ params }: Props) {
               line={product.line}
               madeToOrder={product.madeToOrder}
               labels={parseLabels(product.labels)}
+              preorder={preorder}
               variants={product.variants.map((v) => ({
                 id: v.id,
                 label: v.label,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, MessageCircle, Printer } from "lucide-react";
+import { ArrowLeft, MessageCircle, Printer, Receipt } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { computeOrderCost } from "@/lib/order-cost";
 import { formatKg, totalKg } from "@/lib/box";
@@ -66,6 +66,10 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           packs: order.items.reduce((n, i) => n + i.qty, 0),
           storeName: settings[SETTINGS.STORE_NAME] || "Azhagu Thinpandam",
           appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, ""),
+          status: order.status as OrderStatus,
+          dispatchNote: order.preorder
+            ? settings[SETTINGS.PREORDER_DISPATCH_NOTE]
+            : undefined,
         })
       )
     : null;
@@ -125,7 +129,12 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/admin/orders/${order.id}/print`}>
-              <Printer className="size-4" /> Print
+              <Printer className="size-4" /> Print A4
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/orders/receipts?ids=${order.id}`}>
+              <Receipt className="size-4" /> Thermal receipt
             </Link>
           </Button>
           <Badge variant="outline" className="px-3 py-1">

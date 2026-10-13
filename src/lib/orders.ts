@@ -1,7 +1,13 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getDiscountConfig, getSettings, getShippingConfig } from "@/lib/queries";
+import {
+  getDiscountConfig,
+  getPreorderConfig,
+  getSettings,
+  getShippingConfig,
+} from "@/lib/queries";
+import { isPreorderOpen, preorderDeadlineText } from "@/lib/preorder";
 import { computeShipping } from "@/lib/shipping";
 import { boxDiscount, goodiesForKg, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
@@ -145,6 +151,25 @@ export async function priceOrderLines(params: {
     return { variant, qty: item.qty };
   });
 
+  // Pre-order combos are always an order of their own: they ship on a later
+  // date in their own parcel, and keeping them apart is what lets the admin
+  // track festival orders separately. Booking also closes per delivery state.
+  const preorder = lines.some((l) => l.variant.product.preorder);
+  if (preorder) {
+    if (lines.some((l) => !l.variant.product.preorder)) {
+      throw new CheckoutError(
+        "Pre-order combos are booked and shipped on their own. Please place them as a separate order from your other items."
+      );
+    }
+    const preorderConfig = await getPreorderConfig();
+    if (!isPreorderOpen(preorderConfig, params.state)) {
+      const deadline = preorderDeadlineText(preorderConfig);
+      throw new CheckoutError(
+        `Pre-order booking has closed for deliveries to ${params.state}.${deadline ? ` ${deadline}.` : ""}`
+      );
+    }
+  }
+
   // Staff buy at wholesale cost + ₹5 per packet. The flag is resolved from the
   // session's user record by the caller — never from anything client-supplied.
   const isEmployee = params.isEmployee === true;
@@ -164,8 +189,11 @@ export async function priceOrderLines(params: {
       weightGrams: l.variant.weightGrams,
     }))
   );
-  const foodLines = lines.filter((l) =>
-    WEIGHT_DISCOUNT_LINES.includes(l.variant.product.line as ProductLine)
+  // A combo is already a package price — it earns no weight tier or goodies.
+  const foodLines = lines.filter(
+    (l) =>
+      !l.variant.product.preorder &&
+      WEIGHT_DISCOUNT_LINES.includes(l.variant.product.line as ProductLine)
   );
   const foodKg = totalKg(
     foodLines.map((l) => ({
@@ -315,6 +343,7 @@ export async function priceOrderLines(params: {
     total,
     packingCost,
     weightKg: parcelKg,
+    preorder,
   };
 }
 
@@ -388,6 +417,7 @@ export async function createOrderFromCart(
       shippingFee,
       total,
       packingCost,
+      preorder: priced.preorder,
       couponId,
       couponCode,
       notes: input.notes || null,
@@ -473,6 +503,7 @@ export async function repriceOrderItems(params: {
         shippingFee,
         total,
         packingCost: priced.packingCost,
+        preorder: priced.preorder,
         couponId: priced.couponId,
         couponCode: priced.couponCode,
         items: { create: priced.itemData },

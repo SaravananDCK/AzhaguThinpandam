@@ -25,6 +25,7 @@ import {
 } from "@/lib/box";
 import type { DiscountType } from "@/lib/constants";
 import type { GoodieInfo } from "@/lib/queries";
+import { PREORDER_MIX_MESSAGE } from "@/lib/preorder";
 import { cn } from "@/lib/utils";
 
 export type BoxItem = {
@@ -124,7 +125,7 @@ export function BoxBuilder({
       const q = qty[item.variantId] ?? 0;
       if (q <= 0) continue;
       contents.push({ id: item.variantId, quantity: q, item_price: item.price / 100 });
-      addItem(
+      const ok = addItem(
         {
           variantId: item.variantId,
           productSlug: item.productSlug,
@@ -137,6 +138,10 @@ export function BoxBuilder({
         },
         q
       );
+      if (!ok) {
+        toast.error(PREORDER_MIX_MESSAGE);
+        return;
+      }
       added += q;
     }
     toast.success(

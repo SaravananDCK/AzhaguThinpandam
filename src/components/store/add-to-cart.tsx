@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Package, Plus, ShoppingBag } from "lucide-react";
+import { CalendarClock, Minus, Package, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cart-store";
 import { trackFbq } from "@/lib/fbq";
 import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
+import { PREORDER_MIX_MESSAGE } from "@/lib/preorder";
 import { cn } from "@/lib/utils";
 
 type Variant = {
@@ -35,6 +36,8 @@ type Props = {
   madeToOrder?: boolean;
   /** Selling points ("No Palm Oil") shown as pills beside the size and price */
   labels?: string[];
+  /** Set for pre-order combos: what to tell the customer, and whether booking is over */
+  preorder?: { closed: boolean; deadline: string; dispatchNote: string };
 };
 
 export function AddToCart({
@@ -46,6 +49,7 @@ export function AddToCart({
   line,
   madeToOrder = false,
   labels = [],
+  preorder,
 }: Props) {
   const firstAvailable =
     variants.find((v) => isSellable(v.stock, madeToOrder)) ?? variants[0];
@@ -128,6 +132,22 @@ export function AddToCart({
       )}
       </div>
 
+      {preorder && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+          <p className="flex items-center gap-2 font-semibold text-primary">
+            <CalendarClock className="size-4 shrink-0" />
+            {preorder.closed ? "Pre-order booking has closed" : "Pre-order — book now, delivered for the festival"}
+          </p>
+          {!preorder.closed && (
+            <ul className="mt-1.5 space-y-1 text-muted-foreground">
+              {preorder.dispatchNote && <li>{preorder.dispatchNote}</li>}
+              {preorder.deadline && <li>{preorder.deadline}.</li>}
+              <li>Booked as its own order — it ships separately from other items.</li>
+            </ul>
+          )}
+        </div>
+      )}
+
       {selected && packNote(selected.label, packetGrams) && (
         <p className="inline-flex items-center gap-1.5 rounded-md bg-gold-100 px-3 py-1.5 text-sm font-medium text-gold-800 dark:bg-gold-950/60 dark:text-gold-300">
           <Package className="size-4 shrink-0" /> Delivered as{" "}
@@ -171,12 +191,12 @@ export function AddToCart({
         <Button
           size="lg"
           className="flex-1 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 font-bold transition-all duration-300 hover:scale-[1.02] hover:from-primary-700 hover:to-primary-800 hover:shadow-[0_0_24px_rgba(207,68,68,0.4)] active:scale-95"
-          disabled={outOfStock}
+          disabled={outOfStock || preorder?.closed}
           onClick={() => {
             if (!selected) return;
             // Login first: carts belong to a verified customer (see useLoginGate)
             gate(() => {
-            addItem(
+            const added = addItem(
               {
                 variantId: selected.id,
                 productSlug,
@@ -189,9 +209,14 @@ export function AddToCart({
                 packetGrams,
                 weightGrams: selected.weightGrams ?? null,
                 line,
+                preorder: Boolean(preorder),
               },
               qty
             );
+            if (!added) {
+              toast.error(PREORDER_MIX_MESSAGE);
+              return;
+            }
             toast.success(`${productName} (${selected.label}) added to cart`);
             // Inside the gate: an abandoned login is not an add.
             trackFbq("AddToCart", {

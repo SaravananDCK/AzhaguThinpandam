@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { formatINR, paiseToRupees } from "@/lib/money";
-import { getManualPaymentConfig } from "@/lib/queries";
+import { getManualPaymentConfig, getPreorderConfig } from "@/lib/queries";
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { PayNow } from "@/components/store/pay-now";
 import { OrderReviewForm } from "@/components/store/order-review-form";
@@ -68,6 +68,11 @@ export default async function OrderPage({ params, searchParams }: Props) {
     getManualPaymentConfig(),
   ]);
   if (!order) notFound();
+  // Until it ships, a pre-order's page says when it will
+  const preorderNote =
+    order.preorder && ["PENDING", "PAID", "CONFIRMED"].includes(order.status)
+      ? (await getPreorderConfig()).dispatchNote
+      : "";
 
   const statusLabel =
     ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status;
@@ -245,6 +250,13 @@ export default async function OrderPage({ params, searchParams }: Props) {
           {statusLabel}
         </Badge>
       </div>
+
+      {order.preorder && (
+        <p className="mt-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <span className="font-semibold text-primary">Pre-order.</span>{" "}
+          {preorderNote || "This order was booked ahead and ships on its own."}
+        </p>
+      )}
 
       {/* The "delivered" WhatsApp message links here — rate the whole order */}
       {order.status === "DELIVERED" && (

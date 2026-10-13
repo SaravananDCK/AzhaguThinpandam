@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart-store";
 import { trackFbq } from "@/lib/fbq";
 import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
+import { PREORDER_MIX_MESSAGE } from "@/lib/preorder";
 import { cn } from "@/lib/utils";
 
 type Variant = {
@@ -66,7 +67,7 @@ export function CardAddToCart({
     if (!selected) return;
     // Login first: carts belong to a verified customer (see useLoginGate)
     gate(() => {
-    addItem({
+    const added = addItem({
       variantId: selected.id,
       productSlug,
       productName,
@@ -79,6 +80,10 @@ export function CardAddToCart({
       weightGrams: selected.weightGrams ?? null,
       line,
     });
+    if (!added) {
+      toast.error(PREORDER_MIX_MESSAGE);
+      return;
+    }
     toast.success(`${productName} (${selected.label}) added to cart`);
     // Inside the gate: an abandoned login is not an add.
     trackFbq("AddToCart", {
