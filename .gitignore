@@ -78,3 +78,10 @@ rzp*.csv
 
 # DevExtreme stylesheets copied from node_modules by scripts/copy-dx-css.mjs
 /public/dx
+
+# Expo mobile app
+/mobile/node_modules
+/mobile/.expo
+/mobile/dist
+# The app's .env only names the public site URL — it is meant to be committed
+!/mobile/.env

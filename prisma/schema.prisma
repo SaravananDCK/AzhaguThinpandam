@@ -30,8 +30,26 @@ model User {
   orders       Order[]
   reviews      Review[]
   cartLines    CartLine[]
+  apiSessions  ApiSession[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+// A mobile-app sign-in: one row per device. The app holds an opaque token and
+// only its SHA-256 hash is stored here (src/lib/api-auth.ts). Deleting the row
+// signs that device out; `pushToken` is where order notifications are sent.
+model ApiSession {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  deviceName String?
+  pushToken  String?
+  lastUsedAt DateTime @default(now())
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
 
 // One-time login codes delivered over WhatsApp or email (stored hashed,

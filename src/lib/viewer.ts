@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -11,10 +11,11 @@ import { prisma } from "@/lib/prisma";
  * component in a single render, and anonymous visitors cost zero queries.
  */
 export const getViewerPricing = cache(async (): Promise<{ isEmployee: boolean }> => {
-  const session = await auth();
-  if (!session?.user?.id) return { isEmployee: false };
+  // Website cookie or mobile-app token — staff see staff prices on both
+  const viewer = await getCurrentUser();
+  if (!viewer) return { isEmployee: false };
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: viewer.id },
     select: { isEmployee: true },
   });
   return { isEmployee: user?.isEmployee ?? false };

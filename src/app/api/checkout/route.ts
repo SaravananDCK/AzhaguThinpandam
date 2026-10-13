@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import {
   checkoutSchema,
@@ -49,8 +49,9 @@ export async function POST(req: Request) {
     // Orders require an OTP-verified account: it makes the delivery contact
     // real, ties the order to a customer, and keeps coupon limits honest.
     // The client opens an inline OTP dialog when it sees this 401.
-    const session = await auth();
-    if (!session?.user?.id) {
+    // The website's session cookie or the mobile app's token — same checkout.
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { error: "Please verify your mobile number to place the order.", needsAuth: true },
         { status: 401 }
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
     // Retrying takes that order over instead of stacking up a second one — the
     // customer keeps a single order number, and only one Razorpay order is ever
     // live for it, so a late capture can't pay for a duplicate.
-    const reused = manual.enabled ? null : await findReusableOrder(session.user.id);
+    const reused = manual.enabled ? null : await findReusableOrder(user.id);
 
     let order = null;
     if (reused) {
@@ -86,9 +87,9 @@ export async function POST(req: Request) {
     }
     order ??= await createOrderFromCart(
       parsed.data,
-      session.user.id,
+      user.id,
       // Verified identity: phone, or email for accounts that logged in by email
-      session.user.phone ?? session.user.email ?? undefined,
+      user.phone ?? user.email ?? undefined,
       tracking
     );
 
@@ -102,13 +103,13 @@ export async function POST(req: Request) {
     {
       const a = parsed.data.address;
       const existing = await prisma.address.findFirst({
-        where: { userId: session.user.id, line1: a.line1, pincode: a.pincode },
+        where: { userId: user.id, line1: a.line1, pincode: a.pincode },
       });
       if (!existing) {
-        const count = await prisma.address.count({ where: { userId: session.user.id } });
+        const count = await prisma.address.count({ where: { userId: user.id } });
         await prisma.address.create({
           data: {
-            userId: session.user.id,
+            userId: user.id,
             name: a.name,
             phone: a.phone,
             line1: a.line1,
