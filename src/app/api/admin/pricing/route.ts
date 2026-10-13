@@ -19,7 +19,7 @@ export async function GET() {
 
   const products = await prisma.product.findMany({
     include: {
-      category: { select: { name: true } },
+      category: { select: { id: true, name: true } },
       variants: {
         where: { isActive: true },
         select: { price: true, sortOrder: true },
@@ -33,6 +33,7 @@ export async function GET() {
       id: p.id,
       name: p.name,
       category: p.category.name,
+      categoryId: p.category.id,
       active: p.isActive,
       labels: p.labels,
       purchasePerKg: p.purchasePricePerKg != null ? p.purchasePricePerKg / 100 : null,

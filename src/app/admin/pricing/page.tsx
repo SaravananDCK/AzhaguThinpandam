@@ -19,7 +19,10 @@ export default async function AdminPricingPage() {
           product&apos;s pack prices recalculate from its rule, with the largest packs getting
           the standard bulk discount. Flip the <strong>₹5 rounding</strong> toggle and hit{" "}
           <strong>Recalculate all prices</strong> to re-apply it across the whole catalog.
-          Filter by category to price a whole group at once. The{" "}
+          Type into <strong>Sale prices</strong> to set a pack price by hand — the
+          product&apos;s Margin % is worked back from its smallest pack. Use{" "}
+          <strong>Change prices by category</strong> to add ₹ or % across whole
+          categories. Filter by category to price a whole group at once. The{" "}
           <strong>Labels</strong> column sets the selling points shown on each product
           page (e.g. No Palm Oil, No Maida) — editing it doesn&apos;t change prices.
         </p>

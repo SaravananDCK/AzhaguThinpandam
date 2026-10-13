@@ -19,6 +19,27 @@ export function gramsOf(label: string): number | null {
 export type PricedVariant = { price: number; mrp: number | null };
 
 /**
+ * The margin % implied by the base (smallest weight) pack's sale price, so a
+ * price typed by hand keeps the Margin column true. Inverse of
+ * applyMarginPricing's base price: price = cost × (1 + margin/100). Null when
+ * there's no purchase price or no weight-based pack to read it from.
+ */
+export function marginFromBasePrice(
+  purchasePricePerKg: number | null,
+  variants: { label: string; weightGrams: number | null; price: number }[]
+): number | null {
+  if (!purchasePricePerKg || purchasePricePerKg <= 0) return null;
+  const weighed = variants
+    .map((v) => ({ grams: v.weightGrams ?? gramsOf(v.label), price: v.price }))
+    .filter((v): v is { grams: number; price: number } => v.grams != null && v.grams > 0)
+    .sort((a, b) => a.grams - b.grams);
+  const base = weighed[0];
+  if (!base) return null;
+  const cost = (purchasePricePerKg * base.grams) / 1000;
+  return Math.round((base.price / cost - 1) * 100 * 10) / 10;
+}
+
+/**
  * Computes prices (paise) for each variant label from the pricing rule.
  * Labels that aren't weights (e.g. "Combo") return null — left untouched.
  * `roundToFive` (store setting): true = ceil sale prices to the next ₹5,
