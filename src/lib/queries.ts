@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_SETTINGS,
   DISCOUNT_TYPES,
+  REVIEW_STATUSES,
   SETTINGS,
   type DiscountType,
   type ProductLine,
@@ -44,6 +45,42 @@ async function pricedForViewer<T extends ProductWithDetails>(products: T[]): Pro
     variants: p.variants.map((v) => ({ ...v, price: staffUnitPrice(v, p), mrp: null })),
   }));
 }
+
+/**
+ * Highest-rated approved reviews with something written in them, for the
+ * homepage ticker. Same visibility rule as the floating Reviews tab: order
+ * reviews always, product reviews only while the product is on sale.
+ */
+export async function getTopReviews(take = 12) {
+  const rows = await prisma.review.findMany({
+    where: {
+      status: REVIEW_STATUSES.APPROVED,
+      OR: [{ productId: null }, { product: { isActive: true } }],
+    },
+    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+    take: take * 3, // over-fetch: blank bodies are dropped below
+    select: {
+      id: true,
+      rating: true,
+      tasteRating: true,
+      packingRating: true,
+      deliveryRating: true,
+      title: true,
+      body: true,
+      authorName: true,
+      verifiedPurchase: true,
+      createdAt: true,
+      product: { select: { name: true, slug: true } },
+    },
+  });
+  // Prisma's `not: ""` misses whitespace-only text, so filter here
+  return rows
+    .filter((r) => (r.body ?? "").trim() || (r.title ?? "").trim())
+    .slice(0, take)
+    .map((r) => ({ ...r, authorName: r.authorName?.trim() || "Customer" }));
+}
+
+export type TopReview = Awaited<ReturnType<typeof getTopReviews>>[number];
 
 /** Storefront categories — only those with at least one active product.
     (Admin pages query all categories directly.) */

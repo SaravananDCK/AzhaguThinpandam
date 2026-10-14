@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { HeroSlideshow } from "@/components/store/hero-slideshow";
 import { InstagramReels } from "@/components/store/instagram-reels";
 import { ProductCard } from "@/components/store/product-card";
+import { ReviewsMarquee } from "@/components/store/reviews-marquee";
 import { Reveal } from "@/components/store/reveal";
-import { getCategories, getFeaturedProducts, getSettings } from "@/lib/queries";
+import { getCategories, getFeaturedProducts, getSettings, getTopReviews } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
 import { JsonLd } from "@/lib/seo";
 
@@ -132,10 +133,11 @@ function SectionHeader({
 }
 
 export default async function HomePage() {
-  const [categories, featured, settings] = await Promise.all([
+  const [categories, featured, settings, topReviews] = await Promise.all([
     getCategories(),
     getFeaturedProducts(8),
     getSettings(),
+    getTopReviews(12),
   ]);
   const instaHandle = settings[SETTINGS.INSTAGRAM_HANDLE] ?? "";
   // Show the latest 3 (paste newest-first in Admin → Settings)
@@ -278,6 +280,20 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* Top-rated reviews, scrolling */}
+        {topReviews.length > 0 && (
+          <section className="mt-16 sm:mt-20">
+            <Reveal>
+              <SectionHeader
+                eyebrow="Reviews"
+                title="What our customers say"
+                subtitle="Our highest-rated reviews from customers."
+              />
+            </Reveal>
+            <ReviewsMarquee reviews={topReviews} />
+          </section>
+        )}
 
         {/* Categories */}
         <section className="mt-16 sm:mt-20">
