@@ -76,6 +76,65 @@ export function OrderAnalysis({
               </span>
               <span className="font-medium">{data.paidOrders}</span>
             </div>
+
+            {data.categories.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <p className="font-semibold">Packets sold by category</p>
+                  <p className="text-xs text-muted-foreground">
+                    Across the orders counted as sales. Free goodies not included.
+                  </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-xs text-muted-foreground">
+                        <th className={th}>Category</th>
+                        <th className={th}>Packets</th>
+                        <th className={th}>Weight</th>
+                        <th className={th}>Avg / packet</th>
+                        <th className={th}>Revenue</th>
+                        <th className={th}>Profit</th>
+                        <th className={th}>Margin</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.categories.map((c) => (
+                        <tr key={c.category} className="border-b last:border-b-0">
+                          <td className={td}>{c.category}</td>
+                          <td className={`${td} font-medium`}>{c.packs}</td>
+                          <td className={td}>{kg(c.grams)}</td>
+                          <td className={td}>{formatINR(c.avgPackPrice)}</td>
+                          <td className={td}>{formatINR(c.revenue)}</td>
+                          <td className={`${td} ${c.profit < 0 ? "text-destructive" : ""}`}>
+                            {signed(c.profit)}
+                          </td>
+                          <td className={td}>{pct(c.marginPct)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-semibold">
+                        <td className={td}>Total</td>
+                        <td className={td}>
+                          {data.categories.reduce((s, c) => s + c.packs, 0)}
+                        </td>
+                        <td className={td}>
+                          {kg(data.categories.reduce((s, c) => s + c.grams, 0))}
+                        </td>
+                        <td className={td} />
+                        <td className={td}>
+                          {formatINR(data.categories.reduce((s, c) => s + c.revenue, 0))}
+                        </td>
+                        <td className={td}>
+                          {signed(data.categories.reduce((s, c) => s + c.profit, 0))}
+                        </td>
+                        <td className={td} />
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

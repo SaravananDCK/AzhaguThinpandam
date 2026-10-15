@@ -28,6 +28,18 @@ export type ProductProfit = {
   unknownLines: number;
 };
 
+export type CategorySales = {
+  category: string;
+  packs: number;
+  grams: number;
+  revenue: number; // net of pro-rata discounts
+  cost: number;
+  profit: number;
+  marginPct: number | null;
+  /** Revenue ÷ packs — what a packet in this category fetches on average */
+  avgPackPrice: number;
+};
+
 export type StateSales = {
   state: string;
   orders: number;
@@ -55,6 +67,8 @@ export type OrderAnalytics = {
   newCustomerOrders: number;
   repeatCustomerOrders: number;
   products: ProductProfit[];
+  /** Packets sold per category, most packs first */
+  categories: CategorySales[];
   /** Cost of ₹0 goodies given away, already included in the margins above */
   freebieCost: number;
   states: StateSales[];
@@ -71,7 +85,21 @@ export async function computeOrderAnalytics(from: Date, to: Date): Promise<Order
     }),
     prisma.order.findMany({
       where: { ...inPeriod, status: { in: REVENUE_STATUSES } },
-      include: { items: ORDER_COST_ITEMS_INCLUDE, user: { select: { phone: true } } },
+      include: {
+        items: {
+          include: {
+            variant: {
+              select: {
+                ...ORDER_COST_ITEMS_INCLUDE.include.variant.select,
+                product: {
+                  select: { purchasePricePerKg: true, category: { select: { name: true } } },
+                },
+              },
+            },
+          },
+        },
+        user: { select: { phone: true } },
+      },
     }),
     loadPaidHistory(),
   ]);
@@ -91,6 +119,7 @@ export async function computeOrderAnalytics(from: Date, to: Date): Promise<Order
   let newCustomerOrders = 0;
   let freebieCost = 0;
   const products = new Map<string, ProductProfit>();
+  const categories = new Map<string, CategorySales>();
   const states = new Map<string, StateSales>();
 
   for (const order of orders) {
@@ -139,12 +168,32 @@ export async function computeOrderAnalytics(from: Date, to: Date): Promise<Order
         marginPct: null,
         unknownLines: 0,
       };
+      const grams = (item.variant?.weightGrams ?? gramsOf(line.variantLabel) ?? 0) * line.qty;
+      const revenue = Math.round(line.revenue * netShare);
       p.packs += line.qty;
-      p.grams += (item.variant?.weightGrams ?? gramsOf(line.variantLabel) ?? 0) * line.qty;
-      p.revenue += Math.round(line.revenue * netShare);
+      p.grams += grams;
+      p.revenue += revenue;
       if (line.cost == null) p.unknownLines++;
       else p.cost += line.cost;
       products.set(line.productName, p);
+
+      // Items whose variant has since been deleted can't be placed
+      const catName = item.variant?.product.category?.name ?? "Other";
+      const c = categories.get(catName) ?? {
+        category: catName,
+        packs: 0,
+        grams: 0,
+        revenue: 0,
+        cost: 0,
+        profit: 0,
+        marginPct: null,
+        avgPackPrice: 0,
+      };
+      c.packs += line.qty;
+      c.grams += grams;
+      c.revenue += revenue;
+      c.cost += line.cost ?? 0;
+      categories.set(catName, c);
     });
   }
 
@@ -154,6 +203,18 @@ export async function computeOrderAnalytics(from: Date, to: Date): Promise<Order
       return { ...p, profit, marginPct: p.revenue > 0 ? (profit / p.revenue) * 100 : null };
     })
     .sort((a, b) => b.profit - a.profit);
+
+  const categoryRows = [...categories.values()]
+    .map((c) => {
+      const profit = c.revenue - c.cost;
+      return {
+        ...c,
+        profit,
+        marginPct: c.revenue > 0 ? (profit / c.revenue) * 100 : null,
+        avgPackPrice: c.packs ? Math.round(c.revenue / c.packs) : 0,
+      };
+    })
+    .sort((a, b) => b.packs - a.packs);
 
   const n = orders.length;
   return {
@@ -171,6 +232,7 @@ export async function computeOrderAnalytics(from: Date, to: Date): Promise<Order
     newCustomerOrders,
     repeatCustomerOrders: n - newCustomerOrders,
     products: productRows,
+    categories: categoryRows,
     freebieCost,
     states: [...states.values()].sort((a, b) => b.revenue - a.revenue),
   };
