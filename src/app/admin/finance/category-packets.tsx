@@ -25,21 +25,41 @@ const td = "px-2 py-1.5 text-right first:text-left";
  * It assumes nobody buys less because of the increase — a ceiling, not a
  * forecast.
  */
-export function CategoryPackets({ categories }: { categories: CategorySales[] }) {
+export function CategoryPackets({
+  categories,
+  expensesTotal,
+}: {
+  categories: CategorySales[];
+  /** The period's overheads (Expenses table + supplier-billed transport), paise */
+  expensesTotal: number;
+}) {
   const [increase, setIncrease] = useState("5");
   const perPack = Math.round((Number(increase) || 0) * 100); // paise
+  const totalPacks = categories.reduce((s, c) => s + c.packs, 0);
+  // Overheads spread evenly over every packet sold, so each category carries
+  // its share by volume
+  const expensePerPack = totalPacks ? expensesTotal / totalPacks : 0;
 
   const rows = categories.map((c) => {
+    const expenses = Math.round(c.packs * expensePerPack);
     const extra = c.packs * perPack;
-    const profit = c.profit + extra;
-    const revenue = c.revenue + extra;
-    return { ...c, whatIfProfit: profit, whatIfMarginPct: revenue > 0 ? (profit / revenue) * 100 : null };
+    const whatIfProfit = c.profit + extra;
+    const whatIfRevenue = c.revenue + extra;
+    return {
+      ...c,
+      expenses,
+      net: c.profit - expenses,
+      whatIfProfit,
+      whatIfMarginPct: whatIfRevenue > 0 ? (whatIfProfit / whatIfRevenue) * 100 : null,
+      whatIfNet: whatIfProfit - expenses,
+    };
   });
   const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0);
   const totalRevenue = sum((r) => r.revenue);
   const totalProfit = sum((r) => r.profit);
+  const totalExpenses = sum((r) => r.expenses);
   const totalWhatIfProfit = sum((r) => r.whatIfProfit);
-  const totalWhatIfRevenue = totalRevenue + sum((r) => r.packs) * perPack;
+  const totalWhatIfRevenue = totalRevenue + totalPacks * perPack;
 
   return (
     <>
@@ -67,16 +87,27 @@ export function CategoryPackets({ categories }: { categories: CategorySales[] })
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
+            <tr className="text-xs text-muted-foreground">
+              <th colSpan={5} />
+              <th colSpan={3} className="border-b px-2 py-1 text-center font-medium">
+                Today&apos;s prices
+              </th>
+              <th colSpan={3} className="border-b px-2 py-1 text-center font-medium text-primary">
+                At +{formatINR(perPack)} a packet
+              </th>
+            </tr>
             <tr className="border-b text-xs text-muted-foreground">
               <th className={th}>Category</th>
               <th className={th}>Packets</th>
               <th className={th}>Weight</th>
               <th className={th}>Avg / packet</th>
-              <th className={th}>Revenue</th>
+              <th className={th}>Expenses</th>
               <th className={th}>Profit</th>
               <th className={th}>Margin</th>
-              <th className={`${th} text-primary`}>Profit @ +{formatINR(perPack)}</th>
-              <th className={`${th} text-primary`}>Margin @ +{formatINR(perPack)}</th>
+              <th className={th}>After expenses</th>
+              <th className={`${th} text-primary`}>Profit</th>
+              <th className={`${th} text-primary`}>Margin</th>
+              <th className={`${th} text-primary`}>After expenses</th>
             </tr>
           </thead>
           <tbody>
@@ -86,13 +117,19 @@ export function CategoryPackets({ categories }: { categories: CategorySales[] })
                 <td className={`${td} font-medium`}>{c.packs}</td>
                 <td className={td}>{kg(c.grams)}</td>
                 <td className={td}>{formatINR(c.avgPackPrice)}</td>
-                <td className={td}>{formatINR(c.revenue)}</td>
+                <td className={td}>{formatINR(c.expenses)}</td>
                 <td className={`${td} ${c.profit < 0 ? "text-destructive" : ""}`}>
                   {signed(c.profit)}
                 </td>
                 <td className={td}>{pct(c.marginPct)}</td>
-                <td className={`${td} font-medium text-primary`}>{signed(c.whatIfProfit)}</td>
+                <td className={`${td} font-medium ${c.net < 0 ? "text-destructive" : ""}`}>
+                  {signed(c.net)}
+                </td>
+                <td className={`${td} text-primary`}>{signed(c.whatIfProfit)}</td>
                 <td className={`${td} text-primary`}>{pct(c.whatIfMarginPct)}</td>
+                <td className={`${td} font-medium ${c.whatIfNet < 0 ? "text-destructive" : "text-primary"}`}>
+                  {signed(c.whatIfNet)}
+                </td>
               </tr>
             ))}
             <tr className="font-semibold">
@@ -100,24 +137,29 @@ export function CategoryPackets({ categories }: { categories: CategorySales[] })
               <td className={td}>{sum((r) => r.packs)}</td>
               <td className={td}>{kg(sum((r) => r.grams))}</td>
               <td className={td} />
-              <td className={td}>{formatINR(totalRevenue)}</td>
+              <td className={td}>{formatINR(totalExpenses)}</td>
               <td className={td}>{signed(totalProfit)}</td>
               <td className={td}>
                 {pct(totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null)}
               </td>
+              <td className={td}>{signed(totalProfit - totalExpenses)}</td>
               <td className={`${td} text-primary`}>{signed(totalWhatIfProfit)}</td>
               <td className={`${td} text-primary`}>
                 {pct(totalWhatIfRevenue > 0 ? (totalWhatIfProfit / totalWhatIfRevenue) * 100 : null)}
               </td>
+              <td className={`${td} text-primary`}>{signed(totalWhatIfProfit - totalExpenses)}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p className="text-xs text-muted-foreground">
-        The what-if adds the increase to every packet sold at the same volumes
-        — an upper bound, since some customers may buy less at a higher price.
-        Extra profit = packets × increase ({sum((r) => r.packs)} ×{" "}
-        {formatINR(perPack)} = {signed(totalWhatIfProfit - totalProfit)}).
+        Profit is revenue (net of discounts) less wholesale cost at today&apos;s
+        purchase price. Expenses are the period&apos;s overheads (
+        {formatINR(expensesTotal)}) spread over every packet sold:{" "}
+        {formatINR(Math.round(expensePerPack))} a packet. The what-if adds the
+        increase to every packet at the same volumes — an upper bound, since
+        some customers may buy less at a higher price. Extra profit ={" "}
+        {totalPacks} × {formatINR(perPack)} = {signed(totalWhatIfProfit - totalProfit)}.
       </p>
     </>
   );
