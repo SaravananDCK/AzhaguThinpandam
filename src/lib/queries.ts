@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -84,12 +85,12 @@ export type TopReview = Awaited<ReturnType<typeof getTopReviews>>[number];
 
 /** Storefront categories — only those with at least one active product.
     (Admin pages query all categories directly.) */
-export function getCategories() {
+export const getCategories = cache(function getCategories() {
   return prisma.category.findMany({
     where: { products: { some: { isActive: true, line: "SNACKS" } } },
     orderBy: { sortOrder: "asc" },
   });
-}
+});
 
 export async function getFeaturedProducts(take = 8) {
   return pricedForViewer(
@@ -188,12 +189,12 @@ export async function getRelatedProducts(categoryId: string, excludeId: string, 
 }
 
 /** All settings as a key→value map, with defaults filled in. */
-export async function getSettings(): Promise<Record<string, string>> {
+export const getSettings = cache(async function getSettings(): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany();
   const map = { ...DEFAULT_SETTINGS };
   for (const row of rows) map[row.key] = row.value;
   return map;
-}
+});
 
 /**
  * Manual UPI settlement config — used until the payment gateway is live.

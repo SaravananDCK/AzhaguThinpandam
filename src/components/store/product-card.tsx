@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoreImage } from "@/components/store/store-image";
 import { CheckCircle2, Sparkles, XCircle } from "lucide-react";
 import { CardAddToCart } from "@/components/store/card-add-to-cart";
 import { Stars } from "@/components/store/stars";
@@ -6,7 +7,7 @@ import { isSellable } from "@/lib/availability";
 import { formatINR } from "@/lib/money";
 import type { ProductWithDetails } from "@/lib/queries";
 
-export function ProductCard({ product }: { product: ProductWithDetails }) {
+export function ProductCard({ product, compact = false }: { product: ProductWithDetails; compact?: boolean }) {
   const image = product.images[0]?.url;
   const prices = product.variants.map((v) => v.price);
   const minPrice = prices.length ? Math.min(...prices) : 0;
@@ -49,10 +50,11 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
       {/* Image with zoom + gradient overlay */}
       <Link href={href} className="relative block aspect-square overflow-hidden bg-muted">
         {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <StoreImage
             src={image}
             alt={product.name}
+            fill
+            sizes="(max-width: 767px) 50vw, (max-width: 1152px) 25vw, 276px"
             className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             loading="lazy"
           />
@@ -62,14 +64,14 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
 
       {/* Content */}
       <div className="space-y-2 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {!compact && <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {product.category.name}
-        </p>
+        </p>}
         <Link href={href} className="block">
           <h3 className="font-semibold leading-snug transition-colors group-hover:text-primary-600 dark:group-hover:text-primary-400">
             {product.name}
             {product.tamilName && (
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+              <span className={compact ? "mt-1 block text-xs font-normal text-muted-foreground" : "ml-1.5 text-xs font-normal text-muted-foreground"}>
                 {product.tamilName}
               </span>
             )}
@@ -83,7 +85,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           </span>
         )}
 
-        {inStock ? (
+        {!compact && (inStock ? (
           <p className="flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
             <CheckCircle2 className="size-3.5" /> In stock — made fresh to order
           </p>
@@ -91,7 +93,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
           <p className="flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
             <XCircle className="size-3.5" /> Currently unavailable
           </p>
-        )}
+        ))}
 
         {/* A pre-order has dates and terms to read first, so the card sends
             the customer to the product page rather than adding blind. */}

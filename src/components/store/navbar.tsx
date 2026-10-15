@@ -59,7 +59,7 @@ export async function Navbar() {
                 {/* Center: primary links (desktop) */}
                 <nav className="hidden items-center gap-1 md:flex">
                   <PillLink href="/products">Shop</PillLink>
-                  <PillLink href="/build-box">🎁 Build Your Box</PillLink>
+
                   <PillLink href="/magnets">Magnets</PillLink>
                 </nav>
 

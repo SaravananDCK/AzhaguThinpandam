@@ -67,11 +67,7 @@ export function MobileNav({ categories }: { categories: Category[] }) {
           <DrawerLink href="/products" onClick={close}>
             All Products
           </DrawerLink>
-          <DrawerLink href="/build-box" onClick={close}>
-            <span className="font-semibold text-gold-700 dark:text-gold-400">
-              🎁 Build Your Box
-            </span>
-          </DrawerLink>
+
           {categories.map((c) => (
             <DrawerLink
               key={c.id}

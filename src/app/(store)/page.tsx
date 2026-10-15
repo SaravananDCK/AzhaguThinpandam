@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import {
   ArrowRight,
@@ -8,7 +10,8 @@ import {
   Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HeroSlideshow } from "@/components/store/hero-slideshow";
+import heroImage from "../../../public/banners/hero.webp";
+import { StoreImage } from "@/components/store/store-image";
 import { InstagramReels } from "@/components/store/instagram-reels";
 import { ProductCard } from "@/components/store/product-card";
 import { ReviewsMarquee } from "@/components/store/reviews-marquee";
@@ -116,7 +119,7 @@ function SectionHeader({
   subtitle?: string;
 }) {
   return (
-    <div className="mb-10 text-center">
+    <div className="mb-7 text-center">
       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
         {eyebrow}
       </p>
@@ -132,41 +135,157 @@ function SectionHeader({
   );
 }
 
-export default async function HomePage() {
-  const [categories, featured, settings, topReviews] = await Promise.all([
-    getCategories(),
-    getFeaturedProducts(8),
-    getSettings(),
-    getTopReviews(12),
-  ]);
-  const instaHandle = settings[SETTINGS.INSTAGRAM_HANDLE] ?? "";
-  // Show the latest 3 (paste newest-first in Admin → Settings)
-  const instaReels = parseReels(settings[SETTINGS.INSTAGRAM_REELS]).slice(0, 3);
 
+function SectionPlaceholder({ title }: { title: string }) {
+  return (
+    <section className="my-12 sm:my-16" aria-busy="true" aria-label={`Loading ${title}`}>
+      <SectionHeader eyebrow="Fresh from Kovilpatti" title={title} />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="aspect-[3/4] rounded-2xl bg-muted motion-safe:animate-pulse" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+async function FeaturedSection() {
+  const featured = await getFeaturedProducts(8);
+  if (!featured.length) return null;
+  return (
+    <section className="my-12 sm:my-16">
+      <Reveal>
+        <SectionHeader
+          eyebrow="Customer favourites"
+          title="Bestsellers"
+        />
+      </Reveal>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {featured.map((p, i) => (
+          <Reveal key={p.id} delay={(i % 4) * 90}>
+            <ProductCard product={p} compact />
+          </Reveal>
+        ))}
+      </div>
+      <div className="mt-8 text-center">
+        <Button
+          asChild
+          variant="outline"
+          size="lg"
+          className="rounded-full px-8"
+        >
+          <Link href="/products">
+            View all products <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+async function CategoriesSection() {
+  const categories = await getCategories();
+  if (!categories.length) return null;
+  return (
+    <section className="mt-12 sm:mt-16">
+      <Reveal>
+        <SectionHeader eyebrow="Explore" title="Shop by category" />
+      </Reveal>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {categories.map((c, i) => (
+          <Reveal key={c.id} delay={i * 90}>
+            <Link
+              href={`/products?category=${c.slug}`}
+              className="group relative block overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/60 hover:shadow-xl"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                {c.image && (
+                  <StoreImage
+                    src={c.image}
+                    alt={c.name}
+                    fill
+                    sizes="(max-width: 767px) 50vw, (max-width: 1152px) 25vw, 276px"
+                    className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                <p className="font-heading text-lg font-semibold leading-tight drop-shadow">
+                  {c.name}
+                </p>
+                {c.tamilName && (
+                  <p className="mt-0.5 text-xs text-gold-200">
+                    {c.tamilName}
+                  </p>
+                )}
+              </div>
+            </Link>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+async function ReviewsSection() {
+  const topReviews = await getTopReviews(6);
+  if (!topReviews.length) return null;
+  return (
+    <section className="mt-12 sm:mt-16">
+      <Reveal>
+        <SectionHeader
+          eyebrow="Reviews"
+          title="What our customers say"
+          subtitle="Our highest-rated reviews from customers."
+        />
+      </Reveal>
+      <ReviewsMarquee reviews={topReviews} />
+    </section>
+  );
+}
+
+async function InstagramSection() {
+  const settings = await getSettings();
+  const instaHandle = settings[SETTINGS.INSTAGRAM_HANDLE] ?? "";
+  const instaReels = parseReels(settings[SETTINGS.INSTAGRAM_REELS]).slice(0, 3);
+  return <InstagramReels handle={instaHandle} reels={instaReels} />;
+}
+
+export default function HomePage() {
   return (
     <div>
-      {/* Hero — rotating lifestyle photos with maroon overlay. Bleeds up under
+      {/* Hero — a single product photograph with maroon overlay. Bleeds up under
           the transparent floating nav (negative margin = the reserved nav height). */}
       <section
         className="relative overflow-hidden text-white"
         style={{ marginTop: "calc(var(--nav-h) * -1)" }}
       >
-        <HeroSlideshow />
+        <Image
+          src={heroImage}
+          alt="Traditional Kovilpatti snacks, ready to share"
+          fill
+          preload
+          sizes="100vw"
+          placeholder="blur"
+          className="object-cover object-[70%_center]"
+        />
         {/* Legibility overlays: maroon wash from the left, vignette at edges */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-950/95 via-primary-950/70 to-primary-950/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-950/95 via-primary-950/75 to-primary-950/15" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25" />
 
         <div
-          className="relative z-10 mx-auto max-w-6xl px-4 pb-24 sm:pb-28 lg:pb-36"
-          style={{ paddingTop: "calc(var(--nav-h) + 3.5rem)" }}
+          className="relative z-10 mx-auto max-w-6xl px-4 pb-8 sm:pb-16 lg:pb-20"
+          style={{ paddingTop: "calc(var(--nav-h) + 1.25rem)" }}
         >
           {/* Copy */}
           <div className="max-w-2xl text-center sm:text-left">
             {/* Most of our leads arrive redirected from Karthick Sweets' own
                 site, so lead with their mark — a referred visitor should land
                 on something they already recognise. */}
-            <div className="mb-6 inline-flex animate-fade-in-up items-center gap-3 rounded-2xl border border-gold-300/30 bg-white/10 py-2 pl-2 pr-4 backdrop-blur-sm sm:gap-4 sm:pr-5">
-              <span className="flex h-12 shrink-0 items-center rounded-xl bg-white/95 px-2.5 py-1.5 shadow-sm sm:h-14">
+            <div className="mb-4 inline-flex items-center gap-3 rounded-2xl border border-gold-300/30 bg-white/10 py-2 pl-2 pr-4 backdrop-blur-sm sm:gap-4 sm:pr-5">
+              <span className="flex h-9 shrink-0 items-center rounded-xl bg-white/95 px-2.5 py-1.5 shadow-sm sm:h-12">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/partners/karthick-sweets.webp"
@@ -184,56 +303,50 @@ export default async function HomePage() {
               </span>
             </div>
             <p
-              className="mb-5 animate-fade-in-up text-xs font-semibold uppercase tracking-[0.35em] text-gold-300"
-              style={{ animationDelay: "0.05s" }}
+              className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-gold-300"
             >
               Kovilpatti · அழகு திண்பண்டம்
             </p>
             <h1
-              className="mb-6 animate-fade-in-up font-heading text-4xl font-semibold leading-[1.08] sm:text-5xl lg:text-6xl"
-              style={{ animationDelay: "0.1s" }}
+              className="mb-4 font-heading text-3xl font-semibold leading-[1.08] sm:text-5xl lg:text-6xl"
             >
-              The taste of{" "}
+              Fresh from{" "}
               <span className="italic text-gold-300">Kovilpatti</span>,
-              <br className="hidden sm:block" /> delivered to your home.
+              <br className="hidden sm:block" /> to your doorstep.
             </h1>
             <p
-              className="mx-auto mb-9 max-w-xl animate-fade-in-up text-base font-light leading-relaxed text-white/75 sm:mx-0 sm:text-lg"
-              style={{ animationDelay: "0.2s" }}
+              className="mx-auto mb-5 max-w-lg text-sm font-light leading-relaxed text-white/75 sm:mx-0 sm:text-lg"
             >
-              Kadalai mittai set in country jaggery, hand-twisted murukku, sev
-              and mixture — made fresh in small batches, the way it has always
-              been made.
+              Country-jaggery kadalai mittai, crisp murukku and your favourite
+              Tamil snacks. Made in small batches. Delivered across India.
             </p>
 
             <div
-              className="mb-12 flex animate-fade-in-up flex-col items-center justify-center gap-3 sm:flex-row sm:justify-start"
-              style={{ animationDelay: "0.3s" }}
+              className="mb-5 flex flex-col items-center justify-center gap-3 sm:flex-row sm:justify-start"
             >
               <Link
-                href="/products"
+                href="#bestsellers"
                 className="inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-b from-gold-300 to-gold-500 px-9 py-3.5 text-base font-semibold text-[#2a1204] shadow-lg shadow-gold-900/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gold-800/40 sm:w-auto"
               >
-                Shop the collection
+                Shop bestsellers
                 <ArrowRight className="size-4.5 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
-              <Link
-                href="/build-box"
-                className="inline-flex w-full items-center justify-center rounded-full border border-white/25 px-9 py-3.5 text-base font-medium text-white/90 transition-all duration-300 hover:border-gold-300/60 hover:text-gold-200 sm:w-auto"
-              >
-                Build your own box
-              </Link>
+
             </div>
+
+            <p className="mb-5 max-w-lg text-sm leading-relaxed text-gold-100 sm:text-base">
+              <strong className="font-semibold text-gold-200">Our best online prices on sweets &amp; savouries.</strong>{" "}
+              Compare with your favourite ecommerce sites.
+            </p>
 
             {/* Trust row */}
             <div
-              className="flex animate-fade-in-up flex-col items-center gap-3 text-sm text-white/70 sm:flex-row sm:justify-start sm:gap-0"
-              style={{ animationDelay: "0.4s" }}
+              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-white/70 sm:flex-row sm:justify-start sm:gap-0"
             >
               {TRUST_ROW.map(({ Icon, text }, i) => (
                 <span key={text} className="flex items-center">
                   {i > 0 && (
-                    <span className="mx-5 hidden h-4 w-px bg-white/15 sm:block" />
+                    <span className="mx-3 hidden h-4 w-px bg-white/15 sm:block" />
                   )}
                   <span className="flex items-center gap-2">
                     <Icon className="size-4 text-gold-400" />
@@ -250,16 +363,22 @@ export default async function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
-        {/* Instagram reels (configurable in Admin → Settings) */}
-        <InstagramReels handle={instaHandle} reels={instaReels} />
-
+        <div id="bestsellers" className="scroll-mt-28">
+          <Suspense fallback={<SectionPlaceholder title="Bestsellers" />}>
+            <FeaturedSection />
+          </Suspense>
+        </div>
+        <Suspense fallback={<SectionPlaceholder title="Shop by category" />}>
+          <CategoriesSection />
+        </Suspense>
+        <Suspense fallback={null}><ReviewsSection /></Suspense>
         {/* Why us */}
-        <section className="mt-16 sm:mt-20">
+        <section className="mt-12 sm:mt-16">
           <Reveal>
             <SectionHeader
               eyebrow="Our promise"
               title="Tradition, without shortcuts"
-              subtitle="Three generations of taste, packed into every box."
+              subtitle="From our kitchen in Kovilpatti to your family’s snack time."
             />
           </Reveal>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -281,93 +400,8 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Top-rated reviews, scrolling */}
-        {topReviews.length > 0 && (
-          <section className="mt-16 sm:mt-20">
-            <Reveal>
-              <SectionHeader
-                eyebrow="Reviews"
-                title="What our customers say"
-                subtitle="Our highest-rated reviews from customers."
-              />
-            </Reveal>
-            <ReviewsMarquee reviews={topReviews} />
-          </section>
-        )}
-
-        {/* Categories */}
-        <section className="mt-16 sm:mt-20">
-          <Reveal>
-            <SectionHeader eyebrow="Explore" title="Shop by category" />
-          </Reveal>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {categories.map((c, i) => (
-              <Reveal key={c.id} delay={i * 90}>
-                <Link
-                  href={`/products?category=${c.slug}`}
-                  className="group relative block overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/60 hover:shadow-xl"
-                >
-                  <div className="aspect-[4/3] overflow-hidden bg-muted">
-                    {c.image && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={c.image}
-                        alt={c.name}
-                        className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <p className="font-heading text-lg font-semibold leading-tight drop-shadow">
-                      {c.name}
-                    </p>
-                    {c.tamilName && (
-                      <p className="mt-0.5 text-xs text-gold-200">
-                        {c.tamilName}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* Featured */}
-        {featured.length > 0 && (
-          <section className="my-16 sm:my-20">
-            <Reveal>
-              <SectionHeader
-                eyebrow="Customer favourites"
-                title="Bestsellers"
-              />
-            </Reveal>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {featured.map((p, i) => (
-                <Reveal key={p.id} delay={(i % 4) * 90}>
-                  <ProductCard product={p} />
-                </Reveal>
-              ))}
-            </div>
-            <div className="mt-8 text-center">
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="rounded-full px-8"
-              >
-                <Link href="/products">
-                  View all products <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </section>
-        )}
-
         {/* Showcase gallery */}
-        <section className="my-16 sm:my-20">
+        <section className="my-12 sm:my-16">
           <Reveal>
             <SectionHeader
               eyebrow="From our kitchen"
@@ -377,11 +411,12 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((n, i) => (
               <Reveal key={n} delay={(i % 3) * 100}>
-                <div className="group overflow-hidden rounded-2xl border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="group relative aspect-square overflow-hidden rounded-2xl border">
+                  <Image
                     src={`/showcase/showcase-${n}.webp`}
-                    alt="Azhagu Thinpandam snacks showcase"
+                    alt={`Traditional snacks from our kitchen — photo ${n}`}
+                    fill
+                    sizes="(max-width: 767px) 50vw, (max-width: 1152px) 33vw, 365px"
                     className="aspect-square size-full object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                   />
@@ -391,8 +426,9 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <Suspense fallback={null}><InstagramSection /></Suspense>
         {/* SEO content + FAQ — targets "Kovilpatti kadalai mittai" / "kadalai mittai" */}
-        <section className="my-16 sm:my-20">
+        <section className="my-12 sm:my-16">
           <JsonLd
             data={{
               "@context": "https://schema.org",
@@ -451,10 +487,11 @@ export default async function HomePage() {
         <section className="mb-16 sm:mb-20">
           <Reveal>
             <div className="relative overflow-hidden rounded-3xl text-white">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/banners/cta.webp"
                 alt=""
+                fill
+                sizes="(max-width: 1152px) 100vw, 1152px"
                 className="absolute inset-0 size-full object-cover object-right"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-primary-950/95 via-primary-950/75 to-primary-950/25" />

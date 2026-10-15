@@ -1,84 +1,44 @@
-// lucide-react dropped brand icons, so inline the Instagram glyph.
-function IgIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-    </svg>
-  );
+import Image from "next/image";
+import { ArrowUpRight, Play } from "lucide-react";
+
+function safeInstagramUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !["instagram.com", "www.instagram.com"].includes(url.hostname)) return null;
+    if (!/^\/(reel|reels|p)\/[^/]+\/?$/.test(url.pathname)) return null;
+    return `${url.origin}${url.pathname}`;
+  } catch { return null; }
 }
 
-// A reel/post permalink -> Instagram's iframe embed endpoint.
-// https://www.instagram.com/reel/CODE/ -> https://www.instagram.com/reel/CODE/embed
-function toEmbedUrl(url: string): string {
-  const clean = url.split(/[?#]/)[0].replace(/\/+$/, "");
-  return `${clean}/embed`;
-}
-
+/** Local kitchen previews keep third-party players off the shopping page. */
 export function InstagramReels({ handle, reels }: { handle: string; reels: string[] }) {
-  if (!handle && reels.length === 0) return null;
-  const profileUrl = `https://www.instagram.com/${handle}/`;
+  const cleanHandle = handle.trim().replace(/^@/, "");
+  const validHandle = /^[a-zA-Z0-9_.]{1,30}$/.test(cleanHandle) ? cleanHandle : "";
+  const links = [...new Set(reels.map(safeInstagramUrl).filter((url): url is string => !!url))];
+  if (!validHandle && !links.length) return null;
 
   return (
-    <section className="my-16 sm:my-20">
-      <div className="mb-8 text-center">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
-          Follow along
-        </p>
-        <h2 className="font-heading text-3xl font-semibold sm:text-4xl">From our Instagram</h2>
-        {handle && (
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-2 font-medium text-primary hover:underline"
-          >
-            <IgIcon className="size-4" /> @{handle}
-          </a>
-        )}
+    <section className="my-12 sm:my-16">
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">A little taste of our kitchen</p>
+          <h2 className="font-heading text-3xl font-semibold sm:text-4xl">Fresh stories from Kovilpatti</h2>
+          <p className="mt-3 text-sm text-muted-foreground">See how your favourite snacks come together on Instagram.</p>
+        </div>
+        {validHandle && <a href={`https://www.instagram.com/${validHandle}/`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 font-medium text-primary hover:underline">@{validHandle}<ArrowUpRight className="size-4" /><span className="sr-only"> (opens Instagram in a new tab)</span></a>}
       </div>
-
-      {reels.length > 0 ? (
-        <div className="grid justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {reels.map((url) => (
-            <div
-              key={url}
-              className="w-full max-w-[400px] overflow-hidden rounded-2xl border bg-card shadow-sm"
-            >
-              <iframe
-                src={toEmbedUrl(url)}
-                title="Instagram reel"
-                loading="lazy"
-                scrolling="no"
-                className="block w-full"
-                style={{ height: 620, border: "none" }}
-                allow="encrypted-media; clipboard-write; picture-in-picture; web-share"
-              />
+      {links.length > 0 && <div className="grid gap-4 sm:grid-cols-3">
+        {links.slice(0, 3).map((url, i) => (
+          <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg">
+            <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+              <Image src={`/showcase/showcase-${i + 1}.webp`} alt="Snacks from our Kovilpatti kitchen" fill sizes="(max-width: 639px) 100vw, (max-width: 1152px) 33vw, 365px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"><Play className="size-4" />Watch reel {i + 1}</span>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center">
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 rounded-full bg-gradient-to-b from-primary-600 to-primary-700 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-900/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-          >
-            <IgIcon className="size-5" /> Watch our reels on Instagram
+            <p className="flex items-center justify-between p-4 text-sm text-muted-foreground">Open on Instagram<ArrowUpRight className="size-4" /><span className="sr-only"> (opens in a new tab)</span></p>
           </a>
-        </div>
-      )}
+        ))}
+      </div>}
     </section>
   );
 }
