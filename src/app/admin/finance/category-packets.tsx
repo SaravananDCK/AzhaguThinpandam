@@ -28,17 +28,25 @@ const td = "px-2 py-1.5 text-right first:text-left";
 export function CategoryPackets({
   categories,
   expensesTotal,
+  totalMargin,
 }: {
   categories: CategorySales[];
   /** The period's overheads (Expenses table + supplier-billed transport), paise */
   expensesTotal: number;
+  /** Sum of the orders' margins (goods + shipping collected − cost − packing − courier) */
+  totalMargin: number;
 }) {
   const [increase, setIncrease] = useState("5");
   const perPack = Math.round((Number(increase) || 0) * 100); // paise
   const totalPacks = categories.reduce((s, c) => s + c.packs, 0);
-  // Overheads spread evenly over every packet sold, so each category carries
-  // its share by volume
-  const expensePerPack = totalPacks ? expensesTotal / totalPacks : 0;
+  const goodsProfit = categories.reduce((s, c) => s + c.profit, 0);
+  // Category profit is goods only. What the orders cost beyond the goods —
+  // courier, packing and free goodies, less shipping collected — is the gap
+  // between that and the orders' margins. It's spread over the packets along
+  // with the overheads, so the total after expenses here equals the per-order
+  // "margin after expenses" × orders.
+  const orderCosts = goodsProfit - totalMargin;
+  const expensePerPack = totalPacks ? (expensesTotal + orderCosts) / totalPacks : 0;
 
   const rows = categories.map((c) => {
     const expenses = Math.round(c.packs * expensePerPack);
@@ -155,8 +163,13 @@ export function CategoryPackets({
       <p className="text-xs text-muted-foreground">
         Profit is revenue (net of discounts) less wholesale cost at today&apos;s
         purchase price. Expenses are the period&apos;s overheads (
-        {formatINR(expensesTotal)}) spread over every packet sold:{" "}
-        {formatINR(Math.round(expensePerPack))} a packet. The what-if adds the
+        {formatINR(expensesTotal)}) plus what the orders cost beyond the goods —
+        courier, packing and free goodies, less shipping collected (
+        {signed(orderCosts)}) — spread over every packet sold:{" "}
+        {formatINR(Math.round(expensePerPack))} a packet. The total after
+        expenses matches &ldquo;Margin after expenses, per order&rdquo; × orders;
+        it still differs from the P&amp;L&apos;s net profit, which counts stock
+        when it is bought rather than when it is sold. The what-if adds the
         increase to every packet at the same volumes — an upper bound, since
         some customers may buy less at a higher price. Extra profit ={" "}
         {totalPacks} × {formatINR(perPack)} = {signed(totalWhatIfProfit - totalProfit)}.

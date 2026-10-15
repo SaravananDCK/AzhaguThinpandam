@@ -81,7 +81,11 @@ export function OrderAnalysis({
             {data.categories.length > 0 && (
               <>
                 <Separator />
-                <CategoryPackets categories={data.categories} expensesTotal={expensesTotal} />
+                <CategoryPackets
+                  categories={data.categories}
+                  expensesTotal={expensesTotal}
+                  totalMargin={data.totalMargin}
+                />
               </>
             )}
           </CardContent>
