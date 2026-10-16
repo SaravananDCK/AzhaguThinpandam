@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +47,11 @@ type Props = {
     preorderCloseOther: string;
     preorderDispatchNote: string;
     thermalPaperWidth: "58" | "80";
+    announcementTitle: string;
+    announcementBody: string;
+    announcementImage: string;
+    announcementFrom: string;
+    announcementUntil: string;
   };
   variantOptions: GoodieVariantOption[];
 };
@@ -54,8 +59,28 @@ type Props = {
 export function SettingsForm({ values, variantOptions }: Props) {
   const [pending, startTransition] = useTransition();
   const [discountType, setDiscountType] = useState<DiscountType>(values.discountType);
+  const [announcementImage, setAnnouncementImage] = useState(values.announcementImage);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleAnnouncementUpload(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", files[0]);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) toast.error(data.error ?? "Upload failed");
+      else setAnnouncementImage(data.url);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   function handleSubmit(formData: FormData) {
+    formData.set("announcementImage", announcementImage);
     startTransition(async () => {
       const res = await saveSettings(formData);
       if (res.error) toast.error(res.error);
@@ -447,6 +472,96 @@ export function SettingsForm({ values, variantOptions }: Props) {
             <p className="text-xs text-muted-foreground">
               Shown on the product page, the customer&apos;s order page, the
               confirmation email and the WhatsApp messages for pre-orders.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-4">
+          <p className="font-semibold">Landing announcement</p>
+          <p className="text-xs text-muted-foreground">
+            A pop-up customers see once when they arrive — holiday closures,
+            courier delays, festival hours. Shown on every page of the shop
+            between the two dates; closing it hides it on that device until the
+            text changes. Leave the title and message empty to turn it off.
+          </p>
+          <div className="grid gap-2">
+            <Label htmlFor="s-ann-title">Title</Label>
+            <Input
+              id="s-ann-title"
+              name="announcementTitle"
+              defaultValue={values.announcementTitle}
+              placeholder="Pooja Holiday Update"
+              maxLength={80}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="s-ann-body">Message</Label>
+            <Textarea
+              id="s-ann-body"
+              name="announcementBody"
+              rows={4}
+              defaultValue={values.announcementBody}
+              placeholder={
+                "Orders placed between 16 and 20 October will be dispatched after the Pooja holidays, as our courier partners are closed.\n\nThank you for your patience and support."
+              }
+              maxLength={600}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="s-ann-from">Show from</Label>
+              <Input
+                id="s-ann-from"
+                name="announcementFrom"
+                type="date"
+                defaultValue={values.announcementFrom}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-ann-until">Last day shown</Label>
+              <Input
+                id="s-ann-until"
+                name="announcementUntil"
+                type="date"
+                defaultValue={values.announcementUntil}
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Picture (optional)</Label>
+            {announcementImage ? (
+              <div className="relative w-full max-w-xs overflow-hidden rounded-lg border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={announcementImage} alt="" className="aspect-[4/3] w-full object-cover" />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => setAnnouncementImage("")}
+                  aria-label="Remove picture"
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/50">
+                {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+                {uploading ? "Uploading…" : "Upload a picture"}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(e) => handleAnnouncementUpload(e.target.files)}
+                />
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Landscape works best (4:3). It sits above the title.
             </p>
           </div>
         </CardContent>

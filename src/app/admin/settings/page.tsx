@@ -77,6 +77,11 @@ export default async function AdminSettingsPage() {
           preorderCloseOther: settings[SETTINGS.PREORDER_CLOSE_OTHER] ?? "",
           preorderDispatchNote: settings[SETTINGS.PREORDER_DISPATCH_NOTE] ?? "",
           thermalPaperWidth: settings[SETTINGS.THERMAL_PAPER_WIDTH] === "58" ? "58" : "80",
+          announcementTitle: settings[SETTINGS.ANNOUNCEMENT_TITLE] ?? "",
+          announcementBody: settings[SETTINGS.ANNOUNCEMENT_BODY] ?? "",
+          announcementImage: settings[SETTINGS.ANNOUNCEMENT_IMAGE] ?? "",
+          announcementFrom: settings[SETTINGS.ANNOUNCEMENT_FROM] ?? "",
+          announcementUntil: settings[SETTINGS.ANNOUNCEMENT_UNTIL] ?? "",
         }}
         variantOptions={variantOptions}
       />

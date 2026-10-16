@@ -110,6 +110,13 @@ export const SETTINGS = {
   PREORDER_DISPATCH_NOTE: "preorder_dispatch_note",
   // Roll width of the thermal receipt printer: "58" or "80" (mm)
   THERMAL_PAPER_WIDTH: "thermal_paper_width_mm",
+  // Landing pop-up (src/lib/announcement.ts): shown once per visitor while
+  // today falls between the two "YYYY-MM-DD" dates (either may be blank).
+  ANNOUNCEMENT_TITLE: "announcement_title",
+  ANNOUNCEMENT_BODY: "announcement_body",
+  ANNOUNCEMENT_IMAGE: "announcement_image",
+  ANNOUNCEMENT_FROM: "announcement_from",
+  ANNOUNCEMENT_UNTIL: "announcement_until",
 } as const;
 
 // Ways a supplier payment can be made (stored as a plain string)
@@ -198,6 +205,11 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.PREORDER_DISPATCH_NOTE]:
     "Freshly made and dispatched in the first week of November, in time for Diwali.",
   [SETTINGS.THERMAL_PAPER_WIDTH]: "80",
+  [SETTINGS.ANNOUNCEMENT_TITLE]: "",
+  [SETTINGS.ANNOUNCEMENT_BODY]: "",
+  [SETTINGS.ANNOUNCEMENT_IMAGE]: "",
+  [SETTINGS.ANNOUNCEMENT_FROM]: "",
+  [SETTINGS.ANNOUNCEMENT_UNTIL]: "",
 };
 
 // Suggested expense categories for the accounting module

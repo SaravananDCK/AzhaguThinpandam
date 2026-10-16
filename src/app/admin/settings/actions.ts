@@ -105,6 +105,21 @@ export async function saveSettings(formData: FormData) {
     }
   }
 
+  const announcementFrom = String(formData.get("announcementFrom") ?? "").trim();
+  const announcementUntil = String(formData.get("announcementUntil") ?? "").trim();
+  for (const day of [announcementFrom, announcementUntil]) {
+    if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return { error: "Announcement dates must be valid dates (or empty)." };
+    }
+  }
+  if (announcementFrom && announcementUntil && announcementUntil < announcementFrom) {
+    return { error: "The announcement's last day is before its first day." };
+  }
+  const announcementImage = String(formData.get("announcementImage") ?? "").trim();
+  if (announcementImage && !announcementImage.startsWith("/uploads/")) {
+    return { error: "The announcement image must be an uploaded file." };
+  }
+
   const thermalWidth = String(formData.get("thermalPaperWidth") ?? "80");
   if (thermalWidth !== "58" && thermalWidth !== "80") {
     return { error: "Thermal paper width must be 58 or 80 mm." };
@@ -154,6 +169,11 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.PREORDER_CLOSE_OTHER]: preorderCloseOther,
     [SETTINGS.PREORDER_DISPATCH_NOTE]: String(formData.get("preorderDispatchNote") ?? "").trim(),
     [SETTINGS.THERMAL_PAPER_WIDTH]: thermalWidth,
+    [SETTINGS.ANNOUNCEMENT_TITLE]: String(formData.get("announcementTitle") ?? "").trim(),
+    [SETTINGS.ANNOUNCEMENT_BODY]: String(formData.get("announcementBody") ?? "").trim(),
+    [SETTINGS.ANNOUNCEMENT_IMAGE]: announcementImage,
+    [SETTINGS.ANNOUNCEMENT_FROM]: announcementFrom,
+    [SETTINGS.ANNOUNCEMENT_UNTIL]: announcementUntil,
     [SETTINGS.MANUAL_UPI_PAYMENT]: manualUpi,
     [SETTINGS.UPI_ID]: upiId,
     [SETTINGS.PAYMENT_PENDING_NOTE]: String(
@@ -168,6 +188,7 @@ export async function saveSettings(formData: FormData) {
   );
 
   revalidatePath("/admin/settings");
-  revalidatePath("/");
+  // The announcement lives in the store layout, so every storefront page
+  revalidatePath("/", "layout");
   return { ok: true };
 }
