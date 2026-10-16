@@ -34,16 +34,11 @@ export function OrderAnalysis({
   data,
   month,
   expensesTotal,
-  pnlCogs,
-  pnlNetProfit,
 }: {
   data: OrderAnalytics;
   month: string;
   /** Overheads in the period (Expenses table + supplier-billed transport), paise */
   expensesTotal: number;
-  /** The P&L's stock purchases and net profit for the same period, paise */
-  pnlCogs: number;
-  pnlNetProfit: number;
 }) {
   const expensesPerOrder = data.paidOrders ? Math.round(expensesTotal / data.paidOrders) : 0;
   const share = (n: number) =>
@@ -90,9 +85,6 @@ export function OrderAnalysis({
                   categories={data.categories}
                   expensesTotal={expensesTotal}
                   totalMargin={data.totalMargin}
-                  freebieCost={data.freebieCost}
-                  pnlCogs={pnlCogs}
-                  pnlNetProfit={pnlNetProfit}
                 />
               </>
             )}
@@ -145,8 +137,8 @@ export function OrderAnalysis({
               Margin = goods revenue + shipping collected − wholesale cost at
               today&apos;s purchase price − packing − courier. Expenses are the
               month&apos;s overheads from the Expenses table (and supplier-billed
-              transport) spread evenly over the orders. Stock purchases are not
-              included, so this won&apos;t match the P&amp;L&apos;s net profit.
+              transport) spread evenly over the orders. Margin after expenses ×
+              orders is the P&amp;L&apos;s net profit.
             </p>
             {data.ordersWithUnknownCost > 0 && (
               <p className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">

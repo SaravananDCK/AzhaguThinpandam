@@ -1,8 +1,12 @@
 // P&L and financial-summary math for the admin accounting module.
 // All amounts in paise. "Revenue" is product sales net of bundle discounts;
-// shipping collected is shown separately; COGS = supplier purchases in the
-// period (cash-basis, practical for a small business).
+// shipping collected is shown separately. Cost of goods sold is what the
+// packets SOLD in the period cost at today's purchase price (orderCostOf), so
+// the P&L's net profit is the same figure as the per-order and per-category
+// margins after expenses. Stock PURCHASES in the period are kept alongside
+// for the cash view: the difference is stock building up or running down.
 import { prisma } from "@/lib/prisma";
+import { ORDER_COST_ITEMS_INCLUDE, orderCostOf } from "@/lib/order-cost";
 
 export const REVENUE_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
@@ -14,26 +18,27 @@ export type PnL = {
   orderCount: number;
   revenue: number; // subtotal - discount
   shippingIncome: number;
-  cogs: number; // purchases in period
+  /** Cost of the goods sold in the period, at today's purchase price */
+  goodsCost: number;
+  /** Orders with a line whose cost is unknown — goodsCost is understated by these */
+  unknownCostOrders: number;
+  /** Stock bought from suppliers in the period (cash out) */
+  purchases: number;
   shippingSpend: number; // courier costs recorded on orders
   packing: number; // internal packing costs on orders
   expenses: ExpenseLine[];
   expensesTotal: number;
+  /** revenue + shipping − goods sold − packing − courier − expenses */
   netProfit: number;
+  /** Same, but with stock purchases in place of goods sold (cash basis) */
+  cashNet: number;
 };
 
 export async function computePnL(from: Date, to: Date): Promise<PnL> {
   const [orders, purchases, expensesRaw] = await Promise.all([
     prisma.order.findMany({
       where: { status: { in: REVENUE_STATUSES }, createdAt: { gte: from, lt: to } },
-      select: {
-        subtotal: true,
-        discount: true,
-        manualDiscount: true,
-        shippingFee: true,
-        packingCost: true,
-        shippingCost: true,
-      },
+      include: { items: ORDER_COST_ITEMS_INCLUDE },
     }),
     prisma.purchase.aggregate({
       _sum: { total: true, transportCharge: true },
@@ -55,7 +60,14 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
   // What couriers actually charged, as recorded per order. Shown against
   // shippingIncome so an undercharging flat rate is visible.
   const shippingSpend = orders.reduce((s, o) => s + o.shippingCost, 0);
-  const cogs = purchases._sum.total ?? 0;
+  let goodsCost = 0;
+  let unknownCostOrders = 0;
+  for (const o of orders) {
+    const c = orderCostOf(o);
+    goodsCost += c.goodsCost;
+    if (c.unknownLines > 0) unknownCostOrders++;
+  }
+  const bought = purchases._sum.total ?? 0;
   const expenses = expensesRaw
     .map((e) => ({ category: e.category, amount: e._sum.amount ?? 0 }))
     .sort((a, b) => b.amount - a.amount);
@@ -74,12 +86,15 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
     orderCount: orders.length,
     revenue,
     shippingIncome,
-    cogs,
+    goodsCost,
+    unknownCostOrders,
+    purchases: bought,
     shippingSpend,
     packing,
     expenses,
     expensesTotal,
-    netProfit: revenue + shippingIncome - cogs - packing - shippingSpend - expensesTotal,
+    netProfit: revenue + shippingIncome - goodsCost - packing - shippingSpend - expensesTotal,
+    cashNet: revenue + shippingIncome - bought - packing - shippingSpend - expensesTotal,
   };
 }
 

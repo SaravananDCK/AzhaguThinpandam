@@ -69,7 +69,7 @@ export default async function AdminFinancePage({
   const monthly = history.map((h) => ({
     month: monthLabel(h.from),
     revenue: Math.round((h.revenue + h.shippingIncome) / 100),
-    costs: Math.round((h.cogs + h.packing + h.shippingSpend + h.expensesTotal) / 100),
+    costs: Math.round((h.goodsCost + h.packing + h.shippingSpend + h.expensesTotal) / 100),
     profit: Math.round(h.netProfit / 100),
   }));
   const expenseSlices = pnl.expenses.map((e) => ({
@@ -106,7 +106,7 @@ export default async function AdminFinancePage({
             <Row label={`Product revenue (${pnl.orderCount} orders, net of discounts)`} amount={pnl.revenue} />
             <Row label="Shipping collected" amount={pnl.shippingIncome} />
             <Separator />
-            <Row label="Stock purchases (COGS)" amount={pnl.cogs} negative />
+            <Row label="Cost of goods sold (at today's purchase price)" amount={pnl.goodsCost} negative />
             <Row label="Packing costs" amount={pnl.packing} negative />
             <Row label="Courier costs" amount={pnl.shippingSpend} negative />
             {pnl.expenses.map((e) => (
@@ -114,6 +114,14 @@ export default async function AdminFinancePage({
             ))}
             <Separator />
             <Row label="Net profit" amount={pnl.netProfit} bold negative={pnl.netProfit < 0} />
+            <p className="pt-1 text-xs text-muted-foreground">
+              Stock bought this month: {formatINR(pnl.purchases)}.{" "}
+              {pnl.purchases >= pnl.goodsCost
+                ? `Stock built up by ${formatINR(pnl.purchases - pnl.goodsCost)}, so cash profit was ${formatINR(pnl.cashNet)}.`
+                : `Stock ran down by ${formatINR(pnl.goodsCost - pnl.purchases)}, so cash profit was ${formatINR(pnl.cashNet)}.`}
+              {pnl.unknownCostOrders > 0 &&
+                ` ${pnl.unknownCostOrders} orders include a product with no purchase price, so cost of goods is understated.`}
+            </p>
           </CardContent>
         </Card>
 
@@ -125,12 +133,12 @@ export default async function AdminFinancePage({
               label={`Total collected (${allTime.orderCount} orders incl. shipping)`}
               amount={allTime.revenue + allTime.shippingIncome}
             />
-            <Row label="Total stock purchases" amount={allTime.cogs} negative />
+            <Row label="Total stock purchases" amount={allTime.purchases} negative />
             <Row label="Total packing costs" amount={allTime.packing} negative />
             <Row label="Total courier costs" amount={allTime.shippingSpend} negative />
             <Row label="Total expenses" amount={allTime.expensesTotal} negative />
             <Separator />
-            <Row label="Net position" amount={allTime.netProfit} bold negative={allTime.netProfit < 0} />
+            <Row label="Net position" amount={allTime.cashNet} bold negative={allTime.cashNet < 0} />
             <p className="pt-1 text-xs text-muted-foreground">
               Cash-basis summary: purchases count as cost when bought, not when
               sold. Unsold stock on the shelf is therefore not shown as an asset
@@ -144,8 +152,6 @@ export default async function AdminFinancePage({
         data={analytics}
         month={monthLabel(range.from)}
         expensesTotal={pnl.expensesTotal}
-        pnlCogs={pnl.cogs}
-        pnlNetProfit={pnl.netProfit}
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
