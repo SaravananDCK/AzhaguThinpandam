@@ -534,7 +534,7 @@ export function SettingsForm({ values, variantOptions }: Props) {
             {announcementImage ? (
               <div className="relative w-full max-w-xs overflow-hidden rounded-lg border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={announcementImage} alt="" className="aspect-[4/3] w-full object-cover" />
+                <img src={announcementImage} alt="" className="h-auto w-full" />
                 <Button
                   type="button"
                   variant="secondary"
@@ -561,7 +561,7 @@ export function SettingsForm({ values, variantOptions }: Props) {
               </label>
             )}
             <p className="text-xs text-muted-foreground">
-              Landscape works best (4:3). It sits above the title.
+              Shown at its own shape above the title. Square or portrait fills a phone screen best; wide landscape pictures come out small.
             </p>
           </div>
         </CardContent>

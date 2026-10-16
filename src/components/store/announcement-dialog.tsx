@@ -57,7 +57,7 @@ export function AnnouncementDialog({ announcement }: { announcement: Announcemen
           <img
             src={announcement.image}
             alt=""
-            className="aspect-[4/3] w-full rounded-t-xl object-cover"
+            className="h-auto w-full rounded-t-xl"
           />
         )}
         <div className="space-y-4 p-6 pt-5 text-center">
