@@ -144,6 +144,8 @@ export default async function AdminFinancePage({
         data={analytics}
         month={monthLabel(range.from)}
         expensesTotal={pnl.expensesTotal}
+        pnlCogs={pnl.cogs}
+        pnlNetProfit={pnl.netProfit}
       />
 
       <div className="grid gap-5 lg:grid-cols-2">

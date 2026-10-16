@@ -29,12 +29,20 @@ export function CategoryPackets({
   categories,
   expensesTotal,
   totalMargin,
+  freebieCost,
+  pnlCogs,
+  pnlNetProfit,
 }: {
   categories: CategorySales[];
   /** The period's overheads (Expenses table + supplier-billed transport), paise */
   expensesTotal: number;
   /** Sum of the orders' margins (goods + shipping collected − cost − packing − courier) */
   totalMargin: number;
+  /** Wholesale cost of free goodies — part of the goods sold, but in no category row */
+  freebieCost: number;
+  /** The P&L's stock purchases in the period and its net profit, paise */
+  pnlCogs: number;
+  pnlNetProfit: number;
 }) {
   const [increase, setIncrease] = useState("5");
   const perPack = Math.round((Number(increase) || 0) * 100); // paise
@@ -68,6 +76,11 @@ export function CategoryPackets({
   const totalExpenses = sum((r) => r.expenses);
   const totalWhatIfProfit = sum((r) => r.whatIfProfit);
   const totalWhatIfRevenue = totalRevenue + totalPacks * perPack;
+  const afterExpenses = totalProfit - totalExpenses;
+  // The P&L subtracts stock BOUGHT this period; this table subtracts the goods
+  // SOLD at today's cost. Everything else is the same, so the two net figures
+  // differ by exactly that swap.
+  const goodsSoldCost = sum((r) => r.cost) + freebieCost;
 
   return (
     <>
@@ -173,6 +186,18 @@ export function CategoryPackets({
         increase to every packet at the same volumes — an upper bound, since
         some customers may buy less at a higher price. Extra profit ={" "}
         {totalPacks} × {formatINR(perPack)} = {signed(totalWhatIfProfit - totalProfit)}.
+      </p>
+      <p className="rounded-md bg-muted/60 px-3 py-2 text-xs">
+        <span className="font-medium">Bridge to the P&amp;L:</span> {signed(afterExpenses)} after
+        expenses + {formatINR(goodsSoldCost)} goods sold at today&apos;s cost −{" "}
+        {formatINR(pnlCogs)} stock bought this period = {signed(afterExpenses + goodsSoldCost - pnlCogs)}{" "}
+        net profit
+        {Math.abs(afterExpenses + goodsSoldCost - pnlCogs - pnlNetProfit) >= 100 &&
+          ` (P&L shows ${signed(pnlNetProfit)})`}
+        .{" "}
+        {goodsSoldCost > pnlCogs
+          ? "You sold more stock than you bought, so the cash-basis P&L looks better than the margin."
+          : "You bought more stock than you sold, so the cash-basis P&L looks worse than the margin."}
       </p>
     </>
   );
