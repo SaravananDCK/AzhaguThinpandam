@@ -5,6 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
+import sharp from "sharp";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { Prisma } from "@prisma/client";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
@@ -21,6 +22,21 @@ const MARGIN = 48;
 const INK = rgb(0.1, 0.1, 0.1);
 const MUTED = rgb(0.42, 0.42, 0.42);
 const RULE = rgb(0.85, 0.85, 0.85);
+
+const LOGO_PT = 64; // drawn size on the page
+
+let logoBytes: Promise<Uint8Array | null> | null = null;
+function loadLogo() {
+  // The 512px logo is 180KB; shrunk once to what the page needs so every
+  // invoice stays small. Missing or unreadable logo → no logo, not no invoice.
+  logoBytes ??= sharp(path.join(process.cwd(), "public", "logo.png"))
+    .resize(Math.round(LOGO_PT * 3), Math.round(LOGO_PT * 3), { fit: "inside" })
+    .png()
+    .toBuffer()
+    .then((b) => new Uint8Array(b))
+    .catch(() => null);
+  return logoBytes;
+}
 
 let fontBytes: Promise<[Uint8Array, Uint8Array]> | null = null;
 function loadFonts() {
@@ -115,7 +131,7 @@ class Writer {
 }
 
 export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore): Promise<Uint8Array> {
-  const [regularBytes, boldBytes] = await loadFonts();
+  const [[regularBytes, boldBytes], logoPng] = await Promise.all([loadFonts(), loadLogo()]);
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const regular = await doc.embedFont(regularBytes, { subset: true });
@@ -128,14 +144,26 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
   const right = PAGE.w - MARGIN;
   const colW = PAGE.w - MARGIN * 2;
 
-  // Header: store on the left, invoice number on the right
+  // Header: logo and store on the left, invoice number on the right
   const top = w.y;
+  let textX = MARGIN;
+  if (logoPng) {
+    const logo = await doc.embedPng(logoPng);
+    const scale = LOGO_PT / Math.max(logo.width, logo.height);
+    w.page.drawImage(logo, {
+      x: MARGIN,
+      y: top - LOGO_PT,
+      width: logo.width * scale,
+      height: logo.height * scale,
+    });
+    textX = MARGIN + LOGO_PT + 12;
+  }
   w.y -= 18;
-  w.text(store.name, MARGIN, { size: 18, bold: true });
+  w.text(store.name, textX, { size: 18, bold: true });
   w.y -= 6;
-  w.paragraph(store.address, MARGIN, colW * 0.55, { size: 8.5, color: MUTED });
-  w.paragraph([store.phone, store.email].filter(Boolean).join(" · "), MARGIN, colW * 0.55, { size: 8.5, color: MUTED });
-  const leftBottom = w.y;
+  w.paragraph(store.address, textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
+  w.paragraph([store.phone, store.email].filter(Boolean).join(" · "), textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
+  const leftBottom = Math.min(w.y, top - LOGO_PT);
   w.text("Invoice", right, { size: 14, bold: true, align: "right", y: top - 16 });
   w.text(order.orderNumber, right, { size: 11, align: "right", y: top - 32 });
   w.text(formatDateLong(order.createdAt), right, { size: 8.5, color: MUTED, align: "right", y: top - 46 });
