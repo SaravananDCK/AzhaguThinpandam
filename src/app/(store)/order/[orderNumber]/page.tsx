@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CheckCircle2, IndianRupee, MessageCircle, Package, Star } from "lucide-react";
+import { CheckCircle2, FileText, IndianRupee, MessageCircle, Package, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -246,9 +246,19 @@ export default async function OrderPage({ params, searchParams }: Props) {
             {formatDateLong(order.createdAt)}
           </p>
         </div>
-        <Badge variant={STATUS_VARIANT[order.status] ?? "outline"} className="px-3 py-1 text-sm">
-          {statusLabel}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/order/${order.orderNumber}/invoice.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <FileText className="size-4" /> Invoice (PDF)
+          </a>
+          <Badge variant={STATUS_VARIANT[order.status] ?? "outline"} className="px-3 py-1 text-sm">
+            {statusLabel}
+          </Badge>
+        </div>
       </div>
 
       {order.preorder && (

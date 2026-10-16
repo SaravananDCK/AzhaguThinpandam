@@ -17,13 +17,14 @@ export const ORDER_MESSAGE_PLACEHOLDERS = [
   ["{packs}", "number of packs"],
   ["{link}", "the customer's order page"],
   ["{review}", "where they rate the order (taste, packing, delivery)"],
+  ["{invoice}", "their invoice as a PDF"],
   ["{store}", "store name"],
 ] as const;
 
 export const DEFAULT_ORDER_MESSAGES: OrderMessageTemplates = {
   PENDING:
     "Vanakkam {name}! 🙏 Your {store} order {order} for {total} is waiting for payment. You can complete it here: {link}\nNeed any help? Just reply to this message.",
-  PAID: "Vanakkam {name}! 🙏 We have received your payment of {total} for order {order}. We'll start preparing it fresh for you. Thank you for choosing {store}!",
+  PAID: "Vanakkam {name}! 🙏 We have received your payment of {total} for order {order}. We'll start preparing it fresh for you. Thank you for choosing {store}!\nYour invoice (PDF): {invoice}",
   CONFIRMED:
     "Vanakkam {name}! 🙏 Your {store} order {order} is confirmed and is being prepared fresh. We'll message you as soon as it is dispatched.",
   SHIPPED:
@@ -73,10 +74,11 @@ export function renderOrderMessage(template: string, c: OrderMessageContext): st
     "{packs}": String(c.packs),
     "{link}": `${c.appUrl}/order/${c.orderNumber}`,
     "{review}": `${c.appUrl}/order/${c.orderNumber}#review`,
+    "{invoice}": `${c.appUrl}/order/${c.orderNumber}/invoice.pdf`,
     "{store}": c.storeName,
   };
   const text = template.replace(
-    /\{(name|order|total|packs|link|review|store)\}/g,
+    /\{(name|order|total|packs|link|review|invoice|store)\}/g,
     (m) => values[m]
   );
   // A pre-order isn't being prepared or shipped yet, whatever the status

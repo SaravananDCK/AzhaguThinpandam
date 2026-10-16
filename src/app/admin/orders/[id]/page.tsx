@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, MessageCircle, Printer, Receipt } from "lucide-react";
+import { ArrowLeft, FileText, MessageCircle, Printer, Receipt } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { computeOrderCost } from "@/lib/order-cost";
 import { formatKg, totalKg } from "@/lib/box";
@@ -136,6 +136,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             <Link href={`/admin/orders/receipts?ids=${order.id}`}>
               <Receipt className="size-4" /> Thermal receipt
             </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/order/${order.orderNumber}/invoice.pdf`} target="_blank" rel="noopener noreferrer">
+              <FileText className="size-4" /> Invoice PDF
+            </a>
           </Button>
           <Badge variant="outline" className="px-3 py-1">
             {ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status}
