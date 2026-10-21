@@ -12,7 +12,7 @@ import {
 import { parseBoxTiers, parseGoodieTiers, type BoxTier, type GoodieTier } from "@/lib/box";
 import { staffUnitPrice } from "@/lib/staff-pricing";
 import type { ShippingConfig } from "@/lib/shipping";
-import type { PreorderConfig } from "@/lib/preorder";
+import { isPreorderOpen, type PreorderConfig } from "@/lib/preorder";
 import { getViewerPricing } from "@/lib/viewer";
 
 const productInclude = {
@@ -92,12 +92,20 @@ export const getCategories = cache(function getCategories() {
   });
 });
 
+/** Homepage "Bestsellers": pre-order combos lead while booking is open, then signature products. */
 export async function getFeaturedProducts(take = 8) {
+  // Once booking closes, combos drop off the homepage on their own.
+  const preorderOpen = isPreorderOpen(await getPreorderConfig());
   return pricedForViewer(
     await prisma.product.findMany({
-      where: { isActive: true, isFeatured: true, line: "SNACKS" },
+      where: {
+        isActive: true,
+        isFeatured: true,
+        line: "SNACKS",
+        ...(preorderOpen ? {} : { preorder: false }),
+      },
       include: productInclude,
-      orderBy: [{ isFlagship: "desc" }, { createdAt: "asc" }],
+      orderBy: [{ preorder: "desc" }, { isFlagship: "desc" }, { createdAt: "asc" }],
       take,
     })
   );
@@ -213,14 +221,26 @@ export async function getManualPaymentConfig() {
   };
 }
 
-/** Pre-order booking cutoffs and dispatch note (src/lib/preorder.ts). */
+/** Pre-order booking cutoff and dispatch note (src/lib/preorder.ts). */
 export async function getPreorderConfig(): Promise<PreorderConfig> {
   const settings = await getSettings();
   return {
-    closeTn: (settings[SETTINGS.PREORDER_CLOSE_TN] ?? "").trim(),
-    closeOther: (settings[SETTINGS.PREORDER_CLOSE_OTHER] ?? "").trim(),
+    closeDay: (settings[SETTINGS.PREORDER_CLOSE] ?? "").trim(),
     dispatchNote: (settings[SETTINGS.PREORDER_DISPATCH_NOTE] ?? "").trim(),
   };
+}
+
+/**
+ * Active pre-order combos for the landing pop-up: first picture, cheapest
+ * pack and a link. Staff-priced like every other storefront listing.
+ */
+export async function getPreorderProducts() {
+  const products = await prisma.product.findMany({
+    where: { preorder: true, isActive: true },
+    include: productInclude,
+    orderBy: [{ isFlagship: "desc" }, { name: "asc" }],
+  });
+  return pricedForViewer(products);
 }
 
 export async function getShippingConfig(): Promise<ShippingConfig> {

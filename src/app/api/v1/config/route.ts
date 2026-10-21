@@ -9,7 +9,7 @@ import {
 import { SETTINGS } from "@/lib/constants";
 import { isRazorpayConfigured } from "@/lib/razorpay";
 import { INDIAN_STATES } from "@/lib/india-states";
-import { preorderDeadlineText } from "@/lib/preorder";
+import { PREORDER_DELIVERY_NOTE, preorderDeadlineText } from "@/lib/preorder";
 import { absoluteUrl, apiOrigin } from "@/lib/api-serialize";
 
 /**
@@ -63,6 +63,8 @@ export async function GET(req: Request) {
     preorder: {
       deadline: preorderDeadlineText(preorder),
       dispatchNote: preorder.dispatchNote,
+      /** Combos go to Tamil Nadu / Puducherry only, delivery included */
+      deliveryNote: PREORDER_DELIVERY_NOTE,
     },
   });
 }

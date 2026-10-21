@@ -23,8 +23,8 @@ export async function GET(req: Request, { params }: Ctx) {
 
   return NextResponse.json({
     product: serializeProduct(product, origin),
-    // Null for ordinary products. `closed` is "closed everywhere" — the
-    // per-state cutoff is enforced when the cart is priced.
+    // Null for ordinary products. Delivery area (Tamil Nadu / Puducherry
+    // only) is enforced when the cart is priced.
     preorder: preorderConfig && {
       closed: !isPreorderOpen(preorderConfig),
       deadline: preorderDeadlineText(preorderConfig),

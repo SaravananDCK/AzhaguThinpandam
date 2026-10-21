@@ -5,8 +5,9 @@ import { CartSyncBridge } from "@/components/store/cart-sync-bridge";
 import { Footer } from "@/components/store/footer";
 import { ReviewsTab } from "@/components/store/reviews-tab";
 import { MetaPixel, MetaPixelNoScript } from "@/components/store/meta-pixel";
-import { AnnouncementDialog } from "@/components/store/announcement-dialog";
+import { LandingDialogs } from "@/components/store/landing-dialogs";
 import { getAnnouncement } from "@/lib/announcement";
+import { getPreorderPopup } from "@/lib/preorder-popup";
 import { getSettings } from "@/lib/queries";
 import { getViewerPricing } from "@/lib/viewer";
 import { SETTINGS } from "@/lib/constants";
@@ -34,6 +35,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const gaId = isLive ? (settings[SETTINGS.GA_MEASUREMENT_ID] ?? "").trim() : "";
   const pixelId = isLive ? (settings[SETTINGS.META_PIXEL_ID] ?? "").trim() : "";
   const announcement = getAnnouncement(settings);
+  const preorderPopup = await getPreorderPopup();
 
   return (
     <>
@@ -67,7 +69,7 @@ gtag('config', ${JSON.stringify(gaId)});`}
         </p>
       )}
       <main className="flex-1">{children}</main>
-      {announcement && <AnnouncementDialog announcement={announcement} />}
+      <LandingDialogs preorder={preorderPopup} announcement={announcement} />
       <ReviewsTab />
       <Footer />
     </>

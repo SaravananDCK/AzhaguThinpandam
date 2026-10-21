@@ -44,6 +44,11 @@ import {
   type StateZone,
 } from "@/lib/shipping";
 import { INDIAN_STATES } from "@/lib/india-states";
+import {
+  PREORDER_AREA_MESSAGE,
+  PREORDER_DELIVERY_NOTE,
+  isPreorderDeliverable,
+} from "@/lib/preorder";
 
 declare global {
   interface Window {
@@ -182,9 +187,14 @@ export function CheckoutForm({
   const shippingConfig = { shippingFee, freeShippingAbove, outsideTnPerKg, statePerKg };
   const stateChosen = state.trim().length > 0;
   const outsideTn = !isEmployee && stateChosen && !isTamilNadu(state);
+  // A pre-order combo cart (never mixed — lib/preorder.ts): delivery is in the
+  // price, and only Tamil Nadu / Puducherry addresses are accepted. The server
+  // refuses anything else; this just stops the customer before it does.
+  const preorderCart = items.some((i) => i.preorder);
+  const preorderBlocked = preorderCart && stateChosen && !isPreorderDeliverable(state);
   // Staff collect at the shop — never a delivery charge.
   const fee =
-    stateChosen && !isEmployee
+    stateChosen && !isEmployee && !preorderCart
       ? computeShipping({
           state,
           weightKg: parcelKg,
@@ -263,6 +273,10 @@ export function CheckoutForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (preorderBlocked) {
+      toast.error(PREORDER_AREA_MESSAGE);
+      return;
+    }
     const form = new FormData(e.currentTarget);
     const payload: CheckoutPayload = {
       email: String(form.get("email") ?? ""),
@@ -603,6 +617,19 @@ export function CheckoutForm({
                       </option>
                     ))}
                   </select>
+                  {preorderCart && (
+                    <p
+                      className={
+                        preorderBlocked
+                          ? "text-xs font-medium text-red-600 dark:text-red-400"
+                          : "text-xs text-muted-foreground"
+                      }
+                    >
+                      {preorderBlocked
+                        ? PREORDER_AREA_MESSAGE
+                        : "Pre-order combos: Tamil Nadu & Puducherry only."}
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="pincode">Pincode</Label>
@@ -758,12 +785,28 @@ export function CheckoutForm({
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Shipping</span>
               <span className="font-medium">
-                {isEmployee ? "FREE" : !stateChosen ? "—" : fee === 0 ? "FREE" : formatINR(fee)}
+                {isEmployee || preorderCart
+                  ? "FREE"
+                  : !stateChosen
+                    ? "—"
+                    : fee === 0
+                      ? "FREE"
+                      : formatINR(fee)}
               </span>
             </div>
             {isEmployee ? (
               <p className="text-xs text-muted-foreground">
                 Staff order — no delivery charge; collect at the shop.
+              </p>
+            ) : preorderCart ? (
+              <p
+                className={
+                  preorderBlocked
+                    ? "text-xs font-medium text-red-600 dark:text-red-400"
+                    : "text-xs text-muted-foreground"
+                }
+              >
+                {preorderBlocked ? PREORDER_AREA_MESSAGE : PREORDER_DELIVERY_NOTE}
               </p>
             ) : !stateChosen ? (
               <p className="text-xs text-muted-foreground">
@@ -790,7 +833,12 @@ export function CheckoutForm({
               <span>Total</span>
               <span>{formatINR(total)}</span>
             </div>
-            <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={submitting || preorderBlocked}
+            >
               {submitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" /> Processing…

@@ -11,7 +11,7 @@ import { useCart } from "@/lib/cart-store";
 import { trackFbq } from "@/lib/fbq";
 import { useLoginGate } from "@/hooks/use-login-gate";
 import { isSellable, sellableQty } from "@/lib/availability";
-import { PREORDER_MIX_MESSAGE } from "@/lib/preorder";
+import { PREORDER_DELIVERY_NOTE, PREORDER_MIX_MESSAGE } from "@/lib/preorder";
 import { cn } from "@/lib/utils";
 
 type Variant = {
@@ -142,6 +142,7 @@ export function AddToCart({
             <ul className="mt-1.5 space-y-1 text-muted-foreground">
               {preorder.dispatchNote && <li>{preorder.dispatchNote}</li>}
               {preorder.deadline && <li>{preorder.deadline}.</li>}
+              <li>{PREORDER_DELIVERY_NOTE}</li>
               <li>Booked as its own order — it ships separately from other items.</li>
             </ul>
           )}

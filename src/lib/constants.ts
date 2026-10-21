@@ -103,10 +103,10 @@ export const SETTINGS = {
   // Reassurance on the order page while a UPI payment is pending — customers
   // who expected a card option need telling their order is safe.
   PAYMENT_PENDING_NOTE: "payment_pending_note",
-  // Pre-order combos (src/lib/preorder.ts): last booking day per zone as
-  // "YYYY-MM-DD", and the dispatch line shown to the customer.
-  PREORDER_CLOSE_TN: "preorder_close_tn",
-  PREORDER_CLOSE_OTHER: "preorder_close_other",
+  // Pre-order combos (src/lib/preorder.ts): last booking day as "YYYY-MM-DD"
+  // (the key keeps its historical name — combos only ever ship within Tamil
+  // Nadu / Puducherry now) and the dispatch line shown to the customer.
+  PREORDER_CLOSE: "preorder_close_tn",
   PREORDER_DISPATCH_NOTE: "preorder_dispatch_note",
   // Roll width of the thermal receipt printer: "58" or "80" (mm)
   THERMAL_PAPER_WIDTH: "thermal_paper_width_mm",
@@ -198,10 +198,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // Default GST% (used for products with no per-product rate, and as the
   // starting value on the purchase form). Prices are treated as GST-inclusive.
   [SETTINGS.DEFAULT_GST_RATE]: "5",
-  // Diwali 2026 is 8 November. Other states close a day before Tamil Nadu —
-  // their parcels spend longer on the road.
-  [SETTINGS.PREORDER_CLOSE_TN]: "2026-11-02",
-  [SETTINGS.PREORDER_CLOSE_OTHER]: "2026-11-01",
+  // Diwali 2026 is 8 November.
+  [SETTINGS.PREORDER_CLOSE]: "2026-11-02",
   [SETTINGS.PREORDER_DISPATCH_NOTE]:
     "Freshly made and dispatched in the first week of November, in time for Diwali.",
   [SETTINGS.THERMAL_PAPER_WIDTH]: "80",

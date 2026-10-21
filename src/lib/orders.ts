@@ -7,7 +7,12 @@ import {
   getSettings,
   getShippingConfig,
 } from "@/lib/queries";
-import { isPreorderOpen, preorderDeadlineText } from "@/lib/preorder";
+import {
+  PREORDER_AREA_MESSAGE,
+  isPreorderDeliverable,
+  isPreorderOpen,
+  preorderDeadlineText,
+} from "@/lib/preorder";
 import { computeShipping } from "@/lib/shipping";
 import { boxDiscount, goodiesForKg, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
@@ -153,7 +158,8 @@ export async function priceOrderLines(params: {
 
   // Pre-order combos are always an order of their own: they ship on a later
   // date in their own parcel, and keeping them apart is what lets the admin
-  // track festival orders separately. Booking also closes per delivery state.
+  // track festival orders separately. They go to Tamil Nadu and Puducherry
+  // only, and booking closes on a set day.
   const preorder = lines.some((l) => l.variant.product.preorder);
   if (preorder) {
     if (lines.some((l) => !l.variant.product.preorder)) {
@@ -161,11 +167,14 @@ export async function priceOrderLines(params: {
         "Pre-order combos are booked and shipped on their own. Please place them as a separate order from your other items."
       );
     }
+    if (!isPreorderDeliverable(params.state)) {
+      throw new CheckoutError(PREORDER_AREA_MESSAGE);
+    }
     const preorderConfig = await getPreorderConfig();
-    if (!isPreorderOpen(preorderConfig, params.state)) {
+    if (!isPreorderOpen(preorderConfig)) {
       const deadline = preorderDeadlineText(preorderConfig);
       throw new CheckoutError(
-        `Pre-order booking has closed for deliveries to ${params.state}.${deadline ? ` ${deadline}.` : ""}`
+        `Pre-order booking has closed.${deadline ? ` ${deadline}.` : ""}`
       );
     }
   }
@@ -290,10 +299,12 @@ export async function priceOrderLines(params: {
 
   const shippingConfig = await getShippingConfig();
   // State-aware: inside TN = flat/free-above; outside TN = weight × ₹/kg.
-  // Staff collect at the shop, so they're never charged delivery.
-  const shippingFee = isEmployee
-    ? 0
-    : computeShipping({
+  // Staff collect at the shop, so they're never charged delivery. A pre-order
+  // combo's price already includes delivery.
+  const shippingFee =
+    isEmployee || preorder
+      ? 0
+      : computeShipping({
         state: params.state,
         weightKg: parcelKg,
         subtotal: subtotal - discount,

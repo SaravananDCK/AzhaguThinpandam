@@ -43,8 +43,7 @@ type Props = {
     manualUpiPayment: boolean;
     upiId: string;
     paymentPendingNote: string;
-    preorderCloseTn: string;
-    preorderCloseOther: string;
+    preorderClose: string;
     preorderDispatchNote: string;
     thermalPaperWidth: "58" | "80";
     announcementTitle: string;
@@ -437,26 +436,22 @@ export function SettingsForm({ values, variantOptions }: Props) {
         <CardContent className="space-y-4">
           <p className="font-semibold">Pre-order combos</p>
           <p className="text-xs text-muted-foreground">
-            For products marked “Pre-order” (festival combos). Booking stays open
-            through the end of each closing day; leave a date empty for no cutoff.
+            For products marked “Pre-order” (festival combos). Combos are delivered
+            within Tamil Nadu and Puducherry only, with delivery included in the
+            price — checkout refuses other states and adds no delivery charge.
+            While booking is open and at least one combo is active, customers see
+            a welcome pop-up listing the combos (the landing announcement below
+            then shows after it). Booking stays open through the end of the
+            closing day; leave it empty for no cutoff.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="s-pre-tn">Last booking day — Tamil Nadu &amp; Puducherry</Label>
+              <Label htmlFor="s-pre-close">Last booking day</Label>
               <Input
-                id="s-pre-tn"
-                name="preorderCloseTn"
+                id="s-pre-close"
+                name="preorderClose"
                 type="date"
-                defaultValue={values.preorderCloseTn}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-pre-other">Last booking day — other states</Label>
-              <Input
-                id="s-pre-other"
-                name="preorderCloseOther"
-                type="date"
-                defaultValue={values.preorderCloseOther}
+                defaultValue={values.preorderClose}
               />
             </div>
           </div>

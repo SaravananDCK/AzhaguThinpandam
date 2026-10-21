@@ -2,17 +2,15 @@
 // product page, the cart and the server price the same way.
 //
 // A pre-order product is booked and paid now, and dispatched later. Booking
-// closes on a date that depends on the delivery state — parcels to other
-// states need a day more on the road, so they close a day earlier. A pre-order
-// is always its own order (never mixed with regular items), which keeps festival
-// orders separate in the admin and gives each parcel its own delivery charge.
+// closes at the end of one date. Combos are delivered only within Tamil Nadu
+// and Puducherry, and the combo price includes delivery — no delivery charge
+// is ever added. A pre-order is always its own order (never mixed with regular
+// items), which keeps festival orders separate in the admin.
 import { isTamilNadu } from "@/lib/shipping";
 
 export type PreorderConfig = {
-  /** Last booking day for Tamil Nadu / Puducherry, "YYYY-MM-DD" (IST); "" = no cutoff */
-  closeTn: string;
-  /** Last booking day for every other state */
-  closeOther: string;
+  /** Last booking day, "YYYY-MM-DD" (IST); "" = no cutoff */
+  closeDay: string;
   /** Shown to the customer, e.g. "Dispatched from 3 November, in time for Diwali" */
   dispatchNote: string;
 };
@@ -27,21 +25,15 @@ function closeInstant(day: string): Date | null {
   return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 1) - IST_OFFSET_MS);
 }
 
-/**
- * Whether bookings are still open. With a delivery state, that state's cutoff
- * applies; without one (product page, cart — the address isn't known yet) it is
- * open as long as it is open for anyone.
- */
-export function isPreorderOpen(
-  config: PreorderConfig,
-  state?: string | null,
-  now: Date = new Date()
-): boolean {
-  const tn = closeInstant(config.closeTn);
-  const other = closeInstant(config.closeOther);
-  const open = (close: Date | null) => !close || now < close;
-  if (state == null || state.trim() === "") return open(tn) || open(other);
-  return open(isTamilNadu(state) ? tn : other);
+/** Whether bookings are still open. */
+export function isPreorderOpen(config: PreorderConfig, now: Date = new Date()): boolean {
+  const close = closeInstant(config.closeDay);
+  return !close || now < close;
+}
+
+/** Whether a pre-order can be delivered to this state: Tamil Nadu and Puducherry only. */
+export function isPreorderDeliverable(state: string | null | undefined): boolean {
+  return isTamilNadu(state);
 }
 
 /** "1 Nov" for "2026-11-01"; "" when unset or invalid. */
@@ -55,19 +47,19 @@ export function formatPreorderDay(day: string): string {
   });
 }
 
-/** "Order by 2 Nov (Tamil Nadu & Puducherry) or 1 Nov (other states)"; "" with no cutoffs. */
+/** "Order by 2 Nov"; "" with no cutoff. */
 export function preorderDeadlineText(config: PreorderConfig): string {
-  const tn = formatPreorderDay(config.closeTn);
-  const other = formatPreorderDay(config.closeOther);
-  if (tn && other) {
-    return tn === other
-      ? `Order by ${tn}`
-      : `Order by ${tn} (Tamil Nadu & Puducherry) or ${other} (other states)`;
-  }
-  if (tn) return `Tamil Nadu & Puducherry: order by ${tn}`;
-  if (other) return `Other states: order by ${other}`;
-  return "";
+  const day = formatPreorderDay(config.closeDay);
+  return day ? `Order by ${day}` : "";
 }
+
+/** Where combos go and what the price covers — shown wherever a pre-order is offered. */
+export const PREORDER_DELIVERY_NOTE =
+  "Delivered within Tamil Nadu & Puducherry only. Delivery is included in the price.";
+
+/** Checkout refusal for an address outside the delivery area. */
+export const PREORDER_AREA_MESSAGE =
+  "Pre-order combos are delivered only within Tamil Nadu and Puducherry. Please choose a delivery address there.";
 
 /** Why a regular item and a pre-order can't share a cart — shown wherever one is refused. */
 export const PREORDER_MIX_MESSAGE =

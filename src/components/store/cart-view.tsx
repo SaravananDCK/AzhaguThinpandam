@@ -24,6 +24,7 @@ import {
 } from "@/lib/box";
 import type { DiscountType } from "@/lib/constants";
 import type { GoodieInfo } from "@/lib/queries";
+import { PREORDER_DELIVERY_NOTE } from "@/lib/preorder";
 
 export function CartView({
   shippingFee,
@@ -87,7 +88,9 @@ export function CartView({
   // Shipping threshold applies to the discounted amount (matches the server).
   // Staff collect at the shop, so they're never charged delivery.
   const discounted = subtotal - discount;
-  const freeShipping = isEmployee || discounted >= freeShippingAbove;
+  // A pre-order combo's price includes delivery (lib/preorder.ts)
+  const preorderCart = items.some((i) => i.preorder);
+  const freeShipping = isEmployee || preorderCart || discounted >= freeShippingAbove;
   const shipping = freeShipping ? 0 : shippingFee;
   const remaining = freeShippingAbove - discounted;
 
@@ -97,11 +100,11 @@ export function CartView({
       <div className="mt-4">
         <CartAdjustmentsNotice adjustments={adjustments} onDismiss={dismiss} />
       </div>
-      {items.some((i) => i.preorder) && (
+      {preorderCart && (
         <p className="mt-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
           <span className="font-semibold text-primary">Pre-order.</span> This is booked
           now and dispatched closer to the festival, as its own order. To buy other
-          items, place this order first.
+          items, place this order first. {PREORDER_DELIVERY_NOTE}
         </p>
       )}
       <div className="mt-2 grid gap-6 md:grid-cols-[1fr_300px]">
@@ -228,7 +231,7 @@ export function CartView({
               {freeShipping ? (
                 <span className="font-semibold text-green-600 dark:text-green-400">
                   FREE{" "}
-                  {!isEmployee && (
+                  {!isEmployee && !preorderCart && (
                     <span className="font-normal text-muted-foreground line-through">
                       {formatINR(shippingFee)}
                     </span>
@@ -244,6 +247,11 @@ export function CartView({
               <p className="flex items-center gap-1.5 rounded-md bg-green-100 px-2.5 py-2 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-300">
                 <Truck className="size-3.5 shrink-0" />
                 Staff order — no delivery charge; collect at the shop.
+              </p>
+            ) : preorderCart ? (
+              <p className="flex items-center gap-1.5 rounded-md bg-green-100 px-2.5 py-2 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-300">
+                <Truck className="size-3.5 shrink-0" />
+                Delivery included — Tamil Nadu &amp; Puducherry only.
               </p>
             ) : freeShipping ? (
               <p className="flex items-center gap-1.5 rounded-md bg-green-100 px-2.5 py-2 text-xs font-medium text-green-800 dark:bg-green-950/60 dark:text-green-300">
@@ -267,7 +275,7 @@ export function CartView({
               </div>
             )}
 
-            {!isEmployee && (
+            {!isEmployee && !preorderCart && (
               <p className="text-[11px] text-muted-foreground">
                 Shipping shown is for Tamil Nadu and Puducherry. Other states are charged by
                 weight — your final shipping appears at checkout once you enter your state.
