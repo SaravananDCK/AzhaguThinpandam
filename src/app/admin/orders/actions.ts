@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { MAX_LINE_QTY } from "@/lib/availability";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
 import {
@@ -334,8 +335,8 @@ export async function updateOrderItems(
   if (new Set(items.map((i) => i.variantId)).size !== items.length) {
     return { error: "The same item is listed twice — combine them into one line." };
   }
-  if (items.some((i) => !Number.isInteger(i.qty) || i.qty < 1 || i.qty > 99)) {
-    return { error: "Quantities must be between 1 and 99." };
+  if (items.some((i) => !Number.isInteger(i.qty) || i.qty < 1 || i.qty > MAX_LINE_QTY)) {
+    return { error: `Quantities must be between 1 and ${MAX_LINE_QTY}.` };
   }
 
   try {

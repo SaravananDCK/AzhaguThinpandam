@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { MAX_LINE_QTY } from "@/lib/availability";
 import { useState, useTransition } from "react";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -101,7 +102,7 @@ export function EditOrderItems({
             <Input
               type="number"
               min={1}
-              max={99}
+              max={MAX_LINE_QTY}
               value={line.qty}
               onChange={(e) => setLine(i, { qty: Number(e.target.value) || 1 })}
               className="w-20"

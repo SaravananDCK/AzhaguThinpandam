@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { z } from "zod";
+import { MAX_LINE_QTY } from "@/lib/availability";
 import { prisma } from "@/lib/prisma";
 import {
   getDiscountConfig,
@@ -50,7 +51,7 @@ export const checkoutSchema = z.object({
     .array(
       z.object({
         variantId: z.string().min(1),
-        qty: z.number().int().min(1).max(99),
+        qty: z.number().int().min(1).max(MAX_LINE_QTY),
       })
     )
     .min(1)

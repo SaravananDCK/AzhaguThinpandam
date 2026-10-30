@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MAX_LINE_QTY } from "@/lib/availability";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { Check, Loader2, Plus, Search, Trash2, UserPlus, X } from "lucide-react";
@@ -397,7 +398,7 @@ export function NewOrderForm({
                     <Input
                       type="number"
                       min={1}
-                      max={99}
+                      max={MAX_LINE_QTY}
                       value={line.qty}
                       onChange={(e) => setLine(i, { qty: Number(e.target.value) || 1 })}
                       aria-label={`Quantity for item ${i + 1}`}

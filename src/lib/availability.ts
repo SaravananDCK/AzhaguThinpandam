@@ -8,10 +8,10 @@
 // gate route through these two functions.
 
 /**
- * Per-line quantity ceiling. Matches checkoutSchema's `qty.max(99)` in
+ * Per-line quantity ceiling. Matches checkoutSchema's `qty.max(MAX_LINE_QTY)` in
  * orders.ts — the real bound on any single order line, made-to-order or not.
  */
-export const MAX_LINE_QTY = 99;
+export const MAX_LINE_QTY = 999;
 
 /** Can this variant be added to a cart / ordered? */
 export function isSellable(stock: number, madeToOrder: boolean): boolean {
