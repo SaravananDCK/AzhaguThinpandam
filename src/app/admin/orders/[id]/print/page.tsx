@@ -67,11 +67,16 @@ export default async function OrderPrintPage({ params }: Props) {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-semibold">Invoice</p>
-            <p className="mt-1 font-mono text-sm">{order.orderNumber}</p>
-            <p className="text-xs text-neutral-600">
-              {formatDateLong(order.createdAt)}
+            <p className="text-lg font-semibold">
+              {order.invoiceNumber ? "Invoice" : "Proforma invoice"}
             </p>
+            <p className="mt-1 font-mono text-sm">{order.invoiceNumber ?? order.orderNumber}</p>
+            <p className="text-xs text-neutral-600">
+              {formatDateLong(order.invoicedAt ?? order.createdAt)}
+            </p>
+            {order.invoiceNumber && (
+              <p className="text-xs text-neutral-600">Order {order.orderNumber}</p>
+            )}
             <p className="text-xs text-neutral-600">
               {ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status}
             </p>

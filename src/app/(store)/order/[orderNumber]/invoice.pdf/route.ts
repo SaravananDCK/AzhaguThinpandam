@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ orderNu
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="Invoice-${order.orderNumber}.pdf"`,
+        "Content-Disposition": `inline; filename="Invoice-${(order.invoiceNumber ?? order.orderNumber).replaceAll("/", "-")}.pdf"`,
         // Status and payment can change after the link is shared
         "Cache-Control": "private, no-store",
         "X-Robots-Tag": "noindex, nofollow",

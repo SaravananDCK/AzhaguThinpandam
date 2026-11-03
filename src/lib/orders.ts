@@ -18,6 +18,7 @@ import { computeShipping } from "@/lib/shipping";
 import { boxDiscount, goodiesForKg, totalKg } from "@/lib/box";
 import { validateCoupon } from "@/lib/coupon";
 import { recordMovement, STOCK_REASONS } from "@/lib/stock";
+import { assignInvoiceNumber } from "@/lib/invoice-number";
 import { basePacketGrams } from "@/lib/pack";
 import { staffUnitPrice } from "@/lib/staff-pricing";
 import {
@@ -649,6 +650,7 @@ export async function markOrderPaid(params: {
         method: params.method ?? payment.method,
       },
     });
+    await assignInvoiceNumber(tx, payment.orderId);
     const order = await tx.order.update({
       where: { id: payment.orderId },
       data: { status: "PAID" },

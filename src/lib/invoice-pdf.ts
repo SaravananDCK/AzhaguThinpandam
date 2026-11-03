@@ -136,7 +136,7 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
   doc.registerFontkit(fontkit);
   const regular = await doc.embedFont(regularBytes, { subset: true });
   const bold = await doc.embedFont(boldBytes, { subset: true });
-  doc.setTitle(`Invoice ${order.orderNumber}`);
+  doc.setTitle(`Invoice ${order.invoiceNumber ?? order.orderNumber}`);
   doc.setAuthor(store.name);
   doc.setCreationDate(order.createdAt);
 
@@ -164,11 +164,14 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
   w.paragraph(store.address, textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
   w.paragraph([store.phone, store.email].filter(Boolean).join(" · "), textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
   const leftBottom = Math.min(w.y, top - LOGO_PT);
-  w.text("Invoice", right, { size: 14, bold: true, align: "right", y: top - 16 });
-  w.text(order.orderNumber, right, { size: 11, align: "right", y: top - 32 });
-  w.text(formatDateLong(order.createdAt), right, { size: 8.5, color: MUTED, align: "right", y: top - 46 });
+  // Only paid orders carry a tax-invoice number; anything else is a proforma
+  // under its order number.
+  w.text(order.invoiceNumber ? "Invoice" : "Proforma invoice", right, { size: 14, bold: true, align: "right", y: top - 16 });
+  w.text(order.invoiceNumber ?? order.orderNumber, right, { size: 11, align: "right", y: top - 32 });
+  w.text(formatDateLong(order.invoicedAt ?? order.createdAt), right, { size: 8.5, color: MUTED, align: "right", y: top - 46 });
   w.text(ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status, right, { size: 8.5, color: MUTED, align: "right", y: top - 58 });
-  w.y = Math.min(leftBottom, top - 64) - 12;
+  if (order.invoiceNumber) w.text(`Order ${order.orderNumber}`, right, { size: 8.5, color: MUTED, align: "right", y: top - 70 });
+  w.y = Math.min(leftBottom, top - (order.invoiceNumber ? 76 : 64)) - 12;
   w.rule();
   w.gap(16);
 

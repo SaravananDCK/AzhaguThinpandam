@@ -235,6 +235,11 @@ model Address {
 model Order {
   id          String      @id @default(cuid())
   orderNumber String      @unique
+  // Sequential tax-invoice number, e.g. AT/26-27/0001, numbered per Indian
+  // financial year (April to March, IST). Assigned once, when payment is
+  // captured, so unpaid and abandoned orders never leave gaps in the series.
+  invoiceNumber String?   @unique
+  invoicedAt    DateTime?
   userId      String?
   user        User?       @relation(fields: [userId], references: [id])
   email       String
@@ -478,4 +483,11 @@ model Expense {
   updatedAt   DateTime @updatedAt
 
   @@index([date])
+}
+
+// Last invoice number issued in each financial year ("26-27" -> 42), bumped
+// inside the transaction that marks an order paid.
+model InvoiceCounter {
+  fy   String @id
+  last Int
 }
