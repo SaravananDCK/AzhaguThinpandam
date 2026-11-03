@@ -218,5 +218,6 @@ export const EXPENSE_CATEGORIES = [
   "Utilities",
   "Salaries",
   "Platform & Software",
+  "Product Return",
   "Other",
 ] as const;
