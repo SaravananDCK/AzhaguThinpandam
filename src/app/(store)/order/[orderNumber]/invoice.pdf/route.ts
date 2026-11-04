@@ -25,6 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ orderNu
       address: settings[SETTINGS.STORE_ADDRESS] ?? "",
       phone: settings[SETTINGS.STORE_PHONE] ?? "",
       email: settings[SETTINGS.STORE_EMAIL] ?? "",
+      gstin: settings[SETTINGS.STORE_GSTIN] ?? "",
     });
     return new NextResponse(Buffer.from(pdf), {
       headers: {

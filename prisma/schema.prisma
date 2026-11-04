@@ -112,6 +112,9 @@ model Product {
   // GST rate (%) included in the sale price. Null falls back to the store
   // default (Setting `default_gst_rate`). Prices are GST-inclusive.
   gstRate     Float?
+  // HSN code for the GSTR-1 HSN summary. Null falls back to the store
+  // default (Setting `default_hsn`).
+  hsn         String?
   images      ProductImage[]
   variants    ProductVariant[]
   reviews     Review[]
@@ -240,6 +243,10 @@ model Order {
   // captured, so unpaid and abandoned orders never leave gaps in the series.
   invoiceNumber String?   @unique
   invoicedAt    DateTime?
+  // Registered business buyer (B2B): set by an admin when the customer asks
+  // for a GST invoice. Both null means a B2C sale.
+  gstin         String?
+  gstName       String? // legal name registered against the GSTIN
   userId      String?
   user        User?       @relation(fields: [userId], references: [id])
   email       String

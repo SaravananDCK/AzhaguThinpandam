@@ -169,11 +169,18 @@ export default async function AdminFinancePage({
             />
             <p className="pt-1 text-xs text-muted-foreground">
               Prices and purchase totals are treated as GST-inclusive; tax is
-              backed out at rate/(100+rate). Output GST uses each product&apos;s
-              rate (or the store default); input GST uses each purchase&apos;s
+              backed out at rate/(100+rate). Output GST is on invoices dated this
+              month, after discounts and with delivery taxed at the goods&apos;
+              rate, using each product&apos;s rate (or the store default); input
+              GST uses each purchase&apos;s
               rate. An indicative figure — confirm with your accountant before
               filing.
             </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/admin/finance/gst?month=${monthParamOf(range.from)}`}>
+                GST returns (B2B / B2C) for {monthLabel(range.from)}
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 

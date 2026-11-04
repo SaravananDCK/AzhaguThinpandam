@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PRODUCT_LINES } from "@/lib/constants";
+import { HSN_PATTERN } from "@/lib/gst";
 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Name is too short").max(200),
@@ -17,6 +18,7 @@ export const productSchema = z.object({
   purchasePricePerKg: z.number().int().min(1).nullable().optional(), // paise
   profitMarginPct: z.number().min(0).max(1000).nullable().optional(),
   gstRate: z.number().min(0).max(100).nullable().optional(), // GST% in the sale price
+  hsn: z.string().trim().regex(HSN_PATTERN, "HSN must be 4 to 8 digits").nullable().optional(),
 
   images: z.array(z.string().min(1)).max(8),
   variants: z

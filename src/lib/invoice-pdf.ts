@@ -10,12 +10,12 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { Prisma } from "@prisma/client";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { formatDateLong } from "@/lib/dates";
-import { gstFromInclusive } from "@/lib/finance";
+import { gstSummaryByRate } from "@/lib/gst";
 import { formatINR } from "@/lib/money";
 import { packNote } from "@/lib/pack";
 
 export type InvoiceOrder = Prisma.OrderGetPayload<{ include: { items: true; payment: true } }>;
-export type InvoiceStore = { name: string; address: string; phone: string; email: string };
+export type InvoiceStore = { name: string; address: string; phone: string; email: string; gstin: string };
 
 const PAGE = { w: 595.28, h: 841.89 }; // A4, points
 const MARGIN = 48;
@@ -163,6 +163,7 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
   w.y -= 6;
   w.paragraph(store.address, textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
   w.paragraph([store.phone, store.email].filter(Boolean).join(" · "), textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, color: MUTED });
+  if (store.gstin) w.paragraph(`GSTIN: ${store.gstin}`, textX, colW * 0.68 - (textX - MARGIN), { size: 8.5, bold: true });
   const leftBottom = Math.min(w.y, top - LOGO_PT);
   // Only paid orders carry a tax-invoice number; anything else is a proforma
   // under its order number.
@@ -187,6 +188,12 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
     { size: 9.5 }
   );
   w.paragraph([order.shipPhone, order.email].filter(Boolean).join("\n"), MARGIN, colW * 0.5, { size: 9.5 });
+  if (order.gstin) {
+    // Registered business buyer: a B2B tax invoice must name them and their GSTIN
+    w.gap(4);
+    w.paragraph(`Billed to: ${order.gstName ?? order.shipName}`, MARGIN, colW * 0.5, { size: 9.5, bold: true });
+    w.paragraph(`GSTIN: ${order.gstin}`, MARGIN, colW * 0.5, { size: 9.5, bold: true });
+  }
   const leftEnd = w.y;
   w.y = sectionTop;
   const midX = MARGIN + colW * 0.58;
@@ -259,18 +266,9 @@ export async function buildInvoicePdf(order: InvoiceOrder, store: InvoiceStore):
   w.page.drawLine({ start: { x: labelX, y: w.y }, end: { x: right, y: w.y }, thickness: 0.6, color: RULE });
   line("Total", w.money(order.total), { bold: true, size: 12 });
 
-  // GST summary — prices are inclusive
-  const gstByRate = new Map<number, { taxable: number; gst: number }>();
-  for (const item of order.items) {
-    const rate = item.gstRate ?? 0;
-    if (!rate) continue;
-    const gross = item.price * item.qty;
-    const gst = gstFromInclusive(gross, rate);
-    const e = gstByRate.get(rate) ?? { taxable: 0, gst: 0 };
-    e.taxable += gross - gst;
-    e.gst += gst;
-    gstByRate.set(rate, e);
-  }
+  // GST summary — prices are inclusive; discounts and delivery are spread
+  // across the lines (see orderGstLines)
+  const gstByRate = gstSummaryByRate(order, order.items);
   if (gstByRate.size) {
     w.gap(22);
     w.ensure(40 + gstByRate.size * 13);

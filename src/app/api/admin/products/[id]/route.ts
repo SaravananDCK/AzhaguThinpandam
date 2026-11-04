@@ -57,6 +57,7 @@ export async function PUT(req: Request, { params }: Ctx) {
         purchasePricePerKg: data.purchasePricePerKg ?? null,
         profitMarginPct: data.profitMarginPct ?? null,
         gstRate: data.gstRate ?? null,
+        hsn: data.hsn ?? null,
       },
     });
 

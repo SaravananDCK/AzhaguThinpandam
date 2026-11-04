@@ -70,6 +70,8 @@ export default async function AdminSettingsPage() {
           preLaunchNotice: settings[SETTINGS.PRE_LAUNCH_NOTICE] ?? "",
           orderMessages: parseOrderMessages(settings[SETTINGS.ORDER_WHATSAPP_MESSAGES]),
           defaultGstRate: settings[SETTINGS.DEFAULT_GST_RATE] ?? "5",
+          storeGstin: settings[SETTINGS.STORE_GSTIN] ?? "",
+          defaultHsn: settings[SETTINGS.DEFAULT_HSN] ?? "",
           manualUpiPayment: settings[SETTINGS.MANUAL_UPI_PAYMENT] === "1",
           upiId: settings[SETTINGS.UPI_ID] ?? "",
           paymentPendingNote: settings[SETTINGS.PAYMENT_PENDING_NOTE] ?? "",

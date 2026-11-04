@@ -5,6 +5,7 @@ import { z } from "zod";
 import { MAX_LINE_QTY } from "@/lib/availability";
 import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin";
+import { isValidGstin } from "@/lib/gst";
 import {
   NEXT_STATUSES,
   ORDER_STATUSES,
@@ -210,9 +211,16 @@ export async function deleteOrder(orderId: string) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { status: true, orderNumber: true },
+    select: { status: true, orderNumber: true, invoiceNumber: true },
   });
   if (!order) return { error: "Order not found." };
+  // An issued invoice number must stay on record, or the GST documents-issued
+  // range gets a hole in it. Cancelling keeps it, as a cancelled invoice.
+  if (order.invoiceNumber) {
+    return {
+      error: `This order has invoice ${order.invoiceNumber}, which has to stay in the GST records. Cancel it instead of deleting.`,
+    };
+  }
 
   // Re-checked server-side: the button is hidden for other statuses, but a
   // hidden button is not a permission.
@@ -264,6 +272,14 @@ const orderDetailsSchema = z.object({
   shipPincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
   email: z.string().trim().email("Enter a valid email").max(200).optional().or(z.literal("")),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
+  gstin: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .refine((v) => !v || isValidGstin(v), "That GSTIN doesn't look right — check the 15 characters.")
+    .optional()
+    .or(z.literal("")),
+  gstName: z.string().trim().max(200).optional().or(z.literal("")),
 });
 
 /**
@@ -289,11 +305,16 @@ export async function updateOrderDetails(orderId: string, formData: FormData) {
     shipPincode: formData.get("shipPincode") ?? "",
     email: formData.get("email") ?? "",
     notes: formData.get("notes") ?? "",
+    gstin: formData.get("gstin") ?? "",
+    gstName: formData.get("gstName") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
   }
   const d = parsed.data;
+  if (d.gstin && !d.gstName) {
+    return { error: "Enter the business name registered against the GSTIN." };
+  }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return { error: "Order not found." };
@@ -310,6 +331,8 @@ export async function updateOrderDetails(orderId: string, formData: FormData) {
       shipPincode: d.shipPincode,
       email: d.email ? d.email.toLowerCase() : "",
       notes: d.notes || null,
+      gstin: d.gstin || null,
+      gstName: d.gstin ? d.gstName || null : null,
     },
   });
 

@@ -58,6 +58,7 @@ type ProductData = {
   purchasePricePerKg: number | null;
   profitMarginPct: number | null;
   gstRate: number | null;
+  hsn: string | null;
   images: { url: string }[];
   variants: {
     id: string;
@@ -107,6 +108,7 @@ export function ProductForm({
   const [gstRate, setGstRate] = useState(
     product?.gstRate != null ? String(product.gstRate) : ""
   );
+  const [hsn, setHsn] = useState(product?.hsn ?? "");
   const [images, setImages] = useState<string[]>(product?.images.map((i) => i.url) ?? []);
   function recalcPrices() {
     const perKg = rupeesToPaise(purchasePerKg);
@@ -238,6 +240,7 @@ export function ProductForm({
         purchasePricePerKg: rupeesToPaise(purchasePerKg) || null,
         profitMarginPct: marginPct.trim() ? parseFloat(marginPct) || null : null,
         gstRate: gstRate.trim() ? parseFloat(gstRate) : null,
+        hsn: hsn.trim() || null,
         images,
         variants: parsedVariants,
       };
@@ -394,6 +397,20 @@ export function ProductForm({
               <p className="text-xs text-muted-foreground">
                 GST included in the sale price. Blank = use the store default (Settings).
                 Feeds the output-GST report.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:max-w-[10rem]">
+              <Label htmlFor="p-hsn">HSN code</Label>
+              <Input
+                id="p-hsn"
+                inputMode="numeric"
+                maxLength={8}
+                value={hsn}
+                onChange={(e) => setHsn(e.target.value)}
+                placeholder="store default"
+              />
+              <p className="text-xs text-muted-foreground">
+                For the GSTR-1 HSN summary. Blank = use the store default (Settings).
               </p>
             </div>
             <p className="text-xs text-muted-foreground">

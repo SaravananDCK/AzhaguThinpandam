@@ -47,6 +47,7 @@ export async function POST(req: Request) {
         purchasePricePerKg: data.purchasePricePerKg ?? null,
         profitMarginPct: data.profitMarginPct ?? null,
         gstRate: data.gstRate ?? null,
+        hsn: data.hsn ?? null,
         images: {
           create: data.images.map((url, i) => ({ url, sortOrder: i })),
         },

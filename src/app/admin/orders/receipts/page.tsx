@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/queries";
 import { SETTINGS } from "@/lib/constants";
-import { gstFromInclusive } from "@/lib/finance";
+import { gstSummaryByRate } from "@/lib/gst";
 import { formatDateNumeric } from "@/lib/dates";
 import { packNote } from "@/lib/pack";
 import { Button } from "@/components/ui/button";
@@ -40,17 +40,7 @@ export default async function ThermalReceiptsPage({ searchParams }: Props) {
 
   const receipts: Receipt[] = orders.map((o) => {
     // Prices are GST-inclusive; back the tax out per rate for the summary
-    const gstByRate = new Map<number, { taxable: number; gst: number }>();
-    for (const item of o.items) {
-      const rate = item.gstRate ?? 0;
-      if (!rate) continue;
-      const gross = item.price * item.qty;
-      const gst = gstFromInclusive(gross, rate);
-      const entry = gstByRate.get(rate) ?? { taxable: 0, gst: 0 };
-      entry.taxable += gross - gst;
-      entry.gst += gst;
-      gstByRate.set(rate, entry);
-    }
+    const gstByRate = gstSummaryByRate(o, o.items);
     return {
       id: o.id,
       orderNumber: o.orderNumber,

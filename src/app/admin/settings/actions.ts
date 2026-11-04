@@ -6,6 +6,7 @@ import { assertAdmin } from "@/lib/admin";
 import { DISCOUNT_TYPES, ORDER_STATUSES, SETTINGS, type DiscountType } from "@/lib/constants";
 import { parseGoodieTiers } from "@/lib/box";
 import { rupeesToPaise } from "@/lib/money";
+import { HSN_PATTERN, isValidGstin } from "@/lib/gst";
 
 export async function saveSettings(formData: FormData) {
   await assertAdmin();
@@ -75,6 +76,14 @@ export async function saveSettings(formData: FormData) {
   const gstRate = parseFloat(String(formData.get("defaultGstRate") ?? "0"));
   if (!Number.isFinite(gstRate) || gstRate < 0 || gstRate > 100) {
     return { error: "Default GST rate must be between 0 and 100." };
+  }
+  const storeGstin = String(formData.get("storeGstin") ?? "").trim().toUpperCase();
+  if (storeGstin && !isValidGstin(storeGstin)) {
+    return { error: "Store GSTIN doesn't look right — check the 15 characters." };
+  }
+  const defaultHsn = String(formData.get("defaultHsn") ?? "").trim();
+  if (defaultHsn && !HSN_PATTERN.test(defaultHsn)) {
+    return { error: "Default HSN must be 4 to 8 digits." };
   }
 
   const gaMeasurementId = String(formData.get("gaMeasurementId") ?? "").trim();
@@ -162,6 +171,8 @@ export async function saveSettings(formData: FormData) {
       )
     ),
     [SETTINGS.DEFAULT_GST_RATE]: String(gstRate),
+    [SETTINGS.STORE_GSTIN]: storeGstin,
+    [SETTINGS.DEFAULT_HSN]: defaultHsn,
     [SETTINGS.PREORDER_CLOSE]: preorderClose,
     [SETTINGS.PREORDER_DISPATCH_NOTE]: String(formData.get("preorderDispatchNote") ?? "").trim(),
     [SETTINGS.THERMAL_PAPER_WIDTH]: thermalWidth,

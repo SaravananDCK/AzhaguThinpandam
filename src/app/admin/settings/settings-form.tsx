@@ -40,6 +40,8 @@ type Props = {
     preLaunchNotice: string;
     orderMessages: OrderMessageTemplates;
     defaultGstRate: string;
+    storeGstin: string;
+    defaultHsn: string;
     manualUpiPayment: boolean;
     upiId: string;
     paymentPendingNote: string;
@@ -299,6 +301,35 @@ export function SettingsForm({ values, variantOptions }: Props) {
               <p className="text-xs text-muted-foreground">
                 Applied to products with no GST rate of their own. Prices are
                 GST-inclusive; feeds the output-GST report in Finance.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-gstin">Store GSTIN</Label>
+              <Input
+                id="s-gstin"
+                name="storeGstin"
+                maxLength={15}
+                placeholder="33ABCDE1234F1Z5"
+                className="uppercase"
+                defaultValue={values.storeGstin}
+              />
+              <p className="text-xs text-muted-foreground">
+                Printed on invoices. The first two digits (33 = Tamil Nadu) decide
+                CGST + SGST versus IGST in the GST returns report.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="s-hsn">Default HSN code</Label>
+              <Input
+                id="s-hsn"
+                name="defaultHsn"
+                inputMode="numeric"
+                maxLength={8}
+                defaultValue={values.defaultHsn}
+              />
+              <p className="text-xs text-muted-foreground">
+                Used for products with no HSN code of their own, in the GSTR-1 HSN
+                summary.
               </p>
             </div>
           </div>

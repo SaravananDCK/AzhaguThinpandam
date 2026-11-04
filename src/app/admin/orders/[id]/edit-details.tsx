@@ -22,6 +22,8 @@ export type OrderDetails = {
   shipPincode: string;
   email: string;
   notes: string;
+  gstin: string;
+  gstName: string;
 };
 
 export function EditOrderDetails({ order }: { order: OrderDetails }) {
@@ -115,6 +117,27 @@ export function EditOrderDetails({ order }: { order: OrderDetails }) {
         <Input id="e-email" name="email" type="email" defaultValue={order.email} />
         <p className="text-xs text-muted-foreground">
           Blank means no order emails are sent for this order.
+        </p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="e-gstin">Customer GSTIN</Label>
+          <Input
+            id="e-gstin"
+            name="gstin"
+            maxLength={15}
+            className="uppercase"
+            placeholder="Only for a business buyer"
+            defaultValue={order.gstin}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="e-gstname">Registered business name</Label>
+          <Input id="e-gstname" name="gstName" defaultValue={order.gstName} />
+        </div>
+        <p className="text-xs text-muted-foreground sm:col-span-2">
+          With a GSTIN the invoice names the business and the sale is reported
+          as B2B in the GST returns. Leave blank for an ordinary customer.
         </p>
       </div>
       <div className="grid gap-2">

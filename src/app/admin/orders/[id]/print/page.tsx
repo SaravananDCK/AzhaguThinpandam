@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/queries";
 import { SETTINGS, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 import { formatINR } from "@/lib/money";
-import { gstFromInclusive } from "@/lib/finance";
+import { gstSummaryByRate } from "@/lib/gst";
 import { packNote } from "@/lib/pack";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/admin/print-button";
@@ -28,20 +28,11 @@ export default async function OrderPrintPage({ params }: Props) {
   const storeAddress = settings[SETTINGS.STORE_ADDRESS];
   const storePhone = settings[SETTINGS.STORE_PHONE];
   const storeEmail = settings[SETTINGS.STORE_EMAIL];
+  const storeGstin = settings[SETTINGS.STORE_GSTIN];
 
   // Prices are GST-inclusive, so the tax is backed out of each line at the rate
-  // snapshotted on it when the order was placed.
-  const gstByRate = new Map<number, { taxable: number; gst: number }>();
-  for (const item of order.items) {
-    const rate = item.gstRate ?? 0;
-    if (!rate) continue;
-    const gross = item.price * item.qty;
-    const gst = gstFromInclusive(gross, rate);
-    const entry = gstByRate.get(rate) ?? { taxable: 0, gst: 0 };
-    entry.taxable += gross - gst;
-    entry.gst += gst;
-    gstByRate.set(rate, entry);
-  }
+  // snapshotted on it when the order was placed, after discounts and delivery.
+  const gstByRate = gstSummaryByRate(order, order.items);
   const totalGst = [...gstByRate.values()].reduce((s, e) => s + e.gst, 0);
 
   return (
@@ -65,6 +56,7 @@ export default async function OrderPrintPage({ params }: Props) {
               {storePhone}
               {storeEmail && ` · ${storeEmail}`}
             </p>
+            {storeGstin && <p className="text-xs font-semibold">GSTIN: {storeGstin}</p>}
           </div>
           <div className="text-right">
             <p className="text-lg font-semibold">
@@ -97,6 +89,12 @@ export default async function OrderPrintPage({ params }: Props) {
             </p>
             <p className="mt-1 text-neutral-700">{order.shipPhone}</p>
             {order.email && <p className="text-neutral-700">{order.email}</p>}
+            {order.gstin && (
+              <div className="mt-2 font-semibold">
+                <p>Billed to: {order.gstName ?? order.shipName}</p>
+                <p>GSTIN: {order.gstin}</p>
+              </div>
+            )}
           </div>
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">

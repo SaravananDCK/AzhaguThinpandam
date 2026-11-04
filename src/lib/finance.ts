@@ -7,6 +7,7 @@
 // for the cash view: the difference is stock building up or running down.
 import { prisma } from "@/lib/prisma";
 import { ORDER_COST_ITEMS_INCLUDE, orderCostOf } from "@/lib/order-cost";
+import { gstFromInclusive, orderGstLines } from "@/lib/gst";
 
 export const REVENUE_STATUSES = ["PAID", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
@@ -98,12 +99,6 @@ export async function computePnL(from: Date, to: Date): Promise<PnL> {
   };
 }
 
-/** GST component of a GST-INCLUSIVE amount at the given rate (%). Paise in/out. */
-export function gstFromInclusive(inclusiveAmount: number, rate: number): number {
-  if (!rate || rate <= 0) return 0;
-  return Math.round((inclusiveAmount * rate) / (100 + rate));
-}
-
 export type GstSummary = {
   outputGst: number; // GST collected on sales (owed to govt)
   inputGst: number; // GST paid on purchases (input tax credit)
@@ -115,13 +110,20 @@ export type GstSummary = {
 /**
  * GST position for a period. Both sale prices and purchase totals are
  * GST-inclusive; the tax is backed out with rate/(100+rate). Output GST uses
- * the rate snapshot on each order line; input GST uses each purchase's rate.
+ * the rate snapshot on each order line, after discounts and delivery (see
+ * orderGstLines), on the same basis as the GSTR-1 report: invoices dated in
+ * the period, cancelled or reverted ones left out. Input GST uses each purchase's rate.
  */
 export async function computeGst(from: Date, to: Date): Promise<GstSummary> {
   const [orders, purchases] = await Promise.all([
     prisma.order.findMany({
-      where: { status: { in: REVENUE_STATUSES }, createdAt: { gte: from, lt: to } },
-      select: { items: { select: { price: true, qty: true, gstRate: true } } },
+      where: { invoicedAt: { gte: from, lt: to }, status: { in: REVENUE_STATUSES } },
+      select: {
+        discount: true,
+        manualDiscount: true,
+        shippingFee: true,
+        items: { select: { price: true, qty: true, gstRate: true } },
+      },
     }),
     prisma.purchase.findMany({
       where: { date: { gte: from, lt: to } },
@@ -132,10 +134,9 @@ export async function computeGst(from: Date, to: Date): Promise<GstSummary> {
   let outputGst = 0;
   let salesInclusive = 0;
   for (const o of orders) {
-    for (const i of o.items) {
-      const line = i.price * i.qty;
-      salesInclusive += line;
-      outputGst += gstFromInclusive(line, i.gstRate ?? 0);
+    for (const l of orderGstLines(o, o.items)) {
+      salesInclusive += l.value;
+      outputGst += l.tax;
     }
   }
 

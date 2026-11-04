@@ -350,6 +350,12 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               </p>
               <p className="mt-1.5">📞 {order.shipPhone}</p>
               <p>✉️ {order.email || <span className="italic">no email on file</span>}</p>
+              {order.invoiceNumber && <p className="mt-1.5">Invoice {order.invoiceNumber}</p>}
+              {order.gstin && (
+                <p className="mt-1.5 font-medium text-foreground">
+                  B2B: {order.gstName ?? order.shipName} · GSTIN {order.gstin}
+                </p>
+              )}
               {order.notes && (
                 <p className="mt-2 rounded-lg bg-secondary p-2 text-xs">
                   <span className="font-medium">Note:</span> {order.notes}
@@ -368,6 +374,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 shipPincode: order.shipPincode,
                 email: order.email,
                 notes: order.notes ?? "",
+                gstin: order.gstin ?? "",
+                gstName: order.gstName ?? "",
               }}
             />
           </CardContent>

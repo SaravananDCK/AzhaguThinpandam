@@ -96,6 +96,11 @@ export const SETTINGS = {
   // Blank/missing statuses use DEFAULT_ORDER_MESSAGES (src/lib/order-messages.ts).
   ORDER_WHATSAPP_MESSAGES: "order_whatsapp_messages",
   DEFAULT_GST_RATE: "default_gst_rate",
+  // The store's own GST registration, printed on invoices. Its first two
+  // digits are the home state code that splits CGST+SGST from IGST.
+  STORE_GSTIN: "store_gstin",
+  // HSN code for products with none of their own (GSTR-1 HSN summary).
+  DEFAULT_HSN: "default_hsn",
   // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
   // opening the payment gateway. For use until the gateway goes live.
   MANUAL_UPI_PAYMENT: "manual_upi_payment",
@@ -198,6 +203,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   // Default GST% (used for products with no per-product rate, and as the
   // starting value on the purchase form). Prices are treated as GST-inclusive.
   [SETTINGS.DEFAULT_GST_RATE]: "5",
+  [SETTINGS.STORE_GSTIN]: "",
+  [SETTINGS.DEFAULT_HSN]: "",
   // Diwali 2026 is 8 November.
   [SETTINGS.PREORDER_CLOSE]: "2026-11-02",
   [SETTINGS.PREORDER_DISPATCH_NOTE]:
