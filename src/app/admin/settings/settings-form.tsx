@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { GoodieTier } from "@/lib/box";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type DiscountType } from "@/lib/constants";
 import { ORDER_MESSAGE_PLACEHOLDERS, type OrderMessageTemplates } from "@/lib/order-messages";
 import { GoodieTiersEditor, type GoodieVariantOption } from "./goodie-tiers-editor";
+import { ASSISTANT_MODEL_SUGGESTIONS, DEFAULT_ASSISTANT_MODEL } from "@/lib/assistant-models";
 import { saveSettings } from "./actions";
 
 type Props = {
@@ -53,6 +55,9 @@ type Props = {
     announcementImage: string;
     announcementFrom: string;
     announcementUntil: string;
+    openaiKeyHint: string;
+    openaiKeyFromEnv: boolean;
+    openaiModel: string;
   };
   variantOptions: GoodieVariantOption[];
 };
@@ -91,593 +96,673 @@ export function SettingsForm({ values, variantOptions }: Props) {
 
   return (
     <form action={handleSubmit} className="max-w-xl space-y-6">
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Store details</p>
-          <div className="grid gap-2">
-            <Label htmlFor="s-name">Store name</Label>
-            <Input id="s-name" name="storeName" defaultValue={values.storeName} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="s-phone">Contact phone</Label>
-              <Input id="s-phone" name="storePhone" defaultValue={values.storePhone} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-email">Contact email</Label>
-              <Input
-                id="s-email"
-                name="storeEmail"
-                type="email"
-                defaultValue={values.storeEmail}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-address">Store address (shown in footer)</Label>
-            <Textarea
-              id="s-address"
-              name="storeAddress"
-              rows={2}
-              defaultValue={values.storeAddress}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-ga">Google Analytics ID</Label>
-            <Input
-              id="s-ga"
-              name="gaMeasurementId"
-              defaultValue={values.gaMeasurementId}
-              placeholder="G-XXXXXXXXXX"
-            />
-            <p className="text-xs text-muted-foreground">
-              GA4 measurement ID. The tag loads on customer-facing pages only
-              (never the admin panel). Leave empty to disable tracking.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-pixel">Meta Pixel ID</Label>
-            <Input
-              id="s-pixel"
-              name="metaPixelId"
-              defaultValue={values.metaPixelId}
-              placeholder="1093899719866773"
-            />
-            <p className="text-xs text-muted-foreground">
-              Numeric pixel ID from Meta Events Manager. Same rules as the GA
-              tag — customer-facing pages only, and live site only. Fires{" "}
-              <strong>PageView</strong>, <strong>ViewContent</strong> on a
-              product page, <strong>AddToCart</strong> on every add,{" "}
-              <strong>InitiateCheckout</strong> when a cart reaches checkout, and{" "}
-              <strong>Purchase</strong> once an order is actually paid.
-              Leave empty to disable it.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-meta-domain">Meta domain verification</Label>
-            <Input
-              id="s-meta-domain"
-              name="metaDomainVerification"
-              defaultValue={values.metaDomainVerification}
-              placeholder="a1b2c3d4e5f6g7h8i9j0"
-            />
-            <p className="text-xs text-muted-foreground">
-              Token only — the <code>content</code> value of the meta tag Meta
-              gives you under Business settings → Brand safety → Domains, not the
-              whole tag. Unlike the pixel this renders in every environment, since
-              Meta only ever crawls the live domain. Verification is required
-              before you can set event priority for iOS traffic.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Shipping & stock</p>
-          <p className="text-xs text-muted-foreground">
-            Inside Tamil Nadu and Puducherry: a flat fee, free above the threshold. Every
-            other state: charged by weight (rounded up to the next kg), always — no free
-            shipping.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-2">
-              <Label htmlFor="s-fee">Shipping fee ₹ (inside TN)</Label>
-              <Input
-                id="s-fee"
-                name="shippingFee"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.shippingFeeRupees}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-free">Free shipping above ₹ (inside TN)</Label>
-              <Input
-                id="s-free"
-                name="freeShippingAbove"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.freeShippingAboveRupees}
-              />
-              <p className="text-xs text-muted-foreground">0 disables free shipping.</p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-kerala">Kerala ₹ per kg</Label>
-              <Input
-                id="s-kerala"
-                name="keralaPerKg"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.keralaPerKgRupees}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-karnataka">Karnataka ₹ per kg</Label>
-              <Input
-                id="s-karnataka"
-                name="karnatakaPerKg"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.karnatakaPerKgRupees}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-telangana">Telangana ₹ per kg</Label>
-              <Input
-                id="s-telangana"
-                name="telanganaPerKg"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.telanganaPerKgRupees}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-outtn">Other states ₹ per kg</Label>
-              <Input
-                id="s-outtn"
-                name="outsideTnPerKg"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.outsideTnPerKgRupees}
-              />
-              <p className="text-xs text-muted-foreground">
-                Every state other than TN, Puducherry, Kerala, Karnataka and Telangana. Per-kg rates are
-                charged on every order, rounded up to the next kg — no free shipping.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-lowstock">Low stock alert at</Label>
-              <Input
-                id="s-lowstock"
-                name="lowStockThreshold"
-                type="number"
-                min="0"
-                defaultValue={values.lowStockThreshold}
-              />
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="roundToFive"
-              defaultChecked={values.roundToFive}
-              className="size-4 accent-primary"
-            />
-            Round computed sale prices UP to the next ₹5 (₹88 → ₹90)
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
-              <Input
-                id="s-packing"
-                name="packingCost"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={values.packingCostRupees}
-              />
-              <p className="text-xs text-muted-foreground">
-                Recorded on each new order for the P&amp;L — never charged to the customer.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-gst">Default GST rate %</Label>
-              <Input
-                id="s-gst"
-                name="defaultGstRate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                defaultValue={values.defaultGstRate}
-              />
-              <p className="text-xs text-muted-foreground">
-                Applied to products with no GST rate of their own. Prices are
-                GST-inclusive; feeds the output-GST report in Finance.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-gstin">Store GSTIN</Label>
-              <Input
-                id="s-gstin"
-                name="storeGstin"
-                maxLength={15}
-                placeholder="33ABCDE1234F1Z5"
-                className="uppercase"
-                defaultValue={values.storeGstin}
-              />
-              <p className="text-xs text-muted-foreground">
-                Printed on invoices. The first two digits (33 = Tamil Nadu) decide
-                CGST + SGST versus IGST in the GST returns report.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-hsn">Default HSN code</Label>
-              <Input
-                id="s-hsn"
-                name="defaultHsn"
-                inputMode="numeric"
-                maxLength={8}
-                defaultValue={values.defaultHsn}
-              />
-              <p className="text-xs text-muted-foreground">
-                Used for products with no HSN code of their own, in the GSTR-1 HSN
-                summary.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Build-your-box discounts</p>
-          <div className="grid gap-2">
-            <Label>Discount type</Label>
-            <div className="flex flex-col gap-1.5 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="discountType"
-                  value="percent"
-                  checked={discountType === "percent"}
-                  onChange={() => setDiscountType("percent")}
-                  className="size-4 accent-primary"
-                />
-                Weight discount tiers (% off snacks)
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="discountType"
-                  value="goodies"
-                  checked={discountType === "goodies"}
-                  onChange={() => setDiscountType("goodies")}
-                  className="size-4 accent-primary"
-                />
-                Goodies based on weight (free items — more profitable)
-              </label>
-            </div>
-          </div>
-          {/* Both editors stay mounted whichever type is active: saveSettings
-              upserts every submitted key, so unmounting one would wipe its
-              config on save. The inactive one is just dimmed. */}
-          <div className={discountType === "percent" ? "grid gap-2" : "grid gap-2 opacity-50"}>
-            <Label htmlFor="s-tiers">Weight discount tiers</Label>
-            <Input id="s-tiers" name="boxTiers" defaultValue={values.boxTiers} />
-            <p className="text-xs text-muted-foreground">
-              Format: <code>kg:percent</code> pairs separated by commas — e.g.{" "}
-              <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
-              3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
-              the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
-              {discountType !== "percent" && " Not in use while goodies are selected."}
-            </p>
-          </div>
-          <div className={discountType === "goodies" ? "grid gap-2" : "grid gap-2 opacity-50"}>
-            <Label>Goodie tiers</Label>
-            <GoodieTiersEditor initial={values.goodieTiers} variants={variantOptions} />
-            <p className="text-xs text-muted-foreground">
-              Once the cart&apos;s snack weight reaches a tier, that tier&apos;s items are
-              added to the order free. Several rows may share the same kg — that tier then
-              gives all of them. Only the <strong>highest reached tier</strong> applies;
-              tiers don&apos;t stack. Coupons replace goodies (one offer per order), and
-              out-of-stock goodies are skipped.
-              {discountType !== "goodies" && " Not in use while percent tiers are selected."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Payment mode</p>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="manualUpiPayment"
-              defaultChecked={values.manualUpiPayment}
-              className="mt-0.5 size-4 accent-primary"
-            />
-            <span>
-              Collect payment by UPI over WhatsApp (payment gateway not live yet)
-            </span>
-          </label>
-          <p className="text-xs text-muted-foreground">
-            While this is on, customers still place real orders — they just get UPI
-            instructions instead of a card payment screen. The order sits at{" "}
-            <strong>Payment pending</strong> until you confirm the transfer from{" "}
-            <strong>Admin → Orders</strong>, which is when stock is deducted and the
-            confirmation email goes out. <strong>Turn this off</strong> once your
-            payment gateway is live.
-          </p>
-          <div className="grid gap-2">
-            <Label htmlFor="s-upi">UPI ID</Label>
-            <Input
-              id="s-upi"
-              name="upiId"
-              defaultValue={values.upiId}
-              placeholder="yourname@okicici"
-            />
-            <p className="text-xs text-muted-foreground">
-              Shown on the order page with a &ldquo;Pay by UPI&rdquo; button that opens
-              GPay / PhonePe / Paytm with the amount filled in. Leave empty and
-              customers are told you&apos;ll send payment details on WhatsApp
-              instead. The WhatsApp link uses your <strong>contact phone</strong> above.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-prelaunch">Checkout banner</Label>
-            <Textarea
-              id="s-prelaunch"
-              name="preLaunchNotice"
-              rows={2}
-              defaultValue={values.preLaunchNotice}
-              placeholder="We're taking orders ahead of our grand inauguration!"
-            />
-            <p className="text-xs text-muted-foreground">
-              Shown at the top of checkout while UPI mode is on. Leave empty for no banner.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-pendingnote">Payment note on the order page</Label>
-            <Textarea
-              id="s-pendingnote"
-              name="paymentPendingNote"
-              rows={3}
-              defaultValue={values.paymentPendingNote}
-              placeholder="Card payments aren't live yet — your order is placed and reserved…"
-            />
-            <p className="text-xs text-muted-foreground">
-              Shown above the UPI instructions after an order is placed —
-              reassures customers who expected a card option that their order
-              went through. Leave empty for no note.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Pre-order combos</p>
-          <p className="text-xs text-muted-foreground">
-            For products marked “Pre-order” (festival combos). Combos are delivered
-            within Tamil Nadu and Puducherry only, with delivery included in the
-            price — checkout refuses other states and adds no delivery charge.
-            While booking is open and at least one combo is active, customers see
-            a welcome pop-up listing the combos (the landing announcement below
-            then shows after it). Booking stays open through the end of the
-            closing day; leave it empty for no cutoff.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="s-pre-close">Last booking day</Label>
-              <Input
-                id="s-pre-close"
-                name="preorderClose"
-                type="date"
-                defaultValue={values.preorderClose}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-pre-note">Dispatch note</Label>
-            <Input
-              id="s-pre-note"
-              name="preorderDispatchNote"
-              defaultValue={values.preorderDispatchNote}
-              placeholder="Dispatched from 3 November, in time for Diwali."
-              maxLength={200}
-            />
-            <p className="text-xs text-muted-foreground">
-              Shown on the product page, the customer&apos;s order page, the
-              confirmation email and the WhatsApp messages for pre-orders.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Landing announcement</p>
-          <p className="text-xs text-muted-foreground">
-            A pop-up customers see once when they arrive — holiday closures,
-            courier delays, festival hours. Shown on every page of the shop
-            between the two dates; closing it hides it on that device until the
-            text changes. Leave the title and message empty to turn it off.
-          </p>
-          <div className="grid gap-2">
-            <Label htmlFor="s-ann-title">Title</Label>
-            <Input
-              id="s-ann-title"
-              name="announcementTitle"
-              defaultValue={values.announcementTitle}
-              placeholder="Pooja Holiday Update"
-              maxLength={80}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-ann-body">Message</Label>
-            <Textarea
-              id="s-ann-body"
-              name="announcementBody"
-              rows={4}
-              defaultValue={values.announcementBody}
-              placeholder={
-                "Orders placed between 16 and 20 October will be dispatched after the Pooja holidays, as our courier partners are closed.\n\nThank you for your patience and support."
-              }
-              maxLength={600}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="s-ann-from">Show from</Label>
-              <Input
-                id="s-ann-from"
-                name="announcementFrom"
-                type="date"
-                defaultValue={values.announcementFrom}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="s-ann-until">Last day shown</Label>
-              <Input
-                id="s-ann-until"
-                name="announcementUntil"
-                type="date"
-                defaultValue={values.announcementUntil}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Picture (optional)</Label>
-            {announcementImage ? (
-              <div className="relative w-full max-w-xs overflow-hidden rounded-lg border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={announcementImage} alt="" className="h-auto w-full" />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon-sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => setAnnouncementImage("")}
-                  aria-label="Remove picture"
-                >
-                  <X className="size-4" />
-                </Button>
+      {/* Every tab stays mounted (forceMount, just hidden): saveSettings
+          upserts every submitted key, so an unmounted tab would wipe its
+          fields on save. */}
+      <Tabs defaultValue="store" className="gap-4">
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="store">Store</TabsTrigger>
+          <TabsTrigger value="shipping">Shipping &amp; pricing</TabsTrigger>
+          <TabsTrigger value="payments">Payments &amp; tax</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
+        </TabsList>
+        <TabsContent value="store" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Store details</p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-name">Store name</Label>
+                <Input id="s-name" name="storeName" defaultValue={values.storeName} />
               </div>
-            ) : (
-              <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/50">
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-                {uploading ? "Uploading…" : "Upload a picture"}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
-                  className="sr-only"
-                  disabled={uploading}
-                  onChange={(e) => handleAnnouncementUpload(e.target.files)}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-phone">Contact phone</Label>
+                  <Input id="s-phone" name="storePhone" defaultValue={values.storePhone} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-email">Contact email</Label>
+                  <Input
+                    id="s-email"
+                    name="storeEmail"
+                    type="email"
+                    defaultValue={values.storeEmail}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-address">Store address (shown in footer)</Label>
+                <Textarea
+                  id="s-address"
+                  name="storeAddress"
+                  rows={2}
+                  defaultValue={values.storeAddress}
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="shipping" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Shipping & stock</p>
+              <p className="text-xs text-muted-foreground">
+                Inside Tamil Nadu and Puducherry: a flat fee, free above the threshold. Every
+                other state: charged by weight (rounded up to the next kg), always — no free
+                shipping.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-fee">Shipping fee ₹ (inside TN)</Label>
+                  <Input
+                    id="s-fee"
+                    name="shippingFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.shippingFeeRupees}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-free">Free shipping above ₹ (inside TN)</Label>
+                  <Input
+                    id="s-free"
+                    name="freeShippingAbove"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.freeShippingAboveRupees}
+                  />
+                  <p className="text-xs text-muted-foreground">0 disables free shipping.</p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-kerala">Kerala ₹ per kg</Label>
+                  <Input
+                    id="s-kerala"
+                    name="keralaPerKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.keralaPerKgRupees}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-karnataka">Karnataka ₹ per kg</Label>
+                  <Input
+                    id="s-karnataka"
+                    name="karnatakaPerKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.karnatakaPerKgRupees}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-telangana">Telangana ₹ per kg</Label>
+                  <Input
+                    id="s-telangana"
+                    name="telanganaPerKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.telanganaPerKgRupees}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-outtn">Other states ₹ per kg</Label>
+                  <Input
+                    id="s-outtn"
+                    name="outsideTnPerKg"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.outsideTnPerKgRupees}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Every state other than TN, Puducherry, Kerala, Karnataka and Telangana. Per-kg rates are
+                    charged on every order, rounded up to the next kg — no free shipping.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-lowstock">Low stock alert at</Label>
+                  <Input
+                    id="s-lowstock"
+                    name="lowStockThreshold"
+                    type="number"
+                    min="0"
+                    defaultValue={values.lowStockThreshold}
+                  />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="roundToFive"
+                  defaultChecked={values.roundToFive}
+                  className="size-4 accent-primary"
+                />
+                Round computed sale prices UP to the next ₹5 (₹88 → ₹90)
               </label>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Shown at its own shape above the title. Square or portrait fills a phone screen best; wide landscape pictures come out small.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Printing</p>
-          <div className="grid gap-2">
-            <Label htmlFor="s-thermal">Thermal receipt printer paper width</Label>
-            <select
-              id="s-thermal"
-              name="thermalPaperWidth"
-              defaultValue={values.thermalPaperWidth}
-              className="h-9 w-40 rounded-md border bg-background px-2 text-sm"
-            >
-              <option value="80">80 mm</option>
-              <option value="58">58 mm</option>
-            </select>
-            <p className="text-xs text-muted-foreground">
-              Used by Orders → Thermal receipts. Most receipt printers take 80 mm rolls;
-              small portable ones take 58 mm.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">WhatsApp order messages</p>
-          <p className="text-xs text-muted-foreground">
-            The WhatsApp button on the Orders screen opens a chat with the customer and fills in
-            the message for the order&apos;s current status. Nothing is sent automatically — you
-            review it, attach a photo (such as the courier receipt) and press send. Placeholders:{" "}
-            {ORDER_MESSAGE_PLACEHOLDERS.map(([token, meaning], i) => (
-              <span key={token}>
-                {i > 0 && ", "}
-                <code>{token}</code> {meaning}
-              </span>
-            ))}
-            . Clear a box to go back to the built-in text.
-          </p>
-          {ORDER_STATUSES.map((status) => (
-            <div key={status} className="grid gap-2">
-              <Label htmlFor={`s-msg-${status}`}>{ORDER_STATUS_LABELS[status]}</Label>
-              <Textarea
-                id={`s-msg-${status}`}
-                name={`orderMessage_${status}`}
-                rows={3}
-                defaultValue={values.orderMessages[status]}
-              />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4">
-          <p className="font-semibold">Instagram (homepage)</p>
-          <div className="grid gap-2">
-            <Label htmlFor="s-ig-handle">Instagram handle</Label>
-            <Input
-              id="s-ig-handle"
-              name="instagramHandle"
-              defaultValue={values.instagramHandle}
-              placeholder="azhagintamilmozhi05"
-            />
-            <p className="text-xs text-muted-foreground">
-              Username only, without the @. Used for the &ldquo;Follow&rdquo; link. Leave empty to
-              hide the section.
-            </p>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="s-ig-reels">Featured reel / post links</Label>
-            <Textarea
-              id="s-ig-reels"
-              name="instagramReels"
-              rows={4}
-              defaultValue={values.instagramReels}
-              placeholder="https://www.instagram.com/reel/XXXX/&#10;https://www.instagram.com/reel/YYYY/"
-            />
-            <p className="text-xs text-muted-foreground">
-              One Instagram reel or post URL per line — the <strong>latest 3</strong> are embedded on
-              the homepage (paste newest first). Instagram doesn&apos;t allow pulling a whole profile
-              automatically, so list the reels you want to feature. Leave empty to show just a
-              &ldquo;Watch on Instagram&rdquo; button.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-packing">Packing cost per order ₹ (internal)</Label>
+                  <Input
+                    id="s-packing"
+                    name="packingCost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={values.packingCostRupees}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Recorded on each new order for the P&amp;L — never charged to the customer.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Build-your-box discounts</p>
+              <div className="grid gap-2">
+                <Label>Discount type</Label>
+                <div className="flex flex-col gap-1.5 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="discountType"
+                      value="percent"
+                      checked={discountType === "percent"}
+                      onChange={() => setDiscountType("percent")}
+                      className="size-4 accent-primary"
+                    />
+                    Weight discount tiers (% off snacks)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="discountType"
+                      value="goodies"
+                      checked={discountType === "goodies"}
+                      onChange={() => setDiscountType("goodies")}
+                      className="size-4 accent-primary"
+                    />
+                    Goodies based on weight (free items — more profitable)
+                  </label>
+                </div>
+              </div>
+              {/* Both editors stay mounted whichever type is active: saveSettings
+                  upserts every submitted key, so unmounting one would wipe its
+                  config on save. The inactive one is just dimmed. */}
+              <div className={discountType === "percent" ? "grid gap-2" : "grid gap-2 opacity-50"}>
+                <Label htmlFor="s-tiers">Weight discount tiers</Label>
+                <Input id="s-tiers" name="boxTiers" defaultValue={values.boxTiers} />
+                <p className="text-xs text-muted-foreground">
+                  Format: <code>kg:percent</code> pairs separated by commas — e.g.{" "}
+                  <code>1:10,2:15,3:20</code> means 1&nbsp;kg+ → 10% off, 2&nbsp;kg+ → 15%,
+                  3&nbsp;kg+ → 20%. Fractional kg allowed (e.g. <code>0.5:5</code>). Based on
+                  the cart&apos;s total weight, applied to the whole order. Leave empty to disable.
+                  {discountType !== "percent" && " Not in use while goodies are selected."}
+                </p>
+              </div>
+              <div className={discountType === "goodies" ? "grid gap-2" : "grid gap-2 opacity-50"}>
+                <Label>Goodie tiers</Label>
+                <GoodieTiersEditor initial={values.goodieTiers} variants={variantOptions} />
+                <p className="text-xs text-muted-foreground">
+                  Once the cart&apos;s snack weight reaches a tier, that tier&apos;s items are
+                  added to the order free. Several rows may share the same kg — that tier then
+                  gives all of them. Only the <strong>highest reached tier</strong> applies;
+                  tiers don&apos;t stack. Coupons replace goodies (one offer per order), and
+                  out-of-stock goodies are skipped.
+                  {discountType !== "goodies" && " Not in use while percent tiers are selected."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="payments" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Payment mode</p>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="manualUpiPayment"
+                  defaultChecked={values.manualUpiPayment}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <span>
+                  Collect payment by UPI over WhatsApp (payment gateway not live yet)
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground">
+                While this is on, customers still place real orders — they just get UPI
+                instructions instead of a card payment screen. The order sits at{" "}
+                <strong>Payment pending</strong> until you confirm the transfer from{" "}
+                <strong>Admin → Orders</strong>, which is when stock is deducted and the
+                confirmation email goes out. <strong>Turn this off</strong> once your
+                payment gateway is live.
+              </p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-upi">UPI ID</Label>
+                <Input
+                  id="s-upi"
+                  name="upiId"
+                  defaultValue={values.upiId}
+                  placeholder="yourname@okicici"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown on the order page with a &ldquo;Pay by UPI&rdquo; button that opens
+                  GPay / PhonePe / Paytm with the amount filled in. Leave empty and
+                  customers are told you&apos;ll send payment details on WhatsApp
+                  instead. The WhatsApp link uses your <strong>contact phone</strong> (Store tab).
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-prelaunch">Checkout banner</Label>
+                <Textarea
+                  id="s-prelaunch"
+                  name="preLaunchNotice"
+                  rows={2}
+                  defaultValue={values.preLaunchNotice}
+                  placeholder="We're taking orders ahead of our grand inauguration!"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown at the top of checkout while UPI mode is on. Leave empty for no banner.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-pendingnote">Payment note on the order page</Label>
+                <Textarea
+                  id="s-pendingnote"
+                  name="paymentPendingNote"
+                  rows={3}
+                  defaultValue={values.paymentPendingNote}
+                  placeholder="Card payments aren't live yet — your order is placed and reserved…"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown above the UPI instructions after an order is placed —
+                  reassures customers who expected a card option that their order
+                  went through. Leave empty for no note.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">GST &amp; invoices</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-gst">Default GST rate %</Label>
+                  <Input
+                    id="s-gst"
+                    name="defaultGstRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    defaultValue={values.defaultGstRate}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Applied to products with no GST rate of their own. Prices are
+                    GST-inclusive; feeds the output-GST report in Finance.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-gstin">Store GSTIN</Label>
+                  <Input
+                    id="s-gstin"
+                    name="storeGstin"
+                    maxLength={15}
+                    placeholder="33ABCDE1234F1Z5"
+                    className="uppercase"
+                    defaultValue={values.storeGstin}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Printed on invoices. The first two digits (33 = Tamil Nadu) decide
+                    CGST + SGST versus IGST in the GST returns report.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-hsn">Default HSN code</Label>
+                  <Input
+                    id="s-hsn"
+                    name="defaultHsn"
+                    inputMode="numeric"
+                    maxLength={8}
+                    defaultValue={values.defaultHsn}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used for products with no HSN code of their own, in the GSTR-1 HSN
+                    summary.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="orders" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Pre-order combos</p>
+              <p className="text-xs text-muted-foreground">
+                For products marked “Pre-order” (festival combos). Combos are delivered
+                within Tamil Nadu and Puducherry only, with delivery included in the
+                price — checkout refuses other states and adds no delivery charge.
+                While booking is open and at least one combo is active, customers see
+                a welcome pop-up listing the combos (the Marketing tab&apos;s landing announcement
+                then shows after it). Booking stays open through the end of the
+                closing day; leave it empty for no cutoff.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-pre-close">Last booking day</Label>
+                  <Input
+                    id="s-pre-close"
+                    name="preorderClose"
+                    type="date"
+                    defaultValue={values.preorderClose}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-pre-note">Dispatch note</Label>
+                <Input
+                  id="s-pre-note"
+                  name="preorderDispatchNote"
+                  defaultValue={values.preorderDispatchNote}
+                  placeholder="Dispatched from 3 November, in time for Diwali."
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown on the product page, the customer&apos;s order page, the
+                  confirmation email and the WhatsApp messages for pre-orders.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">WhatsApp order messages</p>
+              <p className="text-xs text-muted-foreground">
+                The WhatsApp button on the Orders screen opens a chat with the customer and fills in
+                the message for the order&apos;s current status. Nothing is sent automatically — you
+                review it, attach a photo (such as the courier receipt) and press send. Placeholders:{" "}
+                {ORDER_MESSAGE_PLACEHOLDERS.map(([token, meaning], i) => (
+                  <span key={token}>
+                    {i > 0 && ", "}
+                    <code>{token}</code> {meaning}
+                  </span>
+                ))}
+                . Clear a box to go back to the built-in text.
+              </p>
+              {ORDER_STATUSES.map((status) => (
+                <div key={status} className="grid gap-2">
+                  <Label htmlFor={`s-msg-${status}`}>{ORDER_STATUS_LABELS[status]}</Label>
+                  <Textarea
+                    id={`s-msg-${status}`}
+                    name={`orderMessage_${status}`}
+                    rows={3}
+                    defaultValue={values.orderMessages[status]}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Printing</p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-thermal">Thermal receipt printer paper width</Label>
+                <select
+                  id="s-thermal"
+                  name="thermalPaperWidth"
+                  defaultValue={values.thermalPaperWidth}
+                  className="h-9 w-40 rounded-md border bg-background px-2 text-sm"
+                >
+                  <option value="80">80 mm</option>
+                  <option value="58">58 mm</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Used by Orders → Thermal receipts. Most receipt printers take 80 mm rolls;
+                  small portable ones take 58 mm.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="marketing" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Landing announcement</p>
+              <p className="text-xs text-muted-foreground">
+                A pop-up customers see once when they arrive — holiday closures,
+                courier delays, festival hours. Shown on every page of the shop
+                between the two dates; closing it hides it on that device until the
+                text changes. Leave the title and message empty to turn it off.
+              </p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-ann-title">Title</Label>
+                <Input
+                  id="s-ann-title"
+                  name="announcementTitle"
+                  defaultValue={values.announcementTitle}
+                  placeholder="Pooja Holiday Update"
+                  maxLength={80}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-ann-body">Message</Label>
+                <Textarea
+                  id="s-ann-body"
+                  name="announcementBody"
+                  rows={4}
+                  defaultValue={values.announcementBody}
+                  placeholder={
+                    "Orders placed between 16 and 20 October will be dispatched after the Pooja holidays, as our courier partners are closed.\n\nThank you for your patience and support."
+                  }
+                  maxLength={600}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="s-ann-from">Show from</Label>
+                  <Input
+                    id="s-ann-from"
+                    name="announcementFrom"
+                    type="date"
+                    defaultValue={values.announcementFrom}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="s-ann-until">Last day shown</Label>
+                  <Input
+                    id="s-ann-until"
+                    name="announcementUntil"
+                    type="date"
+                    defaultValue={values.announcementUntil}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Picture (optional)</Label>
+                {announcementImage ? (
+                  <div className="relative w-full max-w-xs overflow-hidden rounded-lg border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={announcementImage} alt="" className="h-auto w-full" />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => setAnnouncementImage("")}
+                      aria-label="Remove picture"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex w-full max-w-xs cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground hover:bg-muted/50">
+                    {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+                    {uploading ? "Uploading…" : "Upload a picture"}
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      className="sr-only"
+                      disabled={uploading}
+                      onChange={(e) => handleAnnouncementUpload(e.target.files)}
+                    />
+                  </label>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Shown at its own shape above the title. Square or portrait fills a phone screen best; wide landscape pictures come out small.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Instagram (homepage)</p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-ig-handle">Instagram handle</Label>
+                <Input
+                  id="s-ig-handle"
+                  name="instagramHandle"
+                  defaultValue={values.instagramHandle}
+                  placeholder="azhagintamilmozhi05"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Username only, without the @. Used for the &ldquo;Follow&rdquo; link. Leave empty to
+                  hide the section.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-ig-reels">Featured reel / post links</Label>
+                <Textarea
+                  id="s-ig-reels"
+                  name="instagramReels"
+                  rows={4}
+                  defaultValue={values.instagramReels}
+                  placeholder="https://www.instagram.com/reel/XXXX/&#10;https://www.instagram.com/reel/YYYY/"
+                />
+                <p className="text-xs text-muted-foreground">
+                  One Instagram reel or post URL per line — the <strong>latest 3</strong> are embedded on
+                  the homepage (paste newest first). Instagram doesn&apos;t allow pulling a whole profile
+                  automatically, so list the reels you want to feature. Leave empty to show just a
+                  &ldquo;Watch on Instagram&rdquo; button.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">Tracking &amp; ads</p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-ga">Google Analytics ID</Label>
+                <Input
+                  id="s-ga"
+                  name="gaMeasurementId"
+                  defaultValue={values.gaMeasurementId}
+                  placeholder="G-XXXXXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground">
+                  GA4 measurement ID. The tag loads on customer-facing pages only
+                  (never the admin panel). Leave empty to disable tracking.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-pixel">Meta Pixel ID</Label>
+                <Input
+                  id="s-pixel"
+                  name="metaPixelId"
+                  defaultValue={values.metaPixelId}
+                  placeholder="1093899719866773"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Numeric pixel ID from Meta Events Manager. Same rules as the GA
+                  tag — customer-facing pages only, and live site only. Fires{" "}
+                  <strong>PageView</strong>, <strong>ViewContent</strong> on a
+                  product page, <strong>AddToCart</strong> on every add,{" "}
+                  <strong>InitiateCheckout</strong> when a cart reaches checkout, and{" "}
+                  <strong>Purchase</strong> once an order is actually paid.
+                  Leave empty to disable it.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-meta-domain">Meta domain verification</Label>
+                <Input
+                  id="s-meta-domain"
+                  name="metaDomainVerification"
+                  defaultValue={values.metaDomainVerification}
+                  placeholder="a1b2c3d4e5f6g7h8i9j0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Token only — the <code>content</code> value of the meta tag Meta
+                  gives you under Business settings → Brand safety → Domains, not the
+                  whole tag. Unlike the pixel this renders in every environment, since
+                  Meta only ever crawls the live domain. Verification is required
+                  before you can set event priority for iOS traffic.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="ai" forceMount className="space-y-6 data-[state=inactive]:hidden">
+          <Card>
+            <CardContent className="space-y-4">
+              <p className="font-semibold">AI assistant (Ask AI)</p>
+              <p className="text-xs text-muted-foreground">
+                Powers <strong>Admin → Ask AI</strong>. The assistant reads the store database
+                read-only; query results go to OpenAI with customer phone numbers and emails
+                masked. Get a key at platform.openai.com → API keys (usage is billed by OpenAI).
+              </p>
+              <div className="grid gap-2">
+                <Label htmlFor="s-openai-key">OpenAI API key</Label>
+                <Input
+                  id="s-openai-key"
+                  name="openaiApiKey"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={values.openaiKeyHint ? `Saved (${values.openaiKeyHint}) — type a new key to replace it` : "sk-..."}
+                />
+                {values.openaiKeyHint ? (
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" name="clearOpenaiApiKey" className="size-3.5 accent-primary" />
+                    Remove the saved key
+                  </label>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {values.openaiKeyFromEnv
+                      ? "Using OPENAI_API_KEY from the server's .env. A key saved here takes priority."
+                      : "Not set — Ask AI stays off until a key is saved."}
+                  </p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="s-openai-model">Model</Label>
+                <Input
+                  id="s-openai-model"
+                  name="openaiModel"
+                  list="openai-models"
+                  defaultValue={values.openaiModel}
+                  placeholder={DEFAULT_ASSISTANT_MODEL}
+                />
+                <datalist id="openai-models">
+                  {ASSISTANT_MODEL_SUGGESTIONS.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+                <p className="text-xs text-muted-foreground">
+                  Leave empty for {DEFAULT_ASSISTANT_MODEL}. Codex models are tuned for code; a
+                  general model such as gpt-5.5 may give better business advice.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Button type="submit" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />} Save settings

@@ -101,6 +101,11 @@ export const SETTINGS = {
   STORE_GSTIN: "store_gstin",
   // HSN code for products with none of their own (GSTR-1 HSN summary).
   DEFAULT_HSN: "default_hsn",
+  // Admin → Ask AI (src/lib/assistant.ts). The key is a secret: read it only
+  // through getAssistantConfig and never pass it to a client component. Each
+  // falls back to the OPENAI_API_KEY / OPENAI_MODEL env vars when blank.
+  OPENAI_API_KEY: "openai_api_key",
+  OPENAI_MODEL: "openai_model",
   // "1" = take orders but settle payment manually over UPI/WhatsApp instead of
   // opening the payment gateway. For use until the gateway goes live.
   MANUAL_UPI_PAYMENT: "manual_upi_payment",
@@ -205,6 +210,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   [SETTINGS.DEFAULT_GST_RATE]: "5",
   [SETTINGS.STORE_GSTIN]: "",
   [SETTINGS.DEFAULT_HSN]: "",
+  [SETTINGS.OPENAI_API_KEY]: "",
+  [SETTINGS.OPENAI_MODEL]: "",
   // Diwali 2026 is 8 November.
   [SETTINGS.PREORDER_CLOSE]: "2026-11-02",
   [SETTINGS.PREORDER_DISPATCH_NOTE]:

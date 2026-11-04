@@ -10,6 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SettingsForm } from "./settings-form";
 
+/** What the form may know about the OpenAI key: whether one is set, never the key. */
+function assistantSettingsFor(settings: Record<string, string>) {
+  const key = settings[SETTINGS.OPENAI_API_KEY] ?? "";
+  return {
+    openaiKeyHint: key ? `…${key.slice(-4)}` : "",
+    openaiKeyFromEnv: !!process.env.OPENAI_API_KEY,
+    openaiModel: settings[SETTINGS.OPENAI_MODEL] ?? "",
+  };
+}
+
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
@@ -82,6 +92,7 @@ export default async function AdminSettingsPage() {
           announcementBody: settings[SETTINGS.ANNOUNCEMENT_BODY] ?? "",
           announcementImage: settings[SETTINGS.ANNOUNCEMENT_IMAGE] ?? "",
           announcementFrom: settings[SETTINGS.ANNOUNCEMENT_FROM] ?? "",
+          ...assistantSettingsFor(settings),
           announcementUntil: settings[SETTINGS.ANNOUNCEMENT_UNTIL] ?? "",
         }}
         variantOptions={variantOptions}

@@ -186,7 +186,12 @@ export async function saveSettings(formData: FormData) {
     [SETTINGS.PAYMENT_PENDING_NOTE]: String(
       formData.get("paymentPendingNote") ?? ""
     ).trim(),
+    [SETTINGS.OPENAI_MODEL]: String(formData.get("openaiModel") ?? "").trim(),
   };
+  // The saved key is never sent to the browser, so a blank box means "keep it"
+  const openaiKey = String(formData.get("openaiApiKey") ?? "").trim();
+  if (formData.get("clearOpenaiApiKey")) values[SETTINGS.OPENAI_API_KEY] = "";
+  else if (openaiKey) values[SETTINGS.OPENAI_API_KEY] = openaiKey;
 
   await prisma.$transaction(
     Object.entries(values).map(([key, value]) =>
