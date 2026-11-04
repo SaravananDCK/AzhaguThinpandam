@@ -13,6 +13,8 @@ mkdir -p logs/app
 chown -R 1000:1000 logs/app
 
 echo "==> Building and restarting containers…"
+# Shown in the admin sidebar next to the build time
+export BUILD_COMMIT="$(git rev-parse --short HEAD)"
 docker compose build app
 docker compose up -d
 

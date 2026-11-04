@@ -22,6 +22,7 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
+import { formatDateTime } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/store/theme-toggle";
 import { DxTheme, DX_THEME_BOOT_SCRIPT } from "@/components/admin/dx-theme";
@@ -70,6 +71,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span className="block text-xs text-muted-foreground">Admin Panel</span>
           </span>
         </Link>
+        <p className="-mt-4 mb-4 px-2 text-[11px] text-muted-foreground" title="When the live version was built">
+          Updated {formatDateTime(process.env.BUILD_TIME ?? "")}
+          {process.env.BUILD_COMMIT ? ` · ${process.env.BUILD_COMMIT}` : ""}
+        </p>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => (
             <Button key={item.href} asChild variant="ghost" className="justify-start">
