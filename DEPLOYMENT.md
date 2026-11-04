@@ -105,6 +105,7 @@ Fill in:
 | `SMTP_HOST` etc. | e.g. Hostinger email: `smtp.hostinger.com`, port 587, your mailbox login |
 | `ADMIN_EMAIL` | where new-order notifications go |
 | `NEXT_PUBLIC_APP_URL` | `https://azhaguthinpandam.com` |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | optional fallback — Ask AI is normally set up in **Admin → Settings → AI**, which takes priority over these |
 
 `DATABASE_URL` and `UPLOADS_DIR` are set by docker-compose — leave them as-is.
 
