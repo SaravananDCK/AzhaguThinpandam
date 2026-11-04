@@ -121,6 +121,11 @@ export async function priceOrderLines(params: {
   /** Staff pricing: cost + ₹5 per packet, no discounts, no shipping. Resolved
       from the user record by the caller — never from client input. */
   isEmployee?: boolean;
+  /** Admin-only: book pre-order combos after booking has closed (a late
+      WhatsApp order the shop agreed to). Never set from customer paths. */
+  allowClosedPreorder?: boolean;
+  /** Goodie variants to leave off this order (admin removed them). */
+  skipGoodies?: string[];
 }) {
   const variantIds = params.items.map((i) => i.variantId);
   if (new Set(variantIds).size !== variantIds.length) {
@@ -173,7 +178,7 @@ export async function priceOrderLines(params: {
       throw new CheckoutError(PREORDER_AREA_MESSAGE);
     }
     const preorderConfig = await getPreorderConfig();
-    if (!isPreorderOpen(preorderConfig)) {
+    if (!params.allowClosedPreorder && !isPreorderOpen(preorderConfig)) {
       const deadline = preorderDeadlineText(preorderConfig);
       throw new CheckoutError(
         `Pre-order booking has closed.${deadline ? ` ${deadline}.` : ""}`
@@ -256,10 +261,11 @@ export async function priceOrderLines(params: {
   // that variant plus the freebie (never blocks checkout over a free item).
   let freebies: { variant: (typeof lines)[number]["variant"]; qty: number }[] = [];
   if (discountConfig.type === "goodies" && !params.couponCode && !isEmployee) {
+    const skip = new Set(params.skipGoodies ?? []);
     const rows = goodiesForKg(
       discountConfig.goodieTiers.filter((g) => g.available),
       foodKg
-    );
+    ).filter((r) => !skip.has(r.variantId));
     if (rows.length) {
       const purchasedQty = new Map(lines.map((l) => [l.variant.id, l.qty]));
       const goodieVariants = await prisma.productVariant.findMany({
@@ -385,7 +391,9 @@ export async function createOrderFromCart(
   input: Omit<CheckoutInput, "email"> & { email?: string },
   userId?: string,
   verifiedIdentity?: string,
-  tracking?: OrderTracking
+  tracking?: OrderTracking,
+  /** Admin-entered orders only — see priceOrderLines. */
+  options?: { allowClosedPreorder?: boolean }
 ) {
   // Staff pricing is decided by the user record, never by the request body.
   const user = userId
@@ -404,6 +412,7 @@ export async function createOrderFromCart(
     // sessions with neither a phone nor an email.
     couponIdentity: verifiedIdentity || input.address.phone,
     isEmployee,
+    allowClosedPreorder: options?.allowClosedPreorder,
   });
   const { subtotal, discount, couponId, couponCode, shippingFee, total, packingCost } = priced;
 
@@ -466,6 +475,10 @@ export async function repriceOrderItems(params: {
   orderId: string;
   items: { variantId: string; qty: number }[];
   couponCode?: string;
+  /** Admin edits only — see priceOrderLines. */
+  allowClosedPreorder?: boolean;
+  /** Replaces the order's removed-goodies list; omitted keeps it as is. */
+  removedGoodies?: string[];
 }) {
   const order = await prisma.order.findUnique({
     where: { id: params.orderId },
@@ -481,6 +494,9 @@ export async function repriceOrderItems(params: {
     );
   }
 
+  const removedGoodies =
+    params.removedGoodies ?? order.removedGoodies.split(",").filter(Boolean);
+
   const priced = await priceOrderLines({
     items: params.items,
     state: order.shipState,
@@ -491,6 +507,8 @@ export async function repriceOrderItems(params: {
     // A reprice answers "what would we charge now", so an order re-priced after
     // the staff flag was cleared correctly reverts to retail.
     isEmployee: order.user?.isEmployee === true,
+    allowClosedPreorder: params.allowClosedPreorder,
+    skipGoodies: removedGoodies,
   });
 
   // A manual discount is the admin's decision, not a computed one, so it
@@ -514,6 +532,7 @@ export async function repriceOrderItems(params: {
         discount: priced.discount,
         manualDiscount,
         shippingFee,
+        removedGoodies: removedGoodies.join(","),
         total,
         packingCost: priced.packingCost,
         preorder: priced.preorder,

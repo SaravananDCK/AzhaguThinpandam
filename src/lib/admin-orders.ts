@@ -144,7 +144,11 @@ export async function createOrderForCustomer(input: unknown): Promise<AdminOrder
     const order = await createOrderFromCart(
       { ...data, email },
       user.id,
-      user.phone ?? user.email ?? undefined
+      user.phone ?? user.email ?? undefined,
+      undefined,
+      // The admin is taking the order directly, so a closed pre-order window
+      // doesn't stop them booking a late combo they've agreed to.
+      { allowClosedPreorder: true }
     );
 
     // Address book, so a later self-service checkout is prefilled

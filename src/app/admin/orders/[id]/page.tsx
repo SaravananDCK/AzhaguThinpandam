@@ -220,6 +220,20 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               currentItems={order.items
                 .filter((i) => i.variantId && !i.isFreebie)
                 .map((i) => ({ variantId: i.variantId!, qty: i.qty }))}
+              goodies={order.items
+                .filter((i) => i.variantId && i.isFreebie)
+                .map((i) => ({
+                  variantId: i.variantId!,
+                  label: `${i.productName} — ${i.variantLabel}`,
+                  qty: i.qty,
+                }))}
+              removedGoodies={order.removedGoodies
+                .split(",")
+                .filter(Boolean)
+                .map((id) => {
+                  const v = variants.find((x) => x.id === id);
+                  return { variantId: id, label: v ? `${v.product.name} — ${v.label}` : "A goodie" };
+                })}
               variants={variants.map((v) => ({
                 id: v.id,
                 label: `${v.product.name} — ${v.label}`,

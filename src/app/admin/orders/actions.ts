@@ -348,7 +348,8 @@ export async function updateOrderDetails(orderId: string, formData: FormData) {
 export async function updateOrderItems(
   orderId: string,
   items: { variantId: string; qty: number }[],
-  couponCode?: string
+  couponCode?: string,
+  removedGoodies?: string[]
 ) {
   await assertAdmin();
 
@@ -363,7 +364,16 @@ export async function updateOrderItems(
   }
 
   try {
-    const order = await repriceOrderItems({ orderId, items, couponCode });
+    const order = await repriceOrderItems({
+      orderId,
+      items,
+      couponCode,
+      // An admin can still book a combo the customer asked for late
+      allowClosedPreorder: true,
+      removedGoodies: Array.isArray(removedGoodies)
+        ? removedGoodies.filter((id) => typeof id === "string" && id && !id.includes(",")).slice(0, 50)
+        : undefined,
+    });
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
     revalidatePath(`/order/${order.orderNumber}`);

@@ -272,6 +272,10 @@ model Order {
   // `shippingFee` above always holds the effective amount charged, so every
   // display and report reads it without knowing about this.
   shippingFeeOverride Int?
+  // Goodie variants an admin took off this order, comma-separated variant ids.
+  // Repricing regenerates goodies from the weight tiers, so the removal has to
+  // be remembered or the next item edit would quietly add them back.
+  removedGoodies String  @default("")
   total       Int // paise (subtotal - discount - manualDiscount + shippingFee)
   packingCost Int         @default(0) // paise — internal cost (not charged to customer)
   // What the courier actually charged us, paise. `shippingFee` above is what

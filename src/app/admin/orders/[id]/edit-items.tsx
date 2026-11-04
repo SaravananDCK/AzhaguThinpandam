@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { MAX_LINE_QTY } from "@/lib/availability";
 import { useState, useTransition } from "react";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,23 +18,33 @@ type Variant = {
   madeToOrder: boolean;
 };
 type Line = { variantId: string; qty: number };
+type Goodie = { variantId: string; label: string; qty?: number };
 
 export function EditOrderItems({
   orderId,
   variants,
   currentItems,
   couponCode,
+  goodies,
+  removedGoodies,
 }: {
   orderId: string;
   variants: Variant[];
   currentItems: Line[];
   couponCode: string | null;
+  /** Free goodie lines currently on the order */
+  goodies: Goodie[];
+  /** Goodies an admin already took off this order */
+  removedGoodies: Goodie[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [lines, setLines] = useState<Line[]>(currentItems);
+  const [removed, setRemoved] = useState<Goodie[]>(removedGoodies);
   const byId = new Map(variants.map((v) => [v.id, v]));
+  const removedIds = new Set(removed.map((g) => g.variantId));
+  const keptGoodies = goodies.filter((g) => !removedIds.has(g.variantId));
 
   const subtotal = lines.reduce(
     (sum, l) => sum + (byId.get(l.variantId)?.price ?? 0) * l.qty,
@@ -52,7 +62,12 @@ export function EditOrderItems({
       return;
     }
     startTransition(async () => {
-      const res = await updateOrderItems(orderId, items, couponCode ?? undefined);
+      const res = await updateOrderItems(
+        orderId,
+        items,
+        couponCode ?? undefined,
+        removed.map((g) => g.variantId)
+      );
       if (res.error) {
         toast.error(res.error);
         return;
@@ -71,6 +86,7 @@ export function EditOrderItems({
         className="no-print"
         onClick={() => {
           setLines(currentItems);
+          setRemoved(removedGoodies);
           setOpen(true);
         }}
       >
@@ -138,6 +154,48 @@ export function EditOrderItems({
           Items subtotal <span className="font-semibold">{formatINR(subtotal)}</span>
         </span>
       </div>
+
+      {(goodies.length > 0 || removed.length > 0) && (
+        <div className="space-y-1.5 border-t pt-3">
+          <p className="text-sm font-medium">Free goodies</p>
+          {keptGoodies.map((g) => (
+            <div key={g.variantId} className="flex items-center gap-2 text-sm">
+              <span className="flex-1">
+                {g.label} × {g.qty}
+              </span>
+              <span className="w-24 text-right text-xs font-semibold text-green-600 dark:text-green-400">
+                FREE
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setRemoved((p) => [...p, g])}
+                aria-label={`Remove goodie ${g.label}`}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          {removed.map((g) => (
+            <div key={g.variantId} className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex-1 line-through">{g.label}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setRemoved((p) => p.filter((x) => x.variantId !== g.variantId))}
+              >
+                <Undo2 className="size-4" /> Restore
+              </Button>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Removed goodies stay off this order even if the items change. The
+            goodies themselves are re-worked out from the new weight on save.
+          </p>
+        </div>
+      )}
 
       <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
         Saving reprices the whole order with the same rules as the website —
