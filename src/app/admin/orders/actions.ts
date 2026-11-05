@@ -96,7 +96,14 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
       }
     });
   } else {
-    await prisma.order.update({ where: { id: orderId }, data: { status: newStatus } });
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: newStatus,
+        // The courier statement lists parcels by booking date
+        ...(newStatus === "SHIPPED" ? { shippedAt: new Date() } : {}),
+      },
+    });
   }
 
   sendOrderStatusEmail(order.orderNumber, newStatus as OrderStatus).catch((e) =>

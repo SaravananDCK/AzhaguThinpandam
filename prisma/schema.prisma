@@ -282,6 +282,10 @@ model Order {
   // the customer was charged — the two differ (flat ₹60 collected on a 2 kg
   // parcel that cost ₹120), and the gap is only visible if both are recorded.
   shippingCost Int        @default(0)
+  // When the order was marked Shipped (the day it went to the courier). Null
+  // on orders shipped before this was recorded; the courier report falls back
+  // to the paid date for those.
+  shippedAt    DateTime?
   notes       String?
   // Coupon snapshot — set only when a coupon actually applied (beat the box
   // discount). `discount` above holds the winning amount (box vs coupon).

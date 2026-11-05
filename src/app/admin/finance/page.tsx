@@ -181,6 +181,9 @@ export default async function AdminFinancePage({
                 GST returns (B2B / B2C) for {monthLabel(range.from)}
               </Link>
             </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/finance/courier">Courier reconcile</Link>
+            </Button>
           </CardContent>
         </Card>
 
